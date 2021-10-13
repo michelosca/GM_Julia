@@ -1,0 +1,6 @@
+begin:blockname
+ # some general description
+ name1 = var1
+ name2 = var2  # come afterline commets
+ name3 = var3
+end:blockname
