@@ -4,6 +4,7 @@ module GenerateODEs
 #using .SharedData
 
 export GenerateDensRateFunctionList, GenerateTempRateFunctionList 
+export GatherListOfFunctions
 
 
 function GenerateDensRateFunction(s, reaction_list)
@@ -125,7 +126,7 @@ function GenerateTempRateFunctionList(species_list, reaction_list)
 end
 
 
-function gather_list_of_functions(sdens_funct_list::Vector{Function},
+function GatherListOfFunctions(sdens_funct_list::Vector{Function},
     dens::Vector{Float64}, temp::Vector{Float64})
     f_out = 0
     for current_f in sdens_funct_list
