@@ -1,146 +1,137 @@
 module GenerateODEs
 
-include("SharedData.jl")
-using .SharedData
+#include("SharedData.jl")
+#using .SharedData
 
-export GenerateDensODEs, GenerateTempODEs
+export GenerateDensRateFunctionList, GenerateTempRateFunctionList 
 
-#function GenerateDensODEs(species_list::Vector{Species}, reaction_list::Vector{Reaction})
-function GenerateDensODEs(species_list, reaction_list)
-    # Generate density equations
-    # Loop over all species
-    dens_eq_list = []
-    for s in species_list
-        print("Species ", s.species_id,"\n")
 
-        # PARTICLE PRODUCTION
-        # First, add (if exist) the gain/loss term due to particle production
-        if (s.has_dens_eq)
-            funct_list = Function[]
-            s_id = s.species_id
-            # Loop over the reaction set
-            r_counter = 0
-            for r in reaction_list
-                print("  - Reaction ",r.reaction_id,"\n")
-                # Check whether reaction r involves species s_id
-                s_index = findall( x -> x == s_id, r.reacting_species )
-                print("    - Is current species involved ",s_index,"\n")
-                if !(length(s_index) == 0)
-                    r_id = r.reaction_id
-                    s_index = s_index[1]
-                    print("    - Species ", s_id, " is part of reaction ", r_id,"\n")
-                    sign = r.species_balance[s_index]
-                    print("    - The species balance is: ",sign,"\n")
-                    # Only a density gain/loss term is added if there is a non-zero particle balance
-                    if !(sign == 0)
-                        # Generate gain/loss density rate function
-                        f(args...) = sign * args[3] * args[4] * r.rate_coefficient(args...)
-                        print("    - Function added\n")
-                        push!(funct_list, f)
-                        r_counter += 1
-                    end
+function GenerateDensRateFunction(s, reaction_list)
+
+    # This function generates the function terms required in the density ODE function
+    # This is for a sigle species s
+    # Returns a list of functions. Each of these functions is a term in the ODE
+    sdens_funct_list = Function[]
+
+    # Check if species is meant to have a density ODE 
+    if (s.has_dens_eq)
+        s_id = s.species_id
+        
+        # Loop over the reaction set
+        for r in reaction_list
+            # Check whether reaction r involves species s_id
+            s_index = findall( x -> x == s_id, r.involved_species )
+            if !(length(s_index) == 0)
+                s_index = s_index[1]
+
+                # PARTICLE PRODUCTION rates
+                # Terms due to particle gain/loss, e.g. recombination, ionization
+                sign = r.species_balance[s_index]
+                # Only a density gain/loss term is added if there is a non-zero particle balance
+                if !(sign == 0)
+                    push!(sdens_funct_list, (dens::Vector{Float64}, temp::Vector{Float64}) -> 
+                        sign * prod(dens[r.reactant_species]) * r.rate_coefficient(temp))
                 end
             end
-            # All the terms for species s are collected.
-            # Now, add them to the equation list as a single function 
-            f_gainloss(args...) = sum(funct_list[i](args...) for i=1:r_counter)
-        else
-            # If species has no density equation then the function returns zero
-            f_gainloss(args...) = 0
         end
 
         # WALL LOSS rates
-        # Second, find the WALL LOSS for this specific species
+        # Terms due to loss with walls
         if (s.has_dens_wall_loss)
-            f_wallloss(args...) = s.dens_wall_loss(args...)
-        else
-            f_wallloss(args...) = 0
+            push!(sdens_funct_list, s.dens_wall_funct)
         end
-
-        # This is f in the density equation, i.e. in d(n)/dt = f(Te, Tg, ne, nAr,...)
-        f_dens(args...) = f_gainloss(args...) + f_wallloss(args...)
-
-        # Add f_dens to the list of equations
-        push!(dens_eq_list, f_dens)
-
     end
-    return dens_eq_list
+    return sdens_funct_list
 end
 
 
-function GenerateTempODEs(species_list, reaction_list)
-    # Generate temperature equations
+#function GenerateDensODEs(species_list::Vector{Species}, reaction_list::Vector{Reaction})
+function GenerateDensRateFunctionList(species_list, reaction_list)
+    # Gathers the Density rate functions from GenerateDensRateFunction for 
+    #each species in a list
+    
     # Loop over all species
-    temp_eq_list = []
+    dens_rate_funct_list = []
     for s in species_list
+        sdens_funct_list = GenerateDensRateFunction(s, reaction_list)
+        if (length(sdens_funct_list)>0)
+            push!(dens_rate_funct_list, sdens_funct_list)
+        end
+    end
+    return dens_rate_funct_list
+end
 
-        # First, add (if exist) the gain/loss term due to particle production
-        Q0(args...) = 3.0/2.0 * kb * args[3]
-        Q1(args...) = -3.0/2.0 * kb * args[1]
-        if (s.has_temp_eq)
-            funct_list = Function[]
-            s_id = s.species_id
-            # Loop over the reaction set
-            r_counter = 0
-            for r in reaction_list
-                # Check whether reaction r involves species s_id
-                s_index = findall( x -> x == s_id, r.reacting_species )
-                if !(length(s_index) == 0)
-                    # Species s is involved in reaction r
-                    s_index = s_index[1]
+function GenerateTempRateFunction(s, reaction_list)
 
-                    # PARTICLE GAIN/LOSS
-                    # Energy gain/loss dur to particle gain/loss only if non-zero particle balance
-                    sign = r.species_balance[s_index]
-                    if !(sign == 0)
-                        # Generate gain/loss temperature rate function
-                        f_part(args...) = sign * args[3] * args[4] * r.rate_coefficient(args...) * Q1(args...)
-                        push!(funct_list, f_part)
-                        r_counter += 1
-                    end
+    stemp_funct_list = Function[]
+    if (s.has_temp_eq)
+        s_id = s.species_id
+        # "Constants" that are used later
+        Q0(dens::Vector{Float64}) = 3.0/2.0 * kb * dens[s.id]
+        Q1(temp::Vector{Float64}) = 3.0/2.0 * kb * temp[s.id]
 
-                    # COLLISION INTRINSIC ENERGY GAIN/LOSS
-                    r_id = r.reaction_id
-                    Er = r.E_threshold             # Collision threshold energy (includes elastic scattering)
-                    f_coll(args...) = - Er(args...) * r.rate_coefficient(args...) * args[3] * args[4]
-                    push!(funct_list, f_coll)
-                    r_counter += 1
-                    
+        # Loop over the reaction set
+        for r in reaction_list
+            # Check whether reaction r involves species s_id
+            s_index = findall( x -> x == s_id, r.involved_species )
+            if !(length(s_index) == 0)
+                # Species s is involved in reaction r
+                s_index = s_index[1]
+
+                # PARTICLE PRODUCTION rates
+                # Terms due to particle gain/loss, e.g. recombination, ionization
+                sign = r.species_balance[s_index]
+                # Only a temp gain/loss term is added if there is a non-zero particle balance
+                if !(sign == 0)
+                    push!(stemp_funct_list, (dens::Vector{Float64}, temp::Vector{Float64}) ->
+                        sign * prod(dens[r.reactant_species]) * r.rate_coefficient(temp) * Q1(temp) )
                 end
+
+                # COLLISION INTRINSIC ENERGY GAIN/LOSS
+                # In this term it is also included the energy loss/gain due to elastic scattering
+                # as a function of temperature
+                Er = r.E_threshold             
+                push!(stemp_funct_list, (dens::Vector{Float64}, temp::Vector{Float64}) ->
+                    - Er(temp) * prod(dens[r.reactant_species]) * r.rate_coefficient(temp) )
             end
-            # All the terms for species s are collected.
-            # Now, add them to the equation list as a single function 
-            f_gainloss(args...) = sum(funct_list[i](args...) for i=1:r_counter)/Q0(args...)
-        else
-            # If species has no temperature equation then the function returns zero
-            f_gainloss(args...) = 0
         end
 
         # WALL LOSS rates
-        # Second, find the WALL LOSS for this specific species
+        # Terms due to loss with walls
         if (s.has_temp_wall_loss)
-            f_wallloss(args...) = s.temp_wall_loss(args...)
-        else
-            f_wallloss(args...) = 0
+            push!(stemp_funct_list, s.temp_wall_funct)
         end
 
         # HEATING MECHANISM
-        # Second, find the WALL LOSS for this specific species
+        # Terms due to power sources 
         if (s.has_heating_mechanism)
-            f_heat(args...) = s.input_power_funct(args...)
-        else
-            f_heat(args...) = 0
+            push!(stemp_funct_list, s.input_power_funct)
         end
-
-        # This is f in the temperature equation, i.e. in d(T)/dt = f(Te, Tg, n1, n2)
-        f_temp(args...) = f_gainloss(args...) + f_wallloss(args...) +
-            f_wallloss(args...) + f_heat(args...) 
-
-        # Add f_dens to the list of equations
-        push!(temp_eq_list, f_temp)
-
     end
-    return temp_eq_list
+    return stemp_funct_list
+end
+
+function GenerateTempRateFunctionList(species_list, reaction_list)
+    # Generate temperature equations
+    # Loop over all species
+    temp_rate_funct_list = []
+    for s in species_list
+        stemp_funct_list = GenerateTempRateFunction(s, reaction_list)
+        if (length(stemp_funct_list)>0)
+            push!(temp_rate_funct_list, stemp_funct_list)
+        end
+    end
+    return temp_rate_funct_list
+end
+
+
+function gather_list_of_functions(sdens_funct_list::Vector{Function},
+    dens::Vector{Float64}, temp::Vector{Float64})
+    f_out = 0
+    for current_f in sdens_funct_list
+        f_out += current_f(dens, temp)
+    end
+    return f_out
 end
 
 end
