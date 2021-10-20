@@ -33,12 +33,13 @@ function run_GM()
     T_Ar = 300
     T_ArIon = T_Ar
     temp = [T_e, T_Ar, T_ArIon]
-    return 1
+
+    return 
 end
 
 function PrintSpeciesList()
 
-    @printf("Species\n")
+    @printf("Loaded species\n")
     @printf("%15s %15s %15s %15s %15s %15s %15s %15s %15s\n","Name",
         "Species", "Elastic ID", "Mass [kg]", "Charge [C]","has n-eq",
         "has T-eq", "has WL", "has P-input")
@@ -102,9 +103,9 @@ end
 
 function PrintReactionList()
 
-    @printf("Reactions\n")
-    @printf("%15s %30s %15s %15s\n","Name", "Reaction", "E-threshold [eV]",
-        "Neutral species")
+    @printf("Loaded reactions\n")
+    @printf("%15s %30s %15s %15s %15s %15s %15s\n","Name", "Reaction", "E-threshold [eV]",
+        "Neutral species","Involved species", "Species balance", "Reactant species ID")
     for r in SharedData.reaction_list
 
         # r.id -> reaction name
@@ -173,6 +174,7 @@ function PrintReactionList()
             r_neutral = "Not found!"
         end
 
-        @printf("%15s %30s %15.2f %15s\n", r_name, reaction_str, E_eV, r_neutral)
+        @printf("%15s %30s %15.2f %15s %15s %15s %15s\n", r_name, reaction_str,
+            E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species)
     end
 end
