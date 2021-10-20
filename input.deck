@@ -4,7 +4,7 @@ begin:system
   L = 2                  # m
   f = 13.56e6            # Hz
   P = 1000               # W
-  v = 100                # V
+  V = 100                # V
   power_input_method = ccp
 end:system
 

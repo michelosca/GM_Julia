@@ -72,64 +72,54 @@ global drivP = 0                            # W
 global drivV = 0                            # V
 global drivI = 0                            # Amps
 
-function SetSystemParameters(name, var, units)
+function SetSystemParameters(name, var, unit)
 
+    errcode = 1
     # Initialize system parameters
     lname = lowercase(name)
     if (name=="A" || lname=="area")
         global A = parse(Float64,var)
-        return 0 
-    elseif (name=="V" || lname=="volume")
+        errcode = 0
+    elseif (lname=="v" || lname=="volume" || lname=="vol")
         global V = parse(Float64, var)
-        return 0
-    elseif (lname=="L" || lname=="length")
+        errcode = 0
+    elseif (lname=="l" || lname=="length")
         global l = parse(Float64, var) 
-        return 0
+        errcode = 0
     elseif (name=="f" || lname=="frequency" ||
         lname=="freq" || lname=="driving_frequency")
-        if (units=="mhz")
-            unit = 1.e6
-        elseif (units=="ghz")
-            unit = 1.e9
-        elseif (units=="khz")
-            unit = 1.e3
-        else
-            unit = 1.0
-        end
         global drivf = parse(Float64,var) * unit
         global drivOmega = drivf * 2.0 * π
-        return 0
+        errcode = 0
     elseif (name=="P" || lname=="power_input" ||
         lname=="power")
         if (var=="from_I_and_V")
             global drivP = drivV * drivI
         else
-            if (units=="kw")
-                unit = 1.e3
-            else
-                unit = 1
-            end
             global drivP = parse(Float64, var) * unit
         end
-        return 0
+        errcode = 0
     elseif (lname=="voltage")
         if (var=="from_I_and_P")
             global drivV = drivP / drivI
         else
             global drivV = parse(Float64, var)
         end
-        return 0
-    elseif (lname=="power_method" || lname=="input_power_method")
-        lvar = lowcase(var)
+        errcode = 0
+    elseif (lname=="power_method" || lname=="input_power_method" ||
+            lname=="power_input_method")
+        lvar = lowercase(var)
         if (lvar == "ccp")
             p_id = p_ccp_id
+            errcode = 0
         elseif (lvar == "icp")
             p_id = p_icp_id
+            errcode = 0
         else
             p_id = 0
+            errcode = 1 
         end
         global power_input_method = p_id
-        return 0
     elseif (name == "I" || lname == "current" ||
         lname == "driving_current")
         if (var=="from_P_and_V")
@@ -137,10 +127,9 @@ function SetSystemParameters(name, var, units)
         else
             global drivI = parse(Float64,var)
         end
-        return 0
+        errcode = 0
     end
-    # In case there is no match -> return 1
-    return 1
+    return errcode 
 end
 
 
@@ -152,9 +141,15 @@ function AddReactionToList(id::Int64, invol_s::Vector{Int64},
     react_s::Vector{Int64}, balan_s::Vector{Int64}, K::Function, E::Float64,
     n_id::Int64)
 
-    # Add react to reaction_list
-    react = Reaction(id, n_id, invol_s, balan_s, react_s, K, E) 
-    push!(reaction_list, react)
+    errcode = 0
+    try
+        # Add react to reaction_list
+        react = Reaction(id, n_id, invol_s, balan_s, react_s, K, E) 
+        push!(reaction_list, react)
+    catch
+        errcode = 1
+    end
+    return errcode
 end
 
 
@@ -162,10 +157,17 @@ function AddSpeciesToList(id::Int64, mass::Float64, charge::Float64,
     neq_flag::Bool, Teq_flag::Bool, wl_flag::Bool, P_flag::Bool,
     n_id::Int64, r_ela_id::Int64)
     
-    # Add react to reaction_list
-    species = Species(id, n_id, r_ela_id, mass, charge, neq_flag,
-        Teq_flag, wl_flag, P_flag) 
-    push!(species_list, species)
+    errcode = 0
+    try
+        # Add react to reaction_list
+        species = Species(id, n_id, r_ela_id, mass, charge, neq_flag,
+            Teq_flag, wl_flag, P_flag) 
+        push!(species_list, species)
+    catch
+        errcode = 1
+    end
+
+    return errcode
 end
 
 
