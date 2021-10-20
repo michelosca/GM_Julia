@@ -628,18 +628,88 @@ function ParseRateCoefficient(str)
 
     try
         expr = Meta.parse(str)
-        function K_funct(temp::Vector{Float64})
-            Te = temp[SharedData.s_electron_id]
-            Te_eV = Te * SharedData.K_to_eV
-            K = eval(expr)
-        end
-        global input_rate_coeff = K_funct
+        errcode = SetRateCoefficientFunction(expr)
     catch
         errcode = c_io_error
-        print("***ERROR*** While parsing the rate coefficient")
+        print("***ERROR*** While parsing the rate coefficient\n")
     end
 
     return errcode
+end
+
+function SetRateCoefficientFunction(expr)
+
+    errcode = 0
+
+    symbol_list = Symbol[]
+    symbol_list = AssessExpression(expr, symbol_list)
+    symbol_list = AssessSymbols(symbol_list)
+
+    if length(symbol_list) > 1
+        print("***ERROR*** Rate coefficient can only have one free parameter\n")
+        print("The symbols: ", symbol_list,"\n")
+        errcode = c_io_error
+    else
+        symbol = symbol_list[1]
+        if symbol == :Te
+            function K_funct_Te(temp::Vector{Float64})
+                Te = temp[SharedData.s_electron_id]
+                K = eval(expr)
+                return K
+            end
+            global input_rate_coeff = K_funct_Te
+        elseif symbol == :Te_eV
+            function K_funct_Te_eV(temp::Vector{Float64})
+                Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
+                K = eval(expr)
+                return K
+            end
+            global input_rate_coeff = K_funct_Te_eV
+        else
+            print("***ERROR*** The free parameter ",symbol, " is not recognized\n")
+            errcode = c_io_error
+        end
+    end
+    return errcode
+end
+
+
+function AssessExpression(expr, symbol_list)
+    # Identifies all the symbols in the given expression
+
+    for e in expr.args
+        if typeof(e) == Symbol
+            # Bedore adding e to the list, check that it is not
+            # already in symbol_list
+            already_included = false
+            for s in symbol_list
+                if s == e
+                    already_included = true
+                    break
+                end
+            end
+            if !already_included
+                push!(symbol_list, e)
+            end
+        elseif typeof(e) == Expr
+            symbol_list = AssessExpression(e, symbol_list)
+        end
+    end
+    return symbol_list
+end
+
+
+function AssessSymbols(symbol_list)
+
+    new_symbol_list = Symbol[]
+    for s in symbol_list
+        if s == :Te
+            push!(new_symbol_list, s)
+        elseif s == :Te_eV
+            push!(new_symbol_list, s)
+        end
+    end
+    return new_symbol_list
 end
 
 
