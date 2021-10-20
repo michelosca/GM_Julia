@@ -49,16 +49,11 @@ const e = 1.602176634e-19     # C
 const me = 9.1093837015e-31   # kg
 const mp = 1.67262192369e-27  # kg
 const eps0 = 8.854187817e-12
+const K_to_eV = kb / e
 
 # Power input methods
 const p_ccp_id = 1
 const p_icp_id = 2
-
-# Define reaction ids
-const r_elastic_id = 1
-const r_excitat_id = 2
-const r_ionizat_id = 3
-const r_recombi_id = 4
 
 ###############################################################################
 # SYSTEM PARAMETERS
@@ -147,6 +142,7 @@ function AddReactionToList(id::Int64, invol_s::Vector{Int64},
         react = Reaction(id, n_id, invol_s, balan_s, react_s, K, E) 
         push!(reaction_list, react)
     catch
+        print("***ERROR*** While attaching reaction\n")
         errcode = 1
     end
     return errcode
@@ -164,6 +160,7 @@ function AddSpeciesToList(id::Int64, mass::Float64, charge::Float64,
             Teq_flag, wl_flag, P_flag) 
         push!(species_list, species)
     catch
+        print("***ERROR*** While attaching species\n")
         errcode = 1
     end
 
@@ -175,21 +172,31 @@ end
 global s_electron_id = 0
 global s_Ar_id = 0
 global s_ArIon_id = 0
+global s_ArExc_id = 0
 
 function SetSpeciesID(species_name, id)
+
+    errcode = 0
+
     if ("e" == species_name || "electrons" == species_name)
         global s_electron_id = id
-        return 0
     elseif ("Ar" == species_name)
         global s_Ar_id = id
-        return 0
     elseif ("Ar+" == species_name)
         global s_ArIon_id = id
-        return 0 
+    elseif ("Ar*" == species_name || "Ar excited" == species_name)
+        global s_ArExc_id = id
+    else
+        errcode = 1
     end
-
-    # In case there is no match -> return 1
-    return 1
+    return errcode 
 end
+
+# Define reaction ids
+const r_elastic_id = 1
+const r_excitat_id = 2
+const r_ionizat_id = 3
+const r_recombi_id = 4
+const r_cx_id = 5
 
 end

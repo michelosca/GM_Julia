@@ -1,8 +1,8 @@
 module ReadInput
 
+using SharedData
 using SharedData: SetSystemParameters
 using SharedData: me, mp, kb, e
-using SharedData: r_elastic_id, r_ionizat_id, r_recombi_id
 using SharedData: Reaction, Species
 using SharedData: AddSpeciesToList, AddReactionToList
 using SharedData: SetSpeciesID
@@ -19,41 +19,15 @@ const c_io_emptyline = 3::Int64
 
 function SetupInputData()
 
+    errcode = c_io_error
+
     errcode = ReadInputData("input.deck")
     if (errcode != 0)
         print("***ERROR*** Failed to read the input deck. Abort code\n")
-        return errcode 
+        return errcode
     end
 
-    ###########################################################################
-    # Define electron-argon elastic scattering
-    invol_s = [s_electron_id, s_Ar_id]
-    balan_s = [0,0]
-    react_s = [s_electron_id, s_Ar_id]
-    K_r1(temp::Vector{Float64}) = 2.336e-14 * temp[s_electron_id]^1.609
-    E = 0.0
-    neutral_id = s_Ar_id
-    AddReactionToList(r_elastic_id, invol_s, react_s, balan_s, K_r1, E, neutral_id)
-
-    # Define e-impact ionization: e + Ar -> e + e + Ar+
-    invol_s = [s_electron_id, s_Ar_id, s_ArIon_id]
-    balan_s = [1,-1,1]
-    react_s = [s_electron_id, s_Ar_id]
-    K_r3(temp::Vector{Float64}) = 2.34e-14 * temp[s_electron_id]^0.59 *
-        exp(-17.44/temp[s_electron_id])
-    E = 15.76 * e
-    neutral_id = s_Ar_id
-    AddReactionToList(r_ionizat_id, invol_s, react_s, balan_s, K_r3, E, neutral_id)
-    
-    # Define Ar recombination: e + Ar+ -> Ar
-    invol_s = [s_electron_id, s_ArIon_id, s_Ar_id]
-    balan_s = [-1,-1,1]
-    react_s = [s_electron_id, s_ArIon_id]
-    K_r4(temp::Vector{Float64}) =  5e-39 * temp[s_electron_id]^4.5
-    E = 0.0
-    neutral_id = s_Ar_id
-    AddReactionToList(r_recombi_id, invol_s, react_s, balan_s, K_r4, E, neutral_id)
-    return 0
+    return errcode
 end
 
 global block_id = 0
@@ -122,11 +96,14 @@ function ReadLine(string)
         i_comment = i_comment[1]
         string = string[begin:i_comment-1]
     end
+    string = strip(string)
 
     # Signal wether this is a begin/end:block 
     i_block = findfirst(":", string)
     # Signla whether it is a "name = var" line
     i_eq = findfirst("=", string)
+    # Signla whether it is a reaction line
+    i_react = findfirst(";", string)
 
     # Check line
     if !(i_block === nothing)
@@ -154,6 +131,13 @@ function ReadLine(string)
             print("***WARNING***\n  - Entry in ", block_name,
                 "-block has not been located\n")
             print("  - Input entry: ", name ," = ",var ,"\n")
+        end
+    elseif !(i_react === nothing)
+        errcode = ReadInputDeckEntry("",string, block_id) 
+        if (errcode == c_io_error)
+            print("***WARNING***\n  - Entry in ", block_name,
+                "-block has not been located\n")
+            print("  - Input entry: ", string ,"\n")
         end
     else
         errcode = c_io_emptyline
@@ -220,7 +204,23 @@ function StartSpeciesBlock()
 end
 
 function StartReactionsBlock()
-    errcode = 0
+    errcode = c_io_error
+    if (read_step == 1)
+        global input_r_id = 0
+        global input_n_id = 0
+        global input_inv_s = Int64[]
+        global input_bal_s = Int64[]
+        global input_rea_s = Int64[]
+        global input_rate_coeff = Function 
+        global input_E = 0.0
+        if (SharedData.s_electron_id != 0)
+            errcode = 0
+        else
+            print("***ERROR*** Electron species must be defined before reactions\n")
+        end
+    else
+        errcode = 0
+    end
     return errcode
 end
 #
@@ -246,14 +246,15 @@ function EndSpeciesBlock()
             global input_wl_flag = true
         end
 
-        errcode = AddSpeciesToList(input_id, input_mass, input_charge, input_neq_flag,
-            input_Teq_flag, input_wl_flag, input_P_flag, input_n_id, input_relastic_id)
+        errcode = SharedData.AddSpeciesToList(input_id, input_mass,
+            input_charge, input_neq_flag, input_Teq_flag, input_wl_flag,
+            input_P_flag, input_n_id, input_relastic_id)
     end
     return errcode 
 end
 
 function EndReactionsBlock()
-    errcode = 0
+    errcode = 0 
     return errcode
 end
 #
@@ -275,6 +276,8 @@ function ReadInputDeckEntry(name, var, block_id)
     return errcode
 end
 
+###############
+### SYTEM BLOCK
 function ReadSystemEntry(name, var)
 
     errcode = 1
@@ -306,6 +309,8 @@ function ReadSystemEntry(name, var)
     return errcode 
 end
 
+##################
+### SPECIES BLOCK 
 function ReadSpeciesEntry(name, var)
 
     errcode = c_io_error 
@@ -321,9 +326,7 @@ function ReadSpeciesEntry(name, var)
                 global input_n_id = s_Ar_id
                 errcode = 0
             else
-                print("***WARNING***\n")
-                print("Neutral species id has not been found. Make sure you\n",
-                    "define first electron and neutral species.")
+                print("***ERROR*** Neutral species id has not been found\n")
                 errcode = c_io_error 
             end
         end
@@ -360,8 +363,314 @@ function ReadSpeciesEntry(name, var)
     return errcode 
 end
 
+#################
+### REACTION BLOCK
 function ReadReactionsEntry(name, var)
+    # Splits the input line contained in var into four parts
+    # The fourth part is actually not necessary, but it is 
+    # recommended to be included
+
+    errcode = 0 
+
+    if (read_step == 1)
+        # First part: the reaction process
+        idx = findfirst(";", var)
+        if !(idx === nothing)
+            idx = idx[1]
+            reaction_process_str = strip(var[1:idx-1])
+            var = var[idx+1:end]
+            str_track = true
+        else
+            errcode = c_io_error
+            str_track = false 
+        end
+
+        # Second part: the threshold energy
+        idx = findfirst(";", var)
+        if (!(idx === nothing) && str_track)
+            idx = idx[1]
+            e_threshold_str = strip(var[1:idx-1])
+            var = var[idx+1:end]
+            str_track = true
+        else
+            errcode = c_io_error
+            str_track = false 
+        end
+
+        # Third part: the rate coefficient expression
+        idx = findfirst(";", var)
+        if (!(idx === nothing) && str_track)
+            idx = idx[1]
+            rate_coeff_str = strip(var[1:idx-1])
+            var = var[idx+1:end]
+            str_track = true
+        else
+            errcode = c_io_error
+            str_track = false
+        end
+
+        # Fourth part, if existing: reaction description string
+        if (str_track)
+            description_str = strip(var)
+        else
+            description_str = nothing 
+        end
+        if (errcode == c_io_error) return errcode end
+
+        errcode = ParseReaction(reaction_process_str)
+        if (errcode == c_io_error) return errcode end
+        
+        errcode = ParseEThreshold(e_threshold_str)
+        if (errcode == c_io_error) return errcode end
+        
+        errcode = ParseRateCoefficient(rate_coeff_str)
+        if (errcode == c_io_error) return errcode end
+
+        if !(description_str === nothing)
+            errcode = ParseDescription(description_str)
+            if (errcode == c_io_error) return errcode end
+        end
+
+        errcode = SharedData.AddReactionToList(input_r_id, input_inv_s,
+            input_rea_s, input_bal_s, input_rate_coeff, input_E,
+            input_n_id)
+    end
+
+    return errcode
+end
+
+
+function ParseReaction(str)
+
+    # Must provide: neutral_species_id, involved_species,
+    #               species_balance, reactant_species
+    errcode = c_io_error
+
+    idx = findfirst("->",str)
+    if !(idx===nothing)
+        # Get reactant and product strings
+        reactant_str = strip(str[1:idx[1]-1])
+        product_str = strip(str[idx[2]+1:end])
+        
+        # Get Vector{Int64} with species IDs
+        input_rea_s = GetSpeciesFromString(reactant_str)
+        if (input_rea_s == c_io_error) return errcode end
+
+        input_pro_s = GetSpeciesFromString(product_str)
+        if (input_pro_s == c_io_error) return errcode end
+
+        # Get balance, reactant and involved species vectors
+        errcode = GetReactionSpeciesLists(input_rea_s, input_pro_s)
+        if (input_pro_s == c_io_error) return errcode end
+    end
+    return errcode
+end
+
+
+function GetSpeciesFromString(str)
+    # This function links the species found in the given string (str)
+    # to the species ids predefined in the code
+
+    s_list = Int64[]
+    next_species = true 
+    while next_species
+        idx = findfirst(" + ", str)
+        if (idx===nothing)
+            s_id = SelectSpeciesID(str)
+            if (s_id == 0)
+                print("***ERROR*** Reaction species ",str ," is not recognized\n")
+                return c_io_error
+            else 
+                push!(s_list, s_id)
+            end
+            next_species = false
+        else
+            s = strip(str[1:idx[1]-1])
+            str = strip(str[idx[2]+1:end])
+            s_id = SelectSpeciesID(s)
+            if (s_id == 0)
+                print("***ERROR*** Reaction species ",s ," is not recognized\n")
+                return c_io_error
+            else 
+                push!(s_list, s_id)
+            end
+        end
+    end
+    return s_list
+end
+
+
+function SelectSpeciesID(s)
+
+    s_id = 0
+    if (s == "Ar")
+        s_id = SharedData.s_Ar_id
+        global input_n_id = s_id
+    elseif (s == "Ar+")
+        s_id = SharedData.s_ArIon_id
+    elseif (s == "Ar*")
+        s_id = SharedData.s_ArExc_id
+    elseif (s == "e")
+        s_id = SharedData.s_electron_id
+    end
+    return s_id
+end
+
+
+function GetReactionSpeciesLists(reac::Vector{Int64}, prod::Vector{Int64})
+
     errcode = 0
+    try
+        involved_species = Int64[]
+        reactant_species = Int64[]
+
+        # Loop over species list and
+        #  - if not in involved_species -> push
+        #  - if already in, move on
+        # Loop for reactant species
+        for r in reac
+            already_in = false
+            i = 0
+            for is in involved_species
+                i += 1
+                if r == is
+                    already_in = true
+                    break
+                end
+            end
+            if !already_in
+                push!(involved_species, r)
+                push!(reactant_species, r)
+            end
+        end
+        
+        # Can add reactant species to global parameter
+        global input_rea_s = reactant_species 
+
+        # Loop for product species
+        for p in prod 
+            already_in = false
+            i = 0
+            for is in involved_species
+                i += 1
+                if p == is
+                    already_in = true
+                    break
+                end
+            end
+            if !already_in
+                push!(involved_species, p)
+            end
+        end
+
+        # Can add involved species to global parameter
+        global input_inv_s = involved_species
+
+        # Get species balance between reactants and products
+        n_species = length(involved_species)
+        balance_list = zeros(Int64, n_species) 
+        for i in 1:n_species
+            s = involved_species[i]
+            for r in reac
+                if s==r
+                    balance_list[i] -= 1
+                end
+            end
+
+            for p in prod
+                if s==p
+                    balance_list[i] += 1
+                end
+            end
+        end
+
+        # Add balance list to global parameter
+        global input_bal_s = balance_list 
+    catch
+        print("***ERROR*** While setting up reaction species lists\n")
+        errcode = c_io_error
+    end
+    return errcode
+end
+
+
+function ParseEThreshold(str)
+
+    # Must provide: E_threshold
+    errcode = 0
+
+    try
+        units_fact = 1
+        if (occursin("J", str))
+            idx = findfirst("J", str)
+            idx = idx[1]-1
+            str = string(str[1:idx])
+        elseif (occursin("eV", str))
+            units_fact = e
+            idx = findfirst("eV", str)
+            idx = idx[1]-1
+            str = string(str[1:idx])
+        end
+        global input_e_threshold = parse(Float64, str) * units_fact
+    catch
+        print("***ERROR*** While parsing E threshold\n")
+        errcode = c_io_error
+    end
+        
+    return errcode
+end
+
+
+function ParseRateCoefficient(str)
+
+    # Must provide: rate_coefficient
+    errcode = 0
+
+    try
+        expr = Meta.parse(str)
+        function K_funct(temp::Vector{Float64})
+            Te = temp[SharedData.s_electron_id]
+            Te_eV = Te * SharedData.K_to_eV
+            K = eval(expr)
+        end
+        global input_rate_coeff = K_funct
+    catch
+        errcode = c_io_error
+        print("***ERROR*** While parsing the rate coefficient")
+    end
+
+    return errcode
+end
+
+
+function ParseDescription(str)
+
+    # Must provide: id
+    errcode = c_io_error
+
+    str = lowercase(str)
+
+    if (read_step == 1)
+        if (str == "elastic")
+            global input_r_id = SharedData.r_elastic_id 
+            errcode = 0
+        elseif (str == "excitation")
+            global input_r_id = SharedData.r_exictat_id
+            errcode = 0
+        elseif (str == "ionization" || str == "ionisation")
+            global input_r_id = SharedData.r_ionizat_id
+            errcode = 0
+        elseif (str == "recombination")
+            global input_r_id = SharedData.r_recombi_id
+            errcode = 0
+        elseif (str == "charge exchange" || str == "charge-exchange" ||
+            str == "cx" || str == "charge_exchange")
+            global input_r_id = SharedData.r_cx_id
+            errcode = 0
+        end
+    else
+        errcode = 0
+    end
     return errcode
 end
 
