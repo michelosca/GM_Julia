@@ -1,6 +1,40 @@
-begin:blockname
- # some general description
- name1 = var1
- name2 = var2  # come afterline commets
- name3 = var3
-end:blockname
+begin:system
+  A = 1                  # m^3
+  vol = 1                # m^2
+  L = 2                  # m
+  f = 13.56e6            # Hz
+  P = 1000               # W
+  v = 100                # V
+  power_input_method = ccp
+end:system
+
+begin:species
+  name = e
+  charge = -1
+  mass = me 
+  solve_dens = true
+  solve_temp = true
+end:species
+
+begin:species
+  name = Ar
+  charge = 0
+  mass = 4mp
+  solve_dens = true
+  solve_temp = false
+end:species
+
+begin:species
+  name = Ar+
+  charge = 1
+  mass = 4*mp
+  solve_dens = true
+  solve_temp = false
+end:species
+
+begin:reactions
+  e + Ar -> e + Ar;          0; 2.336e-14 * Te_eV^1.609 * exp(0.0618 * (log(Te_eV))^2 - 0.1171*(log(Te_eV))^3)
+  e + Ar -> e + e + Ar+; 15.76 eV; 2.34e-14 * Te_eV^0.59 * exp(-17.44/Te_eV)
+  e + Ar+ -> Ar;             0; 5e-39 * Te_eV^4.5;
+  Ar + Ar+ -> Ar + Ar+;      0; 1.e-18 * sqrt(8*e*Te_eV/pi/Ar.mass)
+end:reactions

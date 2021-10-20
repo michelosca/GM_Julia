@@ -1,67 +1,118 @@
 module ReadInput
 
-include("SharedData.jl")
-using .SharedData
+using SharedData: me, mp, kb, e
+using SharedData: r_elastic_id, r_ionizat_id, r_recombi_id
+using SharedData: Reaction, Species
+using SharedData: SetupSystemParameters
+using SharedData: AddSpeciesToList, AddReactionToList
+using SharedData: SetSpeciesID
+using SharedData: s_electron_id, s_Ar_id, s_ArIon_id
 
-export GetInputData
-export InitializeData
+using PowerInput: PowerInputFunction
 
 # Constants
-const c_io_block_end = 0
-const c_io_block_start = 1
-const c_io_entry = 2
-const c_io_emptyline = 3
+const c_io_block_end = 0::Int64
+const c_io_block_start = 1::Int64
+const c_io_entry = 2::Int64
+const c_io_emptyline = 3::Int64
 
-function InitializeData()
+function SetupInputData()
 
-    # Define species ids
-    #c_electron_id = 1
-    ar_ion_id = 3
+    errcode = GetInputData("input.deck")
+    if (errcode != 0)
+        print("***ERROR***\nFailed to read the input deck. Abort code.")
+        return errcode 
+    end
+    SetupSystemParameters()
 
-    # Define reaction ids
-    r_ela_id = 1
-    r_ion_id = 2
-    r_rec_id = 3
+   # # Load species: ELECTRONS
+   # id = 1
+   # SetSpeciesID("e", id)
+   # n_id = s_electron_id
+   # mass = me
+   # charge = -e
+   # neq_flag = true
+   # Teq_flag = true
+   # wl_flag = true
+   # P_flag = true
+   # relastic_id = 1 
+   # AddSpeciesToList(id, mass, charge, neq_flag, Teq_flag, wl_flag, P_flag,
+   #     n_id, relastic_id)
 
+   # # Load species: ARGON neutral 
+   # id += 1
+   # SetSpeciesID("Ar", id)
+   # n_id = s_Ar_id
+   # mass = 4 * mp
+   # charge = 0.0
+   # neq_flag = true
+   # Teq_flag = false
+   # wl_flag = false
+   # P_flag = false
+   # relastic_id = 0
+   # AddSpeciesToList(id, mass, charge, neq_flag, Teq_flag, wl_flag, P_flag,
+   #     n_id, relastic_id)
+
+   # # Load species: ARGON ions 
+   # id += 1
+   # SetSpeciesID("Ar+", id)
+   # n_id = s_Ar_id
+   # mass = 4 * mp
+   # charge = e 
+   # neq_flag = true
+   # Teq_flag = false 
+   # wl_flag = true 
+   # P_flag = false
+   # relastic_id = 2
+   # AddSpeciesToList(id, mass, charge, neq_flag, Teq_flag, wl_flag,
+   #     P_flag, n_id, relastic_id)
+
+    ###########################################################################
     # Define electron-argon elastic scattering
-    f_r1(temp::Vector{Float64}) = 2.336e-14 * temp[c_electron_id]^1.609
-    Er1(temp::Vector{Float64}) = 3 * me / mg * kb * (temp[c_electron_id] - temp[c_neutral_id])
-    r1 = Reaction(r_ela_id, [c_electron_id,c_neutral_id],[c_electron_id, c_neutral_id],[0,0], f_r1, Er1)
+    invol_s = [s_electron_id, s_Ar_id]
+    balan_s = [0,0]
+    react_s = [s_electron_id, s_Ar_id]
+    K_r1(temp::Vector{Float64}) = 2.336e-14 * temp[s_electron_id]^1.609
+    E = 0.0
+    neutral_id = s_Ar_id
+    AddReactionToList(r_elastic_id, invol_s, react_s, balan_s, K_r1, E, neutral_id)
 
     # Define e-impact ionization: e + Ar -> e + e + Ar+
-    f_r3(temp::Vector{Float64}) = 2.34e-14 * temp[c_electron_id]^0.59 * exp(-17.44/temp[c_electron_id])
-    Er3(temp::Vector{Float64}) =  15.76 * e
-    r3 = Reaction(r_ion_id, [c_electron_id,c_neutral_id,ar_ion_id],[c_electron_id, c_neutral_id], [1,-1,1], f_r3, Er3)
+    invol_s = [s_electron_id, s_Ar_id, s_ArIon_id]
+    balan_s = [1,-1,1]
+    react_s = [s_electron_id, s_Ar_id]
+    K_r3(temp::Vector{Float64}) = 2.34e-14 * temp[s_electron_id]^0.59 *
+        exp(-17.44/temp[s_electron_id])
+    E = 15.76 * e
+    neutral_id = s_Ar_id
+    AddReactionToList(r_ionizat_id, invol_s, react_s, balan_s, K_r3, E, neutral_id)
     
     # Define Ar recombination: e + Ar+ -> Ar
-    f_r4(temp::Vector{Float64}) =  5e-39 * temp[c_electron_id]^4.5
-    Er4(temp::Vector{Float64}) =  0
-    r4 = Reaction(r_rec_id, [c_electron_id,ar_ion_id, c_neutral_id], [c_electron_id, ar_ion_id], [-1,-1,1], f_r4, Er4)
-
-    # Load species
-    f_zero(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    fwl_n_e(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    fwl_T_e(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    fpi_n_e(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    fwl_n_i(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    fwl_T_i(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    fpi_n_i(dens::Vector{Float64} ,temp::Vector{Float64}) = 0
-    #                   species_id   , n_eq,  T_eq,  wl_n  , fwl_n  , wl_T  , fwl_T  , pi_n ,  fpi_n
-    electrons = Species(c_electron_id, true,  true , false , fwl_n_e, false , fwl_T_e, false,  fpi_n_e)
-    argon =     Species(c_neutral_id , true,  false, false , f_zero , false , f_zero , false,  f_zero)
-    argon_io =  Species(ar_ion_id    , true,  false, true  , fwl_n_i, true  , fwl_T_i, false,  f_zero)
-
-    species_list = [ electrons, argon, argon_io ]
-    reaction_list = [r1,r3,r4]
-
-    return species_list, reaction_list
-
+    invol_s = [s_electron_id, s_ArIon_id, s_Ar_id]
+    balan_s = [-1,-1,1]
+    react_s = [s_electron_id, s_ArIon_id]
+    K_r4(temp::Vector{Float64}) =  5e-39 * temp[s_electron_id]^4.5
+    E = 0.0
+    neutral_id = s_Ar_id
+    AddReactionToList(r_recombi_id, invol_s, react_s, balan_s, K_r4, E, neutral_id)
+    return 0
 end
 
+global block_id = 0
+global b_system = 1
+global b_species = 2
+global b_reactions = 3
+
+###############################################################################
+# START BLOCKS
 function GetInputData(filename)
 
     # Opens the file given in filename and reads each line
     try
+        # First read
+        print("First reading of the input deck...\n")
+        global read_step = 1 
+        global input_id = 0
         open(filename,"r") do f
             line = 0
             while ! eof(f)
@@ -71,10 +122,26 @@ function GetInputData(filename)
                 line += 1
             end
         end
-        return 1
-    catch
-        print("Input deck does not exist!\n")
+        print("End of input deck reading\n\n")
+
+        # Second read
+        print("Second reading of the input deck...\n")
+        global read_step = 2 
+        global input_id = 0
+        open(filename,"r") do f
+            line = 0
+            while ! eof(f)
+                s = readline(f)
+                # ReadLine identifies each line on filename
+                read_flag = ReadLine(s)
+                line += 1
+            end
+        end
+        print("End of input deck reading\n\n")
         return 0
+    catch
+        print("***ERROR***\nFailed reading the input.deck\n")
+        return 1
     end
 
 end
@@ -94,10 +161,18 @@ function ReadLine(string)
         i_block = i_block[1]
         block_name = string[i_block+1:end]
         if (occursin("begin", string))
-            print(block_name, " ",c_io_block_start,"\n")
+            errcode = StartBlock(block_name)
+            if (errcode != 0)
+                print("***WARNING***\nSomething went wrong starting the ",
+                    block_name, " block\n")
+            end
             return c_io_block_start
         elseif (occursin("end", string))
-            print(block_name, " ", c_io_block_end,"\n")
+            errcode = EndBlock(block_name)
+            if (errcode != 0)
+                print("***WARNING***\nSomething went wrong ending the ",
+                    block_name, " block\n")
+            end
             return c_io_block_end
         end
     else
@@ -105,19 +180,184 @@ function ReadLine(string)
         i_eq = findfirst("=", string)
         if !(i_eq === nothing)
             i_eq = i_eq[1]
-            name = string[begin:i_eq-1]
-            var = string[i_eq+1:end]
-            print("Name: ", name, "\n")
-            print(" Var: ", var , "\n\n")
+            name = strip(string[begin:i_eq-1])
+            var = strip(string[i_eq+1:end])
+            #print("Name: ", name, "  ")
+            #print(" Var: ", var , "\n\n")
+            ReadInputDeckEntry(name, var, block_id)
             return c_io_entry
         end
     end
     return c_io_emptyline
-
 end
 
-#function ParseFunction(string)
-#    expr = Meta.parse(string)
-#    funct = @eval (param_list) -> $expr
-#end
+###############################################################################
+# BLOCK START/END
+function StartBlock(name)
+
+    errcode = 0
+    if (occursin("system",name))
+        global block_id = b_system
+        errcode = StartSystemBlock()
+    elseif (occursin("species",name))
+        global block_id = b_species
+        errcode = StartSpeciesBlock()
+    elseif (occursin("reactions",name))
+        global block_id = b_reactions
+        errcode = StartReactionsBlock()
+    end
+    return errcode
+end
+
+function EndBlock(name)
+
+    errcode = 0
+    global block_id = 0
+    if (occursin("system",name))
+        errcode = EndSystemBlock()
+    elseif (occursin("species",name))
+        errcode = EndSpeciesBlock()
+    elseif (occursin("reactions",name))
+        errcode = EndReactionsBlock()
+    end
+    return errcode
+end
+#
+###############################################################################
+###############################################################################
+# START BLOCKS
+function StartSystemBlock()
+    return 0
+end
+
+
+function StartSpeciesBlock()
+
+    global input_id += 1
+    if (read_step == 2)
+        global input_n_id = 0
+        global input_relastic_id = 0 
+        global input_mass = 0.0
+        global input_charge = 0.0
+        global input_neq_flag = false 
+        global input_Teq_flag = false 
+        global input_wl_flag = false
+        global input_P_flag = false
+    end
+    return 0
+end
+
+function StartReactionsBlock()
+    return 0
+end
+#
+###############################################################################
+###############################################################################
+# END BLOCKS
+function EndSystemBlock()
+    return 0
+end
+
+function EndSpeciesBlock()
+
+    if (read_step == 1)
+        return 0
+    elseif (read_step == 1)
+        if (input_charge != 0)
+            if (input_Teq_flag)
+                global input_P_flag = true
+            end
+            global input_wl_flag = true
+        end
+
+        AddSpeciesToList(input_id, input_mass, input_charge, input_neq_flag,
+            input_Teq_flag, input_wl_flag, input_P_flag, input_n_id, input_relastic_id)
+        return 0
+    end
+end
+
+function EndReactionsBlock()
+    return 0
+end
+#
+###############################################################################
+###############################################################################
+# READ INPUT ENTRIES 
+function ReadInputDeckEntry(name, var, block_id)
+
+    errcode = 0
+    
+    if (block_id == b_system)
+        errcode = ReadSystemEntry(name, var)
+    elseif (block_id == b_species)
+        errcode = ReadSpeciesEntry(name, var)
+    elseif (block_id == b_reactions)
+        errcode = ReadReactionsEntry(name, var)
+    end
+
+    if (errcode == 1)
+        print("***WARNING***\nEntry in System block has not beeb identified\n")
+        print("Entry ", string(name,"=",var) ," does not belong to any block\n")
+    end
+   
+end
+
+function ReadSystemEntry(name, var)
+    units_index = findlast("_", var)
+    units_index = units_index[1]
+    units = var[units_index+1:end]
+    var = var[1:units_index-1]
+    
+    errcode = SharedData.SetSystemParameters(name, var, unis)
+    return errcode 
+end
+
+function ReadSpeciesEntry(name, var)
+
+    if (name=="name")
+        if (read_step == 1)
+            errcode = SetSpeciesID(var, input_id)
+        else 
+            if (var=="e" || var=="electrons" || var=="electron")
+                global input_n_id = s_electron_id
+            elseif (occursin("Ar",var))
+                global input_n_id = s_Ar_id
+            else
+                print("***WARNING***\n")
+                print("Neutral species id has not been found. Make sure you\n",
+                    "define first electron and neutral species.")
+            end
+        end
+        return 0
+    end
+
+    if (read_step == 2)
+        if (name=="charge")
+            global input_charge = parse(Int64,var) * e
+            return 0
+        end
+
+        if (name=="mass")
+            expr = Meta.parse(var)
+            global input_mass = eval(expr)
+            return 0
+        end
+
+        if (name=="solve_dens")
+            global input_neq_flag = parse(Bool, var) 
+            return 0
+        end
+
+        if (name=="solve_temp")
+            global input_Teq_flag = parse(Bool, var)
+            return 0
+        end
+    end
+    return 1
+end
+
+function ReadReactionsEntry(name, var)
+    return 0 
+end
+
 end
