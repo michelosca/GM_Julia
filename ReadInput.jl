@@ -1,7 +1,6 @@
 module ReadInput
 
 using SharedData
-using SharedData: SetSystemParameters
 using SharedData: me, mp, kb, e
 using SharedData: Reaction, Species
 using SharedData: AddSpeciesToList, AddReactionToList
@@ -302,7 +301,7 @@ function ReadSystemEntry(name, var)
             end
         end
         
-        errcode = SetSystemParameters(name, var, units_fact)
+        errcode = SharedData.SetSystemParameters(name, var, units_fact)
     else
         errcode = 0
     end
@@ -645,31 +644,69 @@ function SetRateCoefficientFunction(expr)
     symbol_list = AssessExpression(expr, symbol_list)
     symbol_list = AssessSymbols(symbol_list)
 
-    if length(symbol_list) > 1
-        print("***ERROR*** Rate coefficient can only have one free parameter\n")
-        print("The symbols: ", symbol_list,"\n")
-        errcode = c_io_error
-    else
-        symbol = symbol_list[1]
-        if symbol == :Te
-            function K_funct_Te(temp::Vector{Float64})
-                Te = temp[SharedData.s_electron_id]
-                K = eval(expr)
-                return K
-            end
-            global input_rate_coeff = K_funct_Te
-        elseif symbol == :Te_eV
-            function K_funct_Te_eV(temp::Vector{Float64})
-                Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
-                K = eval(expr)
-                return K
-            end
-            global input_rate_coeff = K_funct_Te_eV
-        else
-            print("***ERROR*** The free parameter ",symbol, " is not recognized\n")
-            errcode = c_io_error
-        end
+    # Identify the Symbols involved
+    is_Te_symbol = false
+    is_Te_eV_symbol = false
+    is_m_Ar_symbol = false
+    find_Te = findall(x-> x==:Te, symbol_list)
+    if length(find_Te) == 0
+        is_Te_symbol = true
     end
+
+    find_Te_eV = findall(x-> x==:Te_eV, symbol_list)
+    if length(find_Te_eV) == 0
+        is_Te_eV_symbol = true
+    end
+
+    find_m_Ar = findall(x-> x==:m_Ar, symbol_list)
+    if length(find_m_Ar) == 0
+        is_m_Ar_symbol = true
+    end
+
+    # Define the rate coefficient function
+    if is_m_Ar_symbol && is_Te_symbol 
+        function K_funct_Te_mAr(temp::Vector{Float64})
+            Te = temp[SharedData.s_electron_id]
+            m_Ar = 4*mp
+            K = eval(expr)
+            return K
+        end
+        global input_rate_coeff = K_funct_Te_mAr
+    elseif is_m_Ar_symbol && is_Te_eV_symbol
+        function K_funct_Te_eV_mAr(temp::Vector{Float64})
+            Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
+            m_Ar = 4*mp
+            K = eval(expr)
+            return K
+        end
+        global input_rate_coeff = K_funct_Te_eV_mAr
+    elseif is_Te_symbol && is_Te_eV_symbol
+        function K_funct_Te_eV_Te(temp::Vector{Float64})
+            Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
+            Te = temp[SharedData.s_electron_id]
+            K = eval(expr)
+            return K
+        end
+        global input_rate_coeff = K_funct_Te_eV_Te
+    elseif is_Te_symbol
+        function K_funct_Te(temp::Vector{Float64})
+            Te = temp[SharedData.s_electron_id]
+            K = eval(expr)
+            return K
+        end
+        global input_rate_coeff = K_funct_Te
+    elseif is_Te_eV_symbol
+        function K_funct_Te_eV(temp::Vector{Float64})
+            Te = temp[SharedData.s_electron_id] * SharedData.K_to_eV
+            K = eval(expr)
+            return K
+        end
+        global input_rate_coeff = K_funct_Te_eV
+    else
+        print("***ERROR*** The free parameter ",symbol, " is not recognized\n")
+        errcode = c_io_error
+    end
+
     return errcode
 end
 
@@ -706,6 +743,8 @@ function AssessSymbols(symbol_list)
         if s == :Te
             push!(new_symbol_list, s)
         elseif s == :Te_eV
+            push!(new_symbol_list, s)
+        elseif s == :m_Ar
             push!(new_symbol_list, s)
         end
     end
