@@ -199,6 +199,8 @@ function StartSpeciesBlock()
         global input_Teq_flag = false
         global input_wl_flag = false
         global input_P_flag = false
+        global input_dens0 = 0.0
+        global input_temp0 = 0.0
     end
     return errcode
 end
@@ -248,7 +250,8 @@ function EndSpeciesBlock()
 
         errcode = SharedData.AddSpeciesToList(input_id, input_mass,
             input_charge, input_neq_flag, input_Teq_flag, input_wl_flag,
-            input_P_flag, input_n_id, input_elastic_id)
+            input_P_flag, input_n_id, input_elastic_id, input_dens0, 
+            input_temp0)
     end
     return errcode 
 end
@@ -276,8 +279,8 @@ function ReadInputDeckEntry(name, var, block_id)
     return errcode
 end
 
-###############
-### SYTEM BLOCK
+########################
+### SYSTEM BLOCK ENTRIES
 function ReadSystemEntry(name, var)
 
     errcode = 1
@@ -309,8 +312,8 @@ function ReadSystemEntry(name, var)
     return errcode 
 end
 
-##################
-### SPECIES BLOCK 
+#########################
+### SPECIES BLOCK ENTRIES 
 function ReadSpeciesEntry(name, var)
 
     errcode = c_io_error 
@@ -367,11 +370,30 @@ function ReadSpeciesEntry(name, var)
         end
         errcode = 0
     end
+
+    if (name=="T" || name=="T_eV")
+        if (read_step == 2)
+            if (name=="T_eV")
+                units = 1.0/SharedData.K_to_eV
+            else
+                units = 1.0
+            end
+            global input_temp0 = parse(Float64, var)*units
+        end
+        errcode = 0
+    end
+
+    if (name=="density" || name=="dens")
+        if (read_step == 2)
+            global input_dens0 = parse(Float64, var)
+        end
+        errcode = 0
+    end
     return errcode 
 end
 
-#################
-### REACTION BLOCK
+##########################
+### REACTION BLOCK ENTRIES
 function ReadReactionsEntry(name, var)
     # Splits the input line contained in var into four parts
     # The fourth part is actually not necessary, but it is 
@@ -618,7 +640,7 @@ function ParseEThreshold(str)
             idx = idx[1]-1
             str = string(str[1:idx])
         end
-        global input_e_threshold = parse(Float64, str) * units_fact
+        global input_E = parse(Float64, str) * units_fact
     catch
         print("***ERROR*** While parsing E threshold\n")
         errcode = c_io_error

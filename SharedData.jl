@@ -22,6 +22,10 @@ struct Species
 
     # Input power mechanism
     has_heating_mechanism::Bool
+
+    # Initial conditions
+    dens0::Float64
+    temp0::Float64
 end
 
 struct Reaction
@@ -151,13 +155,13 @@ end
 
 function AddSpeciesToList(id::Int64, mass::Float64, charge::Float64,
     neq_flag::Bool, Teq_flag::Bool, wl_flag::Bool, P_flag::Bool,
-    n_id::Int64, r_ela_id::Int64)
+    n_id::Int64, r_ela_id::Int64, dens0::Float64, temp0::Float64)
     
     errcode = 0
     try
         # Add react to reaction_list
         species = Species(id, n_id, r_ela_id, mass, charge, neq_flag,
-            Teq_flag, wl_flag, P_flag) 
+            Teq_flag, wl_flag, P_flag, dens0, temp0) 
         push!(species_list, species)
     catch
         print("***ERROR*** While attaching species\n")

@@ -6,9 +6,9 @@ using Printf
 function PrintSpeciesList()
 
     @printf("Loaded species\n")
-    @printf("%15s %15s %15s %15s %15s %15s %15s %15s %15s\n","Name",
+    @printf("%15s %15s %15s %15s %15s %10s %10s %10s %10s %15s %15s\n","Name",
         "Species", "Elastic ID", "Mass [kg]", "Charge [C]","has n-eq",
-        "has T-eq", "has WL", "has P-input")
+        "has T-eq", "has WL", "has P-input","Dens0 [m^-3]","Temp0 [eV]")
     for s in SharedData.species_list
 
         # s.id -> species name
@@ -59,9 +59,10 @@ function PrintSpeciesList()
             has_heating = "No"
         end
 
-        @printf("%15s %15s %15i %15.5e %15.5e %15s %15s %15s %15s\n",
+        @printf("%15s %15s %15i %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
             s_name, sn_name, s.r_elastic_id, s.mass, s.charge, 
-            has_dens_eq, has_temp_eq, has_wall_loss, has_heating)
+            has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
+            s.dens0, s.temp0*SharedData.K_to_eV)
     end
 end
 
@@ -70,9 +71,10 @@ end
 function PrintReactionList()
 
     @printf("Loaded reactions\n")
-    @printf("%15s %30s %15s %15s %15s %15s %15s %15s\n","Name", "Reaction", "E-threshold [eV]",
-        "Neutral species","Involved species", "Species balance", "Reactant species ID",
-        "Rate coefficient")
+    @printf("%15s %30s %15s %8s %10s %10s %10s %10s\n",
+        "Name", "Reaction", "E-threshold [eV]",
+        "Neutral","Involved sp.", "Sp. balance", "Reactant sp.",
+        "Rate coeff.")
     for r in SharedData.reaction_list
 
         # r.id -> reaction name
@@ -141,7 +143,7 @@ function PrintReactionList()
             r_neutral = "Not found!"
         end
 
-        @printf("%15s %30s %15.2f %15s %15s %15s %15s %s\n", r_name, reaction_str,
+        @printf("%15s %30s %15.2f %8s %10s %10s %10s %s\n", r_name, reaction_str,
             E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species,
             r.rate_coefficient)
     end
