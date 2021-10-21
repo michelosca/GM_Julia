@@ -36,7 +36,7 @@ struct Reaction
     #product_species::Vector{Int}
 
     # Rate coefficient function
-    rate_coefficient::Function
+    rate_coefficient::Expr
 
     # Energy threshold
     E_threshold::Float64
@@ -109,7 +109,7 @@ function SetSystemParameters(name, var, unit)
             errcode = 0
         elseif (lvar == "icp")
             p_id = p_icp_id
-            errcode = 0
+            errcode = 05.0e-39 * Te_eV ^ 4.5
         else
             p_id = 0
             errcode = 1 
@@ -133,7 +133,7 @@ global species_list = Species[]
 global reaction_list = Reaction[]
 
 function AddReactionToList(id::Int64, invol_s::Vector{Int64},
-    react_s::Vector{Int64}, balan_s::Vector{Int64}, K::Function, E::Float64,
+    react_s::Vector{Int64}, balan_s::Vector{Int64}, K::Expr, E::Float64,
     n_id::Int64)
 
     errcode = 0

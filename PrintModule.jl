@@ -70,8 +70,9 @@ end
 function PrintReactionList()
 
     @printf("Loaded reactions\n")
-    @printf("%15s %30s %15s %15s %15s %15s %15s\n","Name", "Reaction", "E-threshold [eV]",
-        "Neutral species","Involved species", "Species balance", "Reactant species ID")
+    @printf("%15s %30s %15s %15s %15s %15s %15s %15s\n","Name", "Reaction", "E-threshold [eV]",
+        "Neutral species","Involved species", "Species balance", "Reactant species ID",
+        "Rate coefficient")
     for r in SharedData.reaction_list
 
         # r.id -> reaction name
@@ -140,8 +141,9 @@ function PrintReactionList()
             r_neutral = "Not found!"
         end
 
-        @printf("%15s %30s %15.2f %15s %15s %15s %15s\n", r_name, reaction_str,
-            E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species)
+        @printf("%15s %30s %15.2f %15s %15s %15s %15s %s\n", r_name, reaction_str,
+            E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species,
+            r.rate_coefficient)
     end
 end
 

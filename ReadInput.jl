@@ -1,6 +1,7 @@
 module ReadInput
 
 using SharedData
+using GenerateODEs
 using SharedData: me, mp, kb, e
 using SharedData: Reaction, Species
 using SharedData: AddSpeciesToList, AddReactionToList
@@ -190,12 +191,12 @@ function StartSpeciesBlock()
     errcode = 0
     global input_id += 1
     if (read_step == 2)
-        global input_n_id = 0
-        global input_relastic_id = 0 
+        global input_n_id= 0 
+        global input_elastic_id= 0
         global input_mass = 0.0
         global input_charge = 0.0
-        global input_neq_flag = false 
-        global input_Teq_flag = false 
+        global input_neq_flag = false
+        global input_Teq_flag = false
         global input_wl_flag = false
         global input_P_flag = false
     end
@@ -210,7 +211,7 @@ function StartReactionsBlock()
         global input_inv_s = Int64[]
         global input_bal_s = Int64[]
         global input_rea_s = Int64[]
-        global input_rate_coeff = Function 
+        global input_rate_coeff = Expr 
         global input_E = 0.0
         if (SharedData.s_electron_id != 0)
             errcode = 0
@@ -247,7 +248,7 @@ function EndSpeciesBlock()
 
         errcode = SharedData.AddSpeciesToList(input_id, input_mass,
             input_charge, input_neq_flag, input_Teq_flag, input_wl_flag,
-            input_P_flag, input_n_id, input_relastic_id)
+            input_P_flag, input_n_id, input_elastic_id)
     end
     return errcode 
 end
@@ -356,6 +357,13 @@ function ReadSpeciesEntry(name, var)
     if (name=="solve_temp")
         if (read_step == 2)
             global input_Teq_flag = parse(Bool, var)
+        end
+        errcode = 0
+    end
+
+    if (name=="dominant_reaction")
+        if (read_step == 2)
+            global input_elastic_id = parse(Int64, var)
         end
         errcode = 0
     end
@@ -627,7 +635,7 @@ function ParseRateCoefficient(str)
 
     try
         expr = Meta.parse(str)
-        errcode = SetRateCoefficientFunction(expr)
+        errcode = SetRateCoefficientExpr(expr)
     catch
         errcode = c_io_error
         print("***ERROR*** While parsing the rate coefficient\n")
@@ -636,7 +644,7 @@ function ParseRateCoefficient(str)
     return errcode
 end
 
-function SetRateCoefficientFunction(expr)
+function SetRateCoefficientExpr(expr)
 
     errcode = 0
 
@@ -645,68 +653,26 @@ function SetRateCoefficientFunction(expr)
     AssessSymbols!(symbol_list)
 
     # Identify the Symbols involved
-    is_Te_symbol = false
-    is_Te_eV_symbol = false
-    is_m_Ar_symbol = false
+    symbol_found = false
     find_Te = findall(x-> x==:Te, symbol_list)
-    if length(find_Te) == 0
-        is_Te_symbol = true
+    if length(find_Te) > 0
+        errcode = GenerateODEs.SetSymbolFlag(1)
+        if (errcode==1) return errcode end
     end
 
     find_Te_eV = findall(x-> x==:Te_eV, symbol_list)
-    if length(find_Te_eV) == 0
-        is_Te_eV_symbol = true
+    if length(find_Te_eV) > 0
+        errcode = GenerateODEs.SetSymbolFlag(2)
+        if (errcode==1) return errcode end
     end
 
     find_m_Ar = findall(x-> x==:m_Ar, symbol_list)
-    if length(find_m_Ar) == 0
-        is_m_Ar_symbol = true
+    if length(find_m_Ar) > 0
+        errcode = GenerateODEs.SetSymbolFlag(3)
+        if (errcode==1) return errcode end
     end
 
-    # Define the rate coefficient function
-    if is_m_Ar_symbol && is_Te_symbol 
-        function K_funct_Te_mAr(temp::Vector{Float64})
-            Te = temp[SharedData.s_electron_id]
-            m_Ar = 4*mp
-            K = eval(expr)
-            return K
-        end
-        global input_rate_coeff = K_funct_Te_mAr
-    elseif is_m_Ar_symbol && is_Te_eV_symbol
-        function K_funct_Te_eV_mAr(temp::Vector{Float64})
-            Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
-            m_Ar = 4*mp
-            K = eval(expr)
-            return K
-        end
-        global input_rate_coeff = K_funct_Te_eV_mAr
-    elseif is_Te_symbol && is_Te_eV_symbol
-        function K_funct_Te_eV_Te(temp::Vector{Float64})
-            Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
-            Te = temp[SharedData.s_electron_id]
-            K = eval(expr)
-            return K
-        end
-        global input_rate_coeff = K_funct_Te_eV_Te
-    elseif is_Te_symbol
-        function K_funct_Te(temp::Vector{Float64})
-            Te = temp[SharedData.s_electron_id]
-            K = eval(expr)
-            return K
-        end
-        global input_rate_coeff = K_funct_Te
-    elseif is_Te_eV_symbol
-        function K_funct_Te_eV(temp::Vector{Float64})
-            Te = temp[SharedData.s_electron_id] * SharedData.K_to_eV
-            K = eval(expr)
-            return K
-        end
-        global input_rate_coeff = K_funct_Te_eV
-    else
-        print("***ERROR*** The free parameter ",symbol, " is not recognized\n")
-        errcode = c_io_error
-    end
-
+    global input_rate_coeff = expr
     return errcode
 end
 
