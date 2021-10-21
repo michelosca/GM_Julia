@@ -641,8 +641,8 @@ function SetRateCoefficientFunction(expr)
     errcode = 0
 
     symbol_list = Symbol[]
-    symbol_list = AssessExpression(expr, symbol_list)
-    symbol_list = AssessSymbols(symbol_list)
+    AssessExpression!(symbol_list, expr)
+    AssessSymbols!(symbol_list)
 
     # Identify the Symbols involved
     is_Te_symbol = false
@@ -711,7 +711,7 @@ function SetRateCoefficientFunction(expr)
 end
 
 
-function AssessExpression(expr, symbol_list)
+function AssessExpression!(symbol_list, expr)
     # Identifies all the symbols in the given expression
 
     for e in expr.args
@@ -729,14 +729,13 @@ function AssessExpression(expr, symbol_list)
                 push!(symbol_list, e)
             end
         elseif typeof(e) == Expr
-            symbol_list = AssessExpression(e, symbol_list)
+            AssessExpression!(symbol_list, e)
         end
     end
-    return symbol_list
 end
 
 
-function AssessSymbols(symbol_list)
+function AssessSymbols!(symbol_list)
 
     new_symbol_list = Symbol[]
     for s in symbol_list
@@ -748,7 +747,7 @@ function AssessSymbols(symbol_list)
             push!(new_symbol_list, s)
         end
     end
-    return new_symbol_list
+    symbol_list = new_symbol_list
 end
 
 
