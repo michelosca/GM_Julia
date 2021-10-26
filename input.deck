@@ -4,7 +4,7 @@ begin:system
   L = 2                  # m
   f = 13.56e6            # Hz
   P = 1000               # W
-  V = 100                # V
+  Voltage = 100                # V
   power_input_method = ccp
 end:system
 
@@ -22,7 +22,7 @@ end:species
 begin:species
   name = Ar
   charge = 0
-  mass = 4mp
+  mass = 4amu
   solve_dens = true
   solve_temp = false
   T = 300
@@ -32,7 +32,7 @@ end:species
 begin:species
   name = Ar+
   charge = 1
-  mass = 4*mp
+  mass = 4*amu
   solve_dens = true
   solve_temp = false
   dominant_reaction = 4 

@@ -1,24 +1,15 @@
 module GenerateODEs
 
-using SharedData
-using SharedData: A, V, l, drivOmega, drivI
+using SharedData: System, Species, Reaction
 using SharedData: kb, e, eps0
-using SharedData: s_electron_id
-using SharedData: Species
-using SharedData: species_list, reaction_list
+using SharedData: p_ccp_id 
+using InputBlock_Species: s_electron_id
+using InputBlock_Reactions: r_elastic_id
 using PowerInput: PowerInputFunction
 
-# Symbol flags
-global Te_symbol = false
-global Te_eV_symbol = false
-global m_Ar_symbol = false
-
-# Symbols
-global Te_eV = 0.0
-global Te = 0.0
-global m_Ar = 0.0
-
-function GenerateDensRateFunction(s::Species)
+function GenerateDensRateFunction(s::Species, species_list::Vector{Species},
+    reaction_list::Vector{Reaction},
+    system::System)
 
     # This function generates the function terms required in the density ODE function
     # This is for a sigle species s
@@ -43,14 +34,15 @@ function GenerateDensRateFunction(s::Species)
                     push!(sdens_funct_list, (dens::Vector{Float64},
                         temp::Vector{Float64}) ->
                         sign * prod(dens[r.reactant_species]) *
-                        eval(r.rate_coefficient))
+                        r.rate_coefficient(temp))
                 end
             end
         end
 
         if (s.has_wall_loss)
             push!(sdens_funct_list, (dens::Vector{Float64},
-                temp::Vector{Float64}) -> DensWallFluxFunction(dens, temp, s))
+                temp::Vector{Float64}) -> DensWallFluxFunction(dens, temp, s,
+                species_list, reaction_list, system))
         end
     else
         push!(sdens_funct_list, () -> 0)
@@ -59,14 +51,16 @@ function GenerateDensRateFunction(s::Species)
 end
 
 
-function GenerateDensRateFunctionList()
+function GenerateDensRateFunctionList(system::System,
+    species_list::Vector{Species}, reaction_list::Vector{Reaction})
     # Gathers the Density rate functions from GenerateDensRateFunction for 
     #each species in a list
     
     # Loop over all species
     dens_rate_funct_list = []
     for s in species_list
-        sdens_funct_list = GenerateDensRateFunction(s)
+        sdens_funct_list = GenerateDensRateFunction(s, species_list,
+            reaction_list, system)
         if (length(sdens_funct_list)>0)
             push!(dens_rate_funct_list, sdens_funct_list)
         end
@@ -75,7 +69,8 @@ function GenerateDensRateFunctionList()
 end
 
 
-function GenerateTempRateFunction(s::Species)
+function GenerateTempRateFunction(s::Species, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System)
 
     stemp_funct_list = Function[]
     if (s.has_temp_eq)
@@ -100,10 +95,10 @@ function GenerateTempRateFunction(s::Species)
                     push!(stemp_funct_list, (dens::Vector{Float64},
                         temp::Vector{Float64}) ->
                         sign * prod(dens[r.reactant_species]) *
-                        eval(r.rate_coefficient) * Q1(temp) / Q0(dens))
+                        r.rate_coefficient(temp) * Q1(temp) / Q0(dens))
                 else
                     # Add energy term due to elastic collisions
-                    if (r.id == SharedData.r_elastic_id)
+                    if (r.id == r_elastic_id)
                         # Find the neutral collision partner
                         neutral_id = r.neutral_species_id 
                         # Set the neutral species mass
@@ -113,7 +108,7 @@ function GenerateTempRateFunction(s::Species)
                         push!(stemp_funct_list, (dens::Vector{Float64},
                             temp::Vector{Float64}) -> Q2 *
                             prod(dens[r.reactant_species]) *
-                            eval(r.rate_coefficient) *
+                            r.rate_coefficient(temp) *
                             (temp[s_id] - temp[neutral_id]) / Q0(dens) )
                     end
 
@@ -125,20 +120,21 @@ function GenerateTempRateFunction(s::Species)
                     push!(stemp_funct_list, (dens::Vector{Float64},
                         temp::Vector{Float64}) -> - Er *
                         prod(dens[r.reactant_species]) *
-                        eval(r.rate_coefficient) / Q0(dens) )
+                        r.rate_coefficient(temp) / Q0(dens) )
                 end
             end
         end
 
         if (s.has_wall_loss)
             push!(stemp_funct_list, (dens::Vector{Float64},
-                temp::Vector{Float64}) -> TempWallFluxFunction(dens, temp, s) /
+                temp::Vector{Float64}) -> TempWallFluxFunction(dens, temp, s,
+                    species_list, reaction_list, system) /
                 Q0(dens))
         end
 
         if (s.has_heating_mechanism)
             push!(stemp_funct_list, (dens::Vector{Float64},
-                temp::Vector{Float64}) -> PowerInputFunction(dens, temp, s) /
+                temp::Vector{Float64}) -> PowerInputFunction(dens, temp, s, system) /
                 Q0(dens))
         end
     else
@@ -148,12 +144,14 @@ function GenerateTempRateFunction(s::Species)
 end
 
 
-function GenerateTempRateFunctionList()
+function GenerateTempRateFunctionList(system::System,
+    species_list::Vector{Species}, reaction_list::Vector{Reaction})
     # Generate temperature equations
     # Loop over all species
     temp_rate_funct_list = []
     for s in species_list
-        stemp_funct_list = GenerateTempRateFunction(s)
+        stemp_funct_list = GenerateTempRateFunction(s, species_list,
+            reaction_list, system)
         if (length(stemp_funct_list)>0)
             push!(temp_rate_funct_list, stemp_funct_list)
         end
@@ -175,76 +173,36 @@ function GatherListOfFunctions(dens::Vector{Float64}, temp::Vector{Float64},
     return f_out
 end
 
-function UpdateGlobalSymbols(temp::Vector{Float64})
-    if Te_eV_symbol
-        global Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
-    end
-
-    if Te_symbol
-        global Te = temp[SharedData.s_electron_id]
-    end
-end
-
-
-function FirstUpdateGlobalSymbols(temp::Vector{Float64})
-    if Te_eV_symbol
-        global Te_eV = temp[SharedData.s_electron_id] * SharedData.K_to_eV
-    end
-
-    if Te_symbol
-        global Te = temp[SharedData.s_electron_id]
-    end
-
-    if m_Ar_symbol
-        global m_Ar = 4 * SharedData.mp
-    end
-end
-
-function SetSymbolFlag(num::Int64)
-
-    errcode = 0
-
-    if (num == 1)
-        global Te_symbol = true
-    elseif (num == 2)
-        global Te_eV_symbol = true
-    elseif (num == 3)
-        global m_Ar_symbol = true
-    else
-        print("***ERROR*** The parameter in rate coefficient is not recognized\n")
-        errcode = 1
-    end
-
-    return errcode
-end
-
-
 ###############################################################################
 # WALL FLUX EXPRESSIONS
 
 function WallFluxFunction_CCP(dens::Vector{Float64},
-    temp::Vector{Float64}, species::Species)
+    temp::Vector{Float64}, species::Species, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System)
     # Input: ions species
     #        if species is electron then summ of all ion species
 
     if (species.id == s_electron_id)
         # Electron wall flux = sum of all ion wall fluxes
         wallflux = 0
-        for s in SharedData.species_list
+        for s in species_list
             if s.charge>0
-                wallflux += s.charge * WallFluxFunction_CCP_ion_species(dens, temp, s)
+                wallflux += s.charge * WallFluxFunction_CCP_ion_species(dens,
+                    temp, s, reaction_list, system)
             end
         end
         wallflux = wallflux / abs(species.charge)
     else
-        wallflux = WallFluxFunction_CCP_ion_species(dens, temp, species)
+        wallflux = WallFluxFunction_CCP_ion_species(dens, temp, species,
+            reaction_list, system)
     end
     return wallflux
 end
 
 
 function WallFluxFunction_CCP_ion_species(dens::Vector{Float64},
-    temp::Vector{Float64}, s::Species)
+    temp::Vector{Float64}, s::Species, reaction_list::Vector{Reaction},
+    system::System)
     # Input: Species type (must be an ion!)
     
     # Plasma parameters 
@@ -253,52 +211,59 @@ function WallFluxFunction_CCP_ion_species(dens::Vector{Float64},
     mi = s.mass
 
     # Ion total collision frequency (elastic collision)
-    r_elastic = SharedData.reaction_list[s.r_elastic_id]
+    r_elastic = reaction_list[s.r_elastic_id]
     ng = dens[r_elastic.neutral_species_id]
-    K_elastic = eval(r_elastic.rate_coefficient)
+    K_elastic = r_elastic.rate_coefficient(temp)
     nu = ng * K_elastic
 
-    wallflux = ni * π * kb * Te / l / mi / nu
+    wallflux = ni * π * kb * Te / system.l / mi / nu
     return wallflux
 
 end
 
 
-function MeanSheathVoltage(dens::Vector{Float64})
+function MeanSheathVoltage(dens::Vector{Float64}, system::System)
 
     ne = dens[s_electron_id]
-    V_sheath = 3/4 * (drivI/A)^2 / (e * eps0 * ne * drivOmega^2)
+    V_sheath = 3/4 * (system.drivI/system.A)^2 / (e * eps0 * ne * system.drivOmega^2)
     return V_sheath
 end
 
 
 function TempWallFluxFunction(dens::Vector{Float64},
-    temp::Vector{Float64}, species::Species)
+    temp::Vector{Float64}, species::Species, species_list::Vector{Species},
+    reaction_list::Vector{Reaction},
+    system::System)
     # Input: Species type (must be an ion!)
 
     if (species.charge == 0)
         temp_wf = 0
     else
-        if (SharedData.power_input_method == SharedData.p_ccp_id)
+        if (system.power_input_method == p_ccp_id)
             if (species.id == s_electron_id)
                 # Must account for the electron flux and for the ion flux
                 temp_wf = 0
-                V_sheath = MeanSheathVoltage(dens)
+                V_sheath = MeanSheathVoltage(dens, system)
                 Te = temp[s_electron_id]
-                for s in SharedData.species_list
+                A = system.A
+                V = system.V
+                for s in species_list
                     if (s.id == s_electron_id)
                         # Electron flux
-                        wf = WallFluxFunction_CCP(dens, temp, s)
+                        wf = WallFluxFunction_CCP(dens, temp, s, species_list,
+                            reaction_list, system)
                         temp_wf -= wf * A / V * 2.0 * kb * Te
                     elseif (s.charge>0)
                         # Ion flux
                         q = s.charge
-                        wf = WallFluxFunction_CCP(dens, temp, s)
+                        wf = WallFluxFunction_CCP(dens, temp, s, species_list,
+                            reaction_list, system)
                         temp_wf -= wf * A / V * (0.5*kb*Te + q*V_sheath)
                     end
                 end
             else
-                print("***WARNING*** Temperature flux models for ions are not implemented yet\n")
+                print("***WARNING*** Temperature flux models for ions are not",
+                    " implemented yet\n")
                 temp_wf = 0
             end
         else
@@ -311,14 +276,16 @@ function TempWallFluxFunction(dens::Vector{Float64},
 end
 
 function DensWallFluxFunction(dens::Vector{Float64},
-    temp::Vector{Float64}, species::Species)
+    temp::Vector{Float64}, species::Species, species_list::Vector{Species}, 
+    reaction_list::Vector{Reaction}, system::System)
 
     if (species.charge == 0)
         dens_wf = 0
     else
-        if (SharedData.power_input_method == SharedData.p_ccp_id)
-            wf = WallFluxFunction_CCP(dens, temp, species)
-            dens_wf = -A / V * wf
+        if (system.power_input_method == p_ccp_id)
+            wf = WallFluxFunction_CCP(dens, temp, species, species_list,
+            reaction_list, system)
+            dens_wf = -system.A / system.V * wf
         else
             dens_wf = 0
             print("Flux models only implemented for CCPs\n")

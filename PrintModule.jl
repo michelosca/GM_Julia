@@ -1,31 +1,34 @@
 module PrintModule
 
-using SharedData
+using SharedData: System, Species, Reaction
+using SharedData: e, K_to_eV
+using SharedData: p_icp_id, p_ccp_id
+using InputBlock_Species: s_electron_id, s_Ar_id, s_ArIon_id, s_ArExc_id
+using InputBlock_Reactions: r_elastic_id, r_excitat_id, r_recombi_id, r_ionizat_id
 using Printf
 
-function PrintSpeciesList()
+function PrintSpeciesList(species_list::Vector{Species})
 
     @printf("Loaded species\n")
     @printf("%15s %15s %15s %15s %15s %10s %10s %10s %10s %15s %15s\n","Name",
         "Species", "Elastic ID", "Mass [kg]", "Charge [C]","has n-eq",
         "has T-eq", "has WL", "has P-input","Dens0 [m^-3]","Temp0 [eV]")
-    for s in SharedData.species_list
-
+    for s in species_list
         # s.id -> species name
-        if (s.id == SharedData.s_electron_id)
+        if (s.id == s_electron_id)
             s_name = "electrons"
-        elseif (s.id == SharedData.s_Ar_id)
+        elseif (s.id == s_Ar_id)
             s_name = "Ar"
-        elseif (s.id == SharedData.s_ArIon_id)
+        elseif (s.id == s_ArIon_id)
             s_name = "Ar+"
         else
             s_name = "Not found!"
         end
 
         # s.neutral_id -> species name
-        if (s.species_id == SharedData.s_Ar_id)
+        if (s.species_id == s_Ar_id)
             sn_name = "Ar"
-        elseif (s.species_id == SharedData.s_electron_id)
+        elseif (s.species_id == s_electron_id)
             sn_name = "electrons"
         else
             sn_name = "None"
@@ -62,29 +65,29 @@ function PrintSpeciesList()
         @printf("%15s %15s %15i %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
             s_name, sn_name, s.r_elastic_id, s.mass, s.charge, 
             has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
-            s.dens0, s.temp0*SharedData.K_to_eV)
+            s.dens0, s.temp0*K_to_eV)
     end
+    print("\n")
 end
 
 
 
-function PrintReactionList()
+function PrintReactionList(reaction_list::Vector{Reaction})
 
     @printf("Loaded reactions\n")
     @printf("%15s %30s %15s %8s %10s %10s %10s %10s\n",
         "Name", "Reaction", "E-threshold [eV]",
         "Neutral","Involved sp.", "Sp. balance", "Reactant sp.",
         "Rate coeff.")
-    for r in SharedData.reaction_list
-
+    for r in reaction_list
         # r.id -> reaction name
-        if (r.id == SharedData.r_elastic_id)
+        if (r.id == r_elastic_id)
             r_name = "Elastic"
-        elseif (r.id == SharedData.r_ionizat_id)
+        elseif (r.id == r_ionizat_id)
             r_name = "Ionization"
-        elseif (r.id == SharedData.r_recombi_id)
+        elseif (r.id == r_recombi_id)
             r_name = "Recombination" 
-        elseif (r.id == SharedData.r_excitat_id)
+        elseif (r.id == r_excitat_id)
             r_name = "Excitation" 
         else
             r_name = "Not found!"
@@ -97,11 +100,11 @@ function PrintReactionList()
             s = r.involved_species[i]
             b = r.species_balance[i]
 
-            if (s == SharedData.s_electron_id)
+            if (s == s_electron_id)
                 s_name = "e"
-            elseif (s == SharedData.s_Ar_id)
+            elseif (s == s_Ar_id)
                 s_name = "Ar"
-            elseif (s == SharedData.s_ArIon_id)
+            elseif (s == s_ArIon_id)
                 s_name = "Ar+"
             else
                 s_name = "None"
@@ -134,10 +137,10 @@ function PrintReactionList()
         reaction_str = string(react," -> ",prod)
 
         # Threshold energy
-        E_eV = r.E_threshold / SharedData.e
+        E_eV = r.E_threshold / e
 
         # Neutral species
-        if (r.neutral_species_id == SharedData.s_Ar_id)
+        if (r.neutral_species_id == s_Ar_id)
             r_neutral = "Ar"
         else
             r_neutral = "Not found!"
@@ -147,6 +150,35 @@ function PrintReactionList()
             E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species,
             r.rate_coefficient)
     end
+    print("\n")
+end
+
+
+function PrintSystemList(system_list::Vector{System})
+
+    @printf("System parameters\n")
+    i = 0
+    for s in system_list
+        i += 1
+        print("System $i\n")
+        @printf(" - Area:               %15g m^2\n", s.A)
+        @printf(" - Volume:             %15g m^3\n", s.V)
+        @printf(" - Length:             %15g m\n", s.l)
+        if (s.power_input_method == p_icp_id)
+            power_str = "ICP"
+        elseif (s.power_input_method == p_ccp_id)
+            power_str = "CCP"
+        else
+            power_str = "Not defined"
+        end
+        print(" - Input power method: ",power_str,"\n")
+        @printf(" - Driving frequency:  %15.2f MHz\n", s.drivf)
+        @printf("                       %15.f rad/s\n", s.drivOmega)
+        @printf(" - Driving power:     %15.2f W\n", s.drivP)
+        @printf(" - Driving voltage:   %15.2f V\n", s.drivV)
+        @printf(" - Driving current:   %15.2f A\n", s.drivI)
+    end
+    print("\n")
 end
 
 end

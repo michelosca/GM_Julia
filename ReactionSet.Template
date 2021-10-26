@@ -1,0 +1,12 @@
+module ReactionSet
+
+using SharedData: amu, e
+using InputBlock_Species: s_electron_id
+
+global K_funct_list = []
+
+### START REACTION STRINGS ###
+
+### END REACTION STRINGS ###
+
+end

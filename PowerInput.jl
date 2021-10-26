@@ -1,14 +1,13 @@
 module PowerInput
 
-using SharedData
-using SharedData: drivP, V 
-using SharedData: Species
+using SharedData: System, Species
+using InputBlock_Species: s_electron_id
 
 function PowerInputFunction(dens::Vector{Float64}, temp::Vector{Float64},
-    species::Species)
+    species::Species, system::System)
 
-    if (species.id == SharedData.s_electron_id)
-        S_abs = drivP/V
+    if (species.id == s_electron_id)
+        S_abs = system.drivP/system.V
     else
         S_abs = 0
     end
