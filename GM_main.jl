@@ -1,9 +1,11 @@
+module GM_main
+
 using SharedData: c_io_error, Species
 using InputData: SetupInputData
 using InputData: setup_main_run
 using PrintModule: PrintSpeciesList, PrintReactionList, PrintSystemList
 using GenerateODEs: GenerateDensRateFunctionList, GenerateTempRateFunctionList
-using TestFunctions: TestDensEquations, TestTempEquations, TestRateCoefficients
+#using TestFunctions: TestDensEquations, TestTempEquations, TestRateCoefficients
 
 function run_GM()
     # Reads data from the input.deck file
@@ -25,22 +27,34 @@ function run_GM()
     print("Initial density values", dens,"\n")
     print("Initial temperature values", temp,"\n")
 
-    for r in reaction_list
-        test_val = r.rate_coefficient(temp)
-        print("Test val: ", test_val,"\n")
-    end
 
+    #print("Test Rate Coefficients\n")
     #TestRateCoefficients(temp, reaction_list)
-    TestDensEquations(dens, temp, dens_funct_list, system_list[1])
-    TestTempEquations(dens, temp, temp_funct_list, system_list[1])
+    #print("Test Density equations\n")
+    #TestDensEquations(dens, temp, dens_funct_list, system_list[1])
+    #print("Test Temp equations\n")
+    #TestTempEquations(dens, temp, temp_funct_list, system_list[1])
+    
+    eq_list = cat(temp_funct_list, dens_funct_list,dims=1)
+    init = cat(temp,dens,dims=1)
+    return init, eq_list
 end
 
 function SetupInitialConditions(species_list::Vector{Species})
     dens = Float64[]
     temp = Float64[]
+    id = 1
     for s in species_list
-        push!(dens, s.dens0)
-        push!(temp, s.temp0)
+        if (s.has_dens_eq)
+            push!(dens, s.dens0)
+        end
+        if (s.has_temp_eq)
+            push!(temp, s.temp0)
+        end
+
+        id += 1
     end
     return dens, temp
+end
+
 end

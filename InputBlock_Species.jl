@@ -8,6 +8,7 @@ using SharedData: Species
 ################################  VARIABLES  ##################################
 ###############################################################################
 global species_list = Species[]
+global dens_offset = 0
 
 # SPECIES IDs 
 # In case more species need to be defined, they need to be added here
@@ -35,6 +36,7 @@ function StartFile_Species(read_step)
     global input_id = 0 
     if (read_step == 2)
         global species_list = Species[]
+        global dens_offset = 0
     end
 
 
@@ -169,6 +171,7 @@ function EndSpeciesBlock(read_step)
     elseif (read_step == 2)
         if (input_charge != 0)
             if (input_Teq_flag)
+                global dens_offset += 1
                 global input_P_flag = true
             end
             global input_wl_flag = true

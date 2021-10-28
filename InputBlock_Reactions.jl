@@ -410,7 +410,7 @@ function ParseDescription(str)
         global input_r_id = r_elastic_id 
         errcode = 0
     elseif (str == "excitation")
-        global input_r_id = r_exictat_id
+        global input_r_id = r_excitat_id
         errcode = 0
     elseif (str == "ionization" || str == "ionisation")
         global input_r_id = r_ionizat_id

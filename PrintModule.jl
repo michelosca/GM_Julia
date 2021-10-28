@@ -21,6 +21,8 @@ function PrintSpeciesList(species_list::Vector{Species})
             s_name = "Ar"
         elseif (s.id == s_ArIon_id)
             s_name = "Ar+"
+        elseif (s.id == s_ArExc_id)
+            s_name = "Ar*"
         else
             s_name = "Not found!"
         end
@@ -106,6 +108,8 @@ function PrintReactionList(reaction_list::Vector{Reaction})
                 s_name = "Ar"
             elseif (s == s_ArIon_id)
                 s_name = "Ar+"
+            elseif (s == s_ArExc_id)
+                s_name = "Ar*"
             else
                 s_name = "None"
             end

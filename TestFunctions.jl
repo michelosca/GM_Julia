@@ -1,8 +1,9 @@
 module TestFunctions
 
 using SharedData: K_to_eV, amu, e, kb, me, eps0
-using GenerateODEs
+using SolveSystem: GatherListOfFunctions
 using InputBlock_Species: s_electron_id, s_Ar_id, s_ArIon_id
+using InputBlock_Species: species_list 
 using Plots
 
 # Following test functions work with the following reaction reaction set
@@ -93,23 +94,24 @@ function TestDensEquations(dens, temp, dens_eq, system)
     fAr_vals = zeros(n)
     for i in 1:n
         temp[s_electron_id] = T_vec[i] / K_to_eV
+        input = cat(temp,dens,dims=1)
         #Electrons###
         # Theory
         n_th[i] = abs(ne(dens, temp))
         # Sim
-        f_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, ne_sim_eq))
+        f_vals[i] = abs(GatherListOfFunctions(input, ne_sim_eq))
 
         # ArIons
         # Theory
         nArIon_th[i] = abs(nArIon(dens, temp))
         # Sim
-        fArIon_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, ArIon_sim_eq))
+        fArIon_vals[i] = abs(GatherListOfFunctions(input, ArIon_sim_eq))
 
         # Ar
         # Theory
         nAr_th[i] = abs(nAr(dens, temp))
         # Sim
-        fAr_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, Ar_sim_eq))
+        fAr_vals[i] = abs(GatherListOfFunctions(input, Ar_sim_eq))
     end
     p1 = plot(T_vec, n_th, xaxis=:log, yaxis=:log, label="Electron dens Th")
     plot!(p1, T_vec, f_vals, xaxis=:log, yaxis=:log, line = (:dot, 4),label="Electron dens Sim")
@@ -139,23 +141,24 @@ function TestDensEquations(dens, temp, dens_eq, system)
     fAr_vals = zeros(n)
     for i in 1:n
         dens[s_Ar_id] = dens_vec[i]
+        input = cat(temp,dens,dims=1)
         #Electrons###
         # Theory
         n_th[i] = abs(ne(dens, temp))
         # Sim
-        f_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, ne_sim_eq))
+        f_vals[i] = abs(GatherListOfFunctions(input, ne_sim_eq))
 
         # ArIons
         # Theory
         nArIon_th[i] = abs(nArIon(dens, temp))
         # Sim
-        fArIon_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, ArIon_sim_eq))
+        fArIon_vals[i] = abs(GatherListOfFunctions(input, ArIon_sim_eq))
 
         # Ar
         # Theory
         nAr_th[i] = abs(nAr(dens, temp))
         # Sim
-        fAr_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, Ar_sim_eq))
+        fAr_vals[i] = abs(GatherListOfFunctions(input, Ar_sim_eq))
     end
     p1 = plot(dens_vec, n_th, xaxis=:log, yaxis=:log, label="Electron dens Th")
     plot!(p1, dens_vec, f_vals, xaxis=:log, yaxis=:log, line = (:dot, 4),label="Electron dens Sim")
@@ -173,7 +176,7 @@ end
 function TestTempEquations(dens, temp, temp_eq, system)
     function Te_eq_th(dens, temp)
         Te = temp[s_electron_id]
-        TAr = temp[s_Ar_id]
+        TAr = species_list[s_Ar_id].temp0
         Te_eV = Te * K_to_eV
         n_e = dens[s_electron_id]
         n_Ar = dens[s_Ar_id]
@@ -210,11 +213,12 @@ function TestTempEquations(dens, temp, temp_eq, system)
     fTe_vals = zeros(n)
     for i in 1:n
         temp[s_electron_id] = T_vec[i] / K_to_eV
+        input = cat(temp,dens,dims=1)
         #Electrons###
         # Theory
         Te_th[i] = abs(Te_eq_th(dens, temp))
         # Sim
-        fTe_vals[i] = abs(GenerateODEs.GatherListOfFunctions(dens, temp, Te_sim_eq))
+        fTe_vals[i] = abs(GatherListOfFunctions(input, Te_sim_eq))
     end
     p1 = plot(T_vec, Te_th, xaxis=:log, yaxis=:log, label="Electron temp Th")
     plot!(p1, T_vec, fTe_vals, xaxis=:log, yaxis=:log, line = (:dot, 4),label="Electron temp Sim")
