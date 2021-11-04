@@ -400,8 +400,10 @@ end
 function ReplaceSymbolS!(expr::Expr)
     # In case new symbols are used in the input.deck,
     # they would need to be added here
-    ReplaceSymbol!(expr, :Te_eV, Expr(:call,:*,:(temp[s_electron_id]), K_to_eV))
-    ReplaceSymbol!(expr, :Te,    :(temp[s_electron_id]))
+    ReplaceSymbol!(expr, :Te_eV,     Expr(:call,:*,:(temp[s_electron_id]), K_to_eV))
+    ReplaceSymbol!(expr, :Te,        :(temp[s_electron_id]))
+    ReplaceSymbol!(expr, :TArIon_eV, Expr(:call,:*,:(temp[s_ArIon_id]), K_to_eV))
+    ReplaceSymbol!(expr, :TArIon, :(temp[s_ArIon_id]))
     ReplaceSymbol!(expr, :TO2,   :(temp[s_O2_id]))
     ReplaceSymbol!(expr, :TO,    :(temp[s_O_id]))
     ReplaceSymbol!(expr, :m_Ar,  Expr(:call,:*,:amu, 40 ))

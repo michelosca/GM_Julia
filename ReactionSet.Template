@@ -1,7 +1,7 @@
 module ReactionSet
 
-using SharedData: amu, e
-using InputBlock_Species: s_electron_id
+using SharedData: amu, e, kb
+using InputBlock_Species: s_electron_id, s_ArIon_id
 using InputBlock_Species: s_O2_id, s_O_id, s_Ar_id
 
 global K_funct_list = []
