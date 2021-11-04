@@ -55,7 +55,6 @@ function SetupInputData(filename, setup_flag)
     errcode = ReadInputData(filename, setup_flag)
     if (errcode == c_io_error)
         print("***ERROR*** Failed to read the input deck. Abort code\n")
-        return errcode
     end
 
     if (setup_flag == setup_pre_run)

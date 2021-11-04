@@ -1,9 +1,11 @@
 module InputBlock_Reactions
 
-using SharedData: c_io_error, e
+using SharedData: c_io_error, e, K_to_eV
 using SharedData: Reaction
 using InputBlock_Species: s_electron_id
 using InputBlock_Species: s_Ar_id, s_ArIon_id, s_ArExc_id
+using InputBlock_Species: s_O_id, s_O2_id, s_OIon_id, s_OnIon_id, s_O2Ion_id
+using InputBlock_Species: s_O3p_id, s_O1d_id, s_O2a1Ag_id
 try
     using ReactionSet: K_funct_list
     print("ReactionSet loaded\n")
@@ -18,16 +20,13 @@ global reaction_list = Reaction[]
 
 # REACTION IDs 
 # In case more reaction need to be defined, they need to be added here
+const r_case_energy_sink = -1
+const r_wall_loss = -2
 const r_elastic_id = 1
 const r_excitat_id = 2
 const r_ionizat_id = 3
 const r_recombi_id = 4
 const r_cx_id = 5
-
-# Symbol flags
-global Te_symbol = false
-global Te_eV_symbol = false
-global m_Ar_symbol = false
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -69,6 +68,7 @@ function StartReactionsBlock(read_step)
         global input_bal_s = Int64[]
         global input_rea_s = Int64[]
         global input_E = 0.0
+        global input_r_case = 0
         if (s_electron_id != 0)
             errcode = 0
         else
@@ -165,7 +165,7 @@ function ReadReactionsEntry(name, var, read_step)
         
             errcode = AddReactionToList(input_r_id, input_inv_s,
                 input_rea_s, input_bal_s, input_K_funct, input_E,
-                input_n_id)
+                input_n_id, input_r_case)
         elseif (read_step == 0)
             errcode = WriteRateCoefficientsToModule(rate_coeff_str)
             if (errcode == c_io_error) return errcode end
@@ -248,6 +248,24 @@ function SelectSpeciesID(s)
         s_id = s_ArExc_id
     elseif (s == "e")
         s_id = s_electron_id
+    elseif (s == "O")
+        s_id = s_O_id
+        global input_n_id = s_id
+    elseif (s == "O2")
+        s_id = s_O2_id
+        global input_n_id = s_id
+    elseif (s == "O+")
+        s_id = s_OIon_id
+    elseif (s == "O-")
+        s_id = s_OnIon_id
+    elseif (s == "O2+")
+        s_id = s_O2Ion_id
+    elseif (s == "O(3p)")
+        s_id = s_O3p_id
+    elseif (s == "O(1d)")
+        s_id = s_O1d_id
+    elseif (s == "O2(a1Ag)")
+        s_id = s_O2a1Ag_id
     end
     return s_id
 end
@@ -364,7 +382,9 @@ function WriteRateCoefficientsToModule(str)
 
     try
         expr = Meta.parse(str)
-        ReplaceSymbolS!(expr)
+        if !(typeof(expr)==Float64)
+            ReplaceSymbolS!(expr)
+        end
         # Now that the expression is ready to be evaluated, write it down in a new file
         write(f_ReactionSet, string("push!(K_funct_list, (temp) -> ",expr,")\n"))
 
@@ -380,9 +400,13 @@ end
 function ReplaceSymbolS!(expr::Expr)
     # In case new symbols are used in the input.deck,
     # they would need to be added here
-    ReplaceSymbol!(expr, :Te_eV, Expr(:call,:/,:(temp[s_electron_id]), 1.16e4))
+    ReplaceSymbol!(expr, :Te_eV, Expr(:call,:*,:(temp[s_electron_id]), K_to_eV))
     ReplaceSymbol!(expr, :Te,    :(temp[s_electron_id]))
-    ReplaceSymbol!(expr, :m_Ar,  Expr(:call,:*,:amu, 4 ))
+    ReplaceSymbol!(expr, :TO2,   :(temp[s_O2_id]))
+    ReplaceSymbol!(expr, :TO,    :(temp[s_O_id]))
+    ReplaceSymbol!(expr, :m_Ar,  Expr(:call,:*,:amu, 40 ))
+    ReplaceSymbol!(expr, :m_O,   Expr(:call,:*,:amu, 16 ))
+    ReplaceSymbol!(expr, :m_O2,  Expr(:call,:*,:amu, 32 ))
 end
 
 
@@ -401,8 +425,8 @@ end
 
 function ParseDescription(str)
 
-    # Must provide: id
-    errcode = c_io_error
+    # Must provide? id
+    errcode = 0 
 
     str = lowercase(str)
 
@@ -422,6 +446,12 @@ function ParseDescription(str)
         str == "cx" || str == "charge_exchange")
         global input_r_id = r_cx_id
         errcode = 0
+    elseif (str == "excitation energy_sink" || str == "excitation energy sink")
+        global input_r_id = r_excitat_id
+        global input_r_case = r_case_energy_sink
+    elseif (str == "wall_rate_coefficient")
+        global input_r_id = r_wall_loss
+        errcode = 0
     end
 
     return errcode
@@ -430,12 +460,12 @@ end
 
 function AddReactionToList(id::Int64, invol_s::Vector{Int64},
     react_s::Vector{Int64}, balan_s::Vector{Int64}, K_funct, E::Float64,
-    n_id::Int64)
+    n_id::Int64, r_case::Int64)
 
     errcode = 0
     try
         # Add react to reaction_list
-        react = Reaction(id, n_id, invol_s, balan_s, react_s, K_funct, E) 
+        react = Reaction(id, n_id, invol_s, balan_s, react_s, K_funct, E, r_case) 
         push!(reaction_list, react)
     catch
         print("***ERROR*** While attaching reaction\n")

@@ -8,14 +8,24 @@ using SharedData: Species
 ################################  VARIABLES  ##################################
 ###############################################################################
 global species_list = Species[]
-global dens_offset = 0
 
 # SPECIES IDs 
 # In case more species need to be defined, they need to be added here
 global s_electron_id = 0
+
 global s_Ar_id = 0
+global s_O_id = 0
+global s_O2_id = 0
+
 global s_ArIon_id = 0
 global s_ArExc_id = 0
+
+global s_OnIon_id = 0
+global s_OIon_id = 0
+global s_O2Ion_id = 0
+global s_O3p_id = 0
+global s_O1d_id = 0
+global s_O2a1Ag_id = 0
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -36,7 +46,6 @@ function StartFile_Species(read_step)
     global input_id = 0 
     if (read_step == 2)
         global species_list = Species[]
-        global dens_offset = 0
     end
 
 
@@ -74,6 +83,12 @@ function ReadSpeciesEntry(name, var, read_step)
                 errcode = 0
             elseif (occursin("Ar",var))
                 global input_n_id = s_Ar_id
+                errcode = 0
+            elseif (occursin("O2",var))
+                global input_n_id = s_O2_id
+                errcode = 0
+            elseif (occursin("O",var))
+                global input_n_id = s_O_id
                 errcode = 0
             else
                 print("***ERROR*** Neutral species id has not been found\n")
@@ -151,10 +166,26 @@ function SetSpeciesID(species_name, id)
         global s_electron_id = id
     elseif ("Ar" == species_name)
         global s_Ar_id = id
+    elseif ("O" == species_name)
+        global s_O_id = id
+    elseif ("O2" == species_name)
+        global s_O2_id = id
     elseif ("Ar+" == species_name)
         global s_ArIon_id = id
+    elseif ("O+" == species_name)
+        global s_OIon_id = id
+    elseif ("O-" == species_name)
+        global s_OnIon_id = id
+    elseif ("O2+" == species_name)
+        global s_O2Ion_id = id
     elseif ("Ar*" == species_name || "Ar excited" == species_name)
         global s_ArExc_id = id
+    elseif ("O(3p)" == species_name)
+        global s_O3p_id = id
+    elseif ("O(1d)" == species_name)
+        global s_O1d_id = id
+    elseif ("O2(a1Ag)" == species_name)
+        global s_O2a1Ag_id = id
     else
         errcode = 1
     end
@@ -171,7 +202,6 @@ function EndSpeciesBlock(read_step)
     elseif (read_step == 2)
         if (input_charge != 0)
             if (input_Teq_flag)
-                global dens_offset += 1
                 global input_P_flag = true
             end
             global input_wl_flag = true

@@ -61,6 +61,8 @@ struct Reaction
 
     # Energy threshold
     E_threshold::Float64
+
+    case::Int64 # Reaction species case flag
 end
 
 
@@ -69,6 +71,7 @@ struct System
     A::Float64                              # system area, m^2
     V::Float64                              # system volume, m^3
     l::Float64                              # system length, m
+    radius::Float64                         # system radius, m
 
     power_input_method::Int64               # driving power method, flag
     drivf::Float64                          # driving frequency, Hz
@@ -76,6 +79,8 @@ struct System
     drivP::Float64                          # driving power, W 
     drivV::Float64                          # driving voltage, V
     drivI::Float64                          # criving current, Amps
+
+    t_end::Float64                          # simulation time, seconds
 end
 
 end

@@ -1,3 +1,5 @@
+module GM_prerun
+
 using InputData: SetupInputData
 using InputData: setup_pre_run
 using SharedData: c_io_error
@@ -9,5 +11,7 @@ function prerun_GM()
     if (errcode == c_io_error)
         return errcode
     end
+
+end
 
 end

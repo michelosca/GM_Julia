@@ -4,7 +4,10 @@ using SharedData: System, Species, Reaction
 using SharedData: e, K_to_eV
 using SharedData: p_icp_id, p_ccp_id
 using InputBlock_Species: s_electron_id, s_Ar_id, s_ArIon_id, s_ArExc_id
+using InputBlock_Species: s_O_id, s_O2_id, s_OIon_id, s_OnIon_id, s_O2Ion_id
+using InputBlock_Species: s_O3p_id, s_O1d_id, s_O2a1Ag_id
 using InputBlock_Reactions: r_elastic_id, r_excitat_id, r_recombi_id, r_ionizat_id
+using InputBlock_Reactions: r_wall_loss
 using Printf
 
 function PrintSpeciesList(species_list::Vector{Species})
@@ -23,6 +26,22 @@ function PrintSpeciesList(species_list::Vector{Species})
             s_name = "Ar+"
         elseif (s.id == s_ArExc_id)
             s_name = "Ar*"
+        elseif s.id == s_O_id
+            s_name = "O"
+        elseif s.id == s_O2_id
+            s_name = "O2"
+        elseif s.id == s_OIon_id
+            s_name = "O+"
+        elseif s.id == s_OnIon_id
+            s_name = "O-"
+        elseif s.id == s_O2Ion_id
+            s_name = "O2+"
+        elseif s.id == s_O3p_id
+            s_name = "O(3p)"
+        elseif s.id == s_O1d_id
+            s_name = "O(1d)"
+        elseif s.id == s_O2a1Ag_id
+            s_name = "O2(a1Ag)"
         else
             s_name = "Not found!"
         end
@@ -32,6 +51,10 @@ function PrintSpeciesList(species_list::Vector{Species})
             sn_name = "Ar"
         elseif (s.species_id == s_electron_id)
             sn_name = "electrons"
+        elseif (s.species_id == s_O2_id)
+            sn_name = "O2"
+        elseif (s.species_id == s_O_id)
+            sn_name = "O"
         else
             sn_name = "None"
         end
@@ -77,10 +100,9 @@ end
 function PrintReactionList(reaction_list::Vector{Reaction})
 
     @printf("Loaded reactions\n")
-    @printf("%15s %30s %15s %8s %10s %10s %10s %10s\n",
+    @printf("%15s %30s %15s %8s %10s %10s %10s\n",
         "Name", "Reaction", "E-threshold [eV]",
-        "Neutral","Involved sp.", "Sp. balance", "Reactant sp.",
-        "Rate coeff.")
+        "Neutral","Involved", "Balance", "Reactants")
     for r in reaction_list
         # r.id -> reaction name
         if (r.id == r_elastic_id)
@@ -91,6 +113,8 @@ function PrintReactionList(reaction_list::Vector{Reaction})
             r_name = "Recombination" 
         elseif (r.id == r_excitat_id)
             r_name = "Excitation" 
+        elseif (r.id == r_wall_loss)
+            r_name = "Wall reaction" 
         else
             r_name = "Not found!"
         end
@@ -110,6 +134,22 @@ function PrintReactionList(reaction_list::Vector{Reaction})
                 s_name = "Ar+"
             elseif (s == s_ArExc_id)
                 s_name = "Ar*"
+            elseif s == s_O_id
+                s_name = "O"
+            elseif s == s_O2_id
+                s_name = "O2"
+            elseif s == s_OIon_id
+                s_name = "O+"
+            elseif s == s_OnIon_id
+                s_name = "O-"
+            elseif s == s_O2Ion_id
+                s_name = "O2+"
+            elseif s == s_O3p_id
+                s_name = "O(3p)"
+            elseif s == s_O1d_id
+                s_name = "O(1d)"
+            elseif s == s_O2a1Ag_id
+                s_name = "O2(a1Ag)"
             else
                 s_name = "None"
             end
@@ -146,13 +186,16 @@ function PrintReactionList(reaction_list::Vector{Reaction})
         # Neutral species
         if (r.neutral_species_id == s_Ar_id)
             r_neutral = "Ar"
+        elseif (r.neutral_species_id == s_O_id)
+            r_neutral = "O"
+        elseif (r.neutral_species_id == s_O2_id)
+            r_neutral = "O2"
         else
             r_neutral = "Not found!"
         end
 
-        @printf("%15s %30s %15.2f %8s %10s %10s %10s %s\n", r_name, reaction_str,
-            E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species,
-            r.rate_coefficient)
+        @printf("%15s %30s %15.2f %8s %10s %10s %10s\n", r_name, reaction_str,
+            E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species)
     end
     print("\n")
 end
@@ -181,6 +224,7 @@ function PrintSystemList(system_list::Vector{System})
         @printf(" - Driving power:     %15.2f W\n", s.drivP)
         @printf(" - Driving voltage:   %15.2f V\n", s.drivV)
         @printf(" - Driving current:   %15.2f A\n", s.drivI)
+        @printf(" - Simulation time:   %15g s\n", s.t_end)
     end
     print("\n")
 end

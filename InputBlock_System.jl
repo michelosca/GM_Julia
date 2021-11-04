@@ -39,12 +39,14 @@ function StartSystemBlock(read_step::Int64)
         global input_area = 0.0
         global input_vol = 0.0
         global input_len = 0.0
+        global input_radius = 0.0
         
         global input_power_method = 0 
         global input_drivf = 0.0
         global input_drivP = 0.0
         global input_drivV = 0.0
         global input_drivI = 0.0
+        global input_time = 0.0
     end
 
     return errcode
@@ -63,7 +65,7 @@ function ReadSystemEntry(name, var, read_step)
             units = ""
         else
             units_index = units_index[1]
-            units_str = lowcase(var[units_index+1:end])
+            units_str = lowercase(var[units_index+1:end])
             if (units_str=="kw" || units_str=="khz")
                 units_fact = 1.e3
                 var = var[1:units_index-1]
@@ -72,6 +74,9 @@ function ReadSystemEntry(name, var, read_step)
                 var = var[1:units_index-1]
             elseif (units_str=="ghz")
                 units_fact = 1.e9
+                var = var[1:units_index-1]
+            elseif (units_str=="microns")
+                units_fact = 1.e-6
                 var = var[1:units_index-1]
             end
         end
@@ -86,6 +91,9 @@ function ReadSystemEntry(name, var, read_step)
             errcode = 0
         elseif (lname=="l" || lname=="length")
             global input_len = parse(Float64, var) 
+            errcode = 0
+        elseif (lname=="radius" || lname=="r")
+            global input_radius = parse(Float64, var) 
             errcode = 0
         elseif (name=="f" || lname=="frequency" ||
             lname=="freq" || lname=="driving_frequency")
@@ -116,6 +124,9 @@ function ReadSystemEntry(name, var, read_step)
             lname == "driving_current")
             global drivI = parse(Float64,var)
             errcode = 0
+        elseif (lname=="t_end")
+            global input_time = parse(Float64, var) * units_fact
+            errcode = 0
         end
     else
         errcode = 0
@@ -130,16 +141,30 @@ function EndSystemBlock(read_step::Int64)
 
     if (read_step == 1)
         if (input_area == 0)
-            print("***ERROR*** System area has not been defined\n")
-            return c_io_error 
+            if (input_radius > 0)
+                global input_area = pi * input_radius^2
+            else
+                print("***ERROR*** System area has not been defined\n")
+                return c_io_error 
+            end
         end
         if (input_vol == 0)
-            print("***ERROR*** System volume has not been defined\n")
-            return c_io_error 
+            if (input_radius > 0 && input_len > 0)
+                global input_vol = 2.0 * pi * input_radius * input_len
+            else
+                print("***ERROR*** System volume has not been defined\n")
+                return c_io_error 
+            end
         end
         if (input_len == 0)
             print("***ERROR*** System length has not been defined\n")
             return c_io_error 
+        end
+        if (input_radius == 0)
+            if (input_vol == 0 || input_area == 0)
+                print("***ERROR*** System radius has not been defined\n")
+                return c_io_error 
+            end
         end
         if (input_power_method == 0)
             print("***ERROR*** System input power method has not been defined\n")
@@ -173,24 +198,29 @@ function EndSystemBlock(read_step::Int64)
                 global input_drivI =  input_drivP / input_drivV
             end
         end
+        if (input_time == 0)
+            print("***ERROR*** Simulation time must be > 0 \n")
+            return c_io_error 
+        end
 
-        errcode = AddSystemToList(input_area, input_vol, input_len, input_power_method,
-            input_drivf, input_drivP, input_drivV, input_drivI)
+        errcode = AddSystemToList(input_area, input_vol, input_len,
+            input_power_method, input_drivf, input_drivP, input_drivV,
+            input_drivI, input_time, input_radius)
     end
     return errcode
 end
 
 function AddSystemToList(area::Float64, vol::Float64, l::Float64,
     p_method::Int64, drivf::Float64, drivP::Float64,
-    drivV::Float64, drivI::Float64)
+    drivV::Float64, drivI::Float64, time::Float64, radius::Float64)
     
     drivOmega = drivf * 2.0 * pi
 
     errcode = 0
     try
         # Add react to reaction_list
-        system = System(area, vol, l, p_method, drivf, drivOmega, drivP,
-            drivV, drivI)
+        system = System(area, vol, l, radius, p_method, drivf, drivOmega, drivP,
+            drivV, drivI, time)
         push!(system_list, system)
     catch
         print("***ERROR*** While attaching system\n")
