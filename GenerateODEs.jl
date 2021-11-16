@@ -71,11 +71,11 @@ function GenerateDensRateFunction(s::Species, reaction_list::Vector{Reaction})
                 # particle balance
                 if !(sign == 0)
                     push!(sdens_funct_list,
-                        (dens_eq_gainloss ,
-                        function (dens::Vector{Float64}, temp::Vector{Float64})
-                            return sign * prod(dens[r.reactant_species]) *
-                            r.rate_coefficient(temp)
-                        end
+                        (dens_eq_gainloss,
+                            function (dens::Vector{Float64}, temp::Vector{Float64})
+                                return sign * prod(dens[r.reactant_species]) *
+                                r.rate_coefficient(temp)
+                            end
                         )
                     )
                 end
@@ -85,9 +85,9 @@ function GenerateDensRateFunction(s::Species, reaction_list::Vector{Reaction})
         if (s.has_wall_loss)
             push!(sdens_funct_list,
                 (dens_eq_flux,
-                function (flux_list::Vector{Float64}, system::System)
-                    return DensWallFluxFunction(flux_list, system, s)
-                end
+                    function (flux_list::Vector{Tuple}, system::System)
+                        return DensWallFluxFunction(flux_list, system, s)
+                    end
                 )
             )
         end
@@ -149,11 +149,11 @@ function GenerateTempRateFunction(s::Species, species_list::Vector{Species},
                     # Temp gain/loss term is added if there is a non-zero particle balance
                     push!(stemp_funct_list,
                         (temp_eq_gainloss,
-                        function (dens::Vector{Float64}, temp::Vector{Float64})
-                            return sign * prod(dens[r.reactant_species]) *
-                                r.rate_coefficient(temp) *
-                                Q1(temp) / Q0(dens)
-                        end
+                            function (dens::Vector{Float64}, temp::Vector{Float64})
+                                return sign * prod(dens[r.reactant_species]) *
+                                    r.rate_coefficient(temp) *
+                                    Q1(temp) / Q0(dens)
+                            end
                         )
                     )
                 else
@@ -165,12 +165,12 @@ function GenerateTempRateFunction(s::Species, species_list::Vector{Species},
                         Q2 = -3.0 * kb * m_charged / m_neutral
                         push!(stemp_funct_list,
                             (temp_eq_elastic,
-                            function (dens::Vector{Float64}, temp::Vector{Float64})
-                                t_neutral = temp[r.neutral_species_id]
-                                e_rate = Q2 * prod(dens[r.reactant_species]) *
-                                    r.rate_coefficient(temp) * (temp[s_id] - t_neutral)
-                                return e_rate / Q0(dens)
-                            end
+                                function (dens::Vector{Float64}, temp::Vector{Float64})
+                                    t_neutral = temp[r.neutral_species_id]
+                                    e_rate = Q2 * prod(dens[r.reactant_species]) *
+                                        r.rate_coefficient(temp) * (temp[s_id] - t_neutral)
+                                    return e_rate / Q0(dens)
+                                end
                             )
                         )
                     end
@@ -182,11 +182,11 @@ function GenerateTempRateFunction(s::Species, species_list::Vector{Species},
                 if (Er != 0) 
                     push!(stemp_funct_list,
                         (temp_eq_ethreshold,
-                        function (dens::Vector{Float64}, temp::Vector{Float64})
-                            e_rate = - Er * prod(dens[r.reactant_species]) *
-                                r.rate_coefficient(temp)
-                            return e_rate / Q0(dens)
-                        end
+                            function (dens::Vector{Float64}, temp::Vector{Float64})
+                                e_rate = - Er * prod(dens[r.reactant_species]) *
+                                    r.rate_coefficient(temp)
+                                return e_rate / Q0(dens)
+                            end
                         )
                     )
                 end
@@ -196,12 +196,12 @@ function GenerateTempRateFunction(s::Species, species_list::Vector{Species},
         if (s.has_wall_loss)
             push!(stemp_funct_list,
                 (temp_eq_flux,
-                function (dens::Vector{Float64}, temp::Vector{Float64},
-                    flux_list::Vector{Float64}, system::System, V_sheath::Float64)
-                    flux = TempWallFluxFunction(temp, flux_list, system,
-                        V_sheath, s)
-                    return flux / Q0(dens)
-                end
+                    function (dens::Vector{Float64}, temp::Vector{Float64}, species_list::Vector{Species},
+                        flux_list::Vector{Tuple}, system::System, V_sheath::Float64)
+                        flux = TempWallFluxFunction(temp, flux_list, species_list, system,
+                            V_sheath, s)
+                        return flux / Q0(dens)
+                    end
                 )
             )
         end
@@ -209,10 +209,10 @@ function GenerateTempRateFunction(s::Species, species_list::Vector{Species},
         if (s.has_heating_mechanism)
             push!(stemp_funct_list,
                 (temp_eq_inpower,
-                function (dens::Vector{Float64}, system::System)
-                    ipower = PowerInputFunction(s, system) 
-                    return ipower / Q0(dens)
-                end
+                    function (dens::Vector{Float64}, system::System)
+                        ipower = PowerInputFunction(s, system) 
+                        return ipower / Q0(dens)
+                    end
                 )
             )
         end

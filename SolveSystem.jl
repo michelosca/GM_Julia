@@ -1,23 +1,21 @@
 module SolveSystem
 
-using DifferentialEquations: ODEProblem, solve
-using DifferentialEquations: Tsit5 
-using WallFlux: MeanSheathVoltage, InterpolateSheathVoltage
-using WallFlux: GetParticleFlux
-using SharedData: p_ccp_id, p_icp_id 
-using SharedData: System
+using PlasmaSheath: GetSheathVoltage
+using WallFlux: GetIonFlux, GetElectronFlux!
+using SharedData: System, Species
 using GenerateODEs: dens_eq_gainloss, dens_eq_flux, eq_empty
 using GenerateODEs: temp_eq_elastic, temp_eq_gainloss
 using GenerateODEs: temp_eq_ethreshold, temp_eq_flux, temp_eq_inpower
+using DifferentialEquations: ODEProblem, solve, Tsit5, Rosenbrock23
 
 function ExecuteProblem(init::Vector{Float64}, tspan::Tuple, p::Tuple)
 
     prob = ODEProblem(ode_fn!, init, tspan, p)
-    sol = solve(prob, Tsit5(), reltol=1e-8, abstol=1e-8)
+    sol = solve(prob, Tsit5(), maxiters=1.e7) #, reltol=1e-8, abstol=1e-8)
     return sol
 end
 
-function ode_fn!(dy,y,p,t)
+function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     # dy are the derivatives of y, i.e. the lhs of the ODE equations
     # y are [temperature,dens] (the input Vector in other functions) 
     # p are the free parameters the y-functions may have
@@ -32,33 +30,30 @@ function ode_fn!(dy,y,p,t)
     temp = y[1:n_species]
     dens = y[n_species + 1:end]
 
+    # First get the positive ion fluxes
+    flux_list = GetIonFlux(dens, temp, species_list, reaction_list, system)
+
     # Calculate the sheath potential
-    if (system.power_input_method == p_ccp_id)
-        V_sheath = MeanSheathVoltage(dens, system)
-    elseif (system.power_input_method == p_ccp_id)
-        V_sheath = InterpolateSheathVoltage(dens, temp, species_list,
-            reaction_list, system)
-    end
+    V_sheath = GetSheathVoltage(dens, temp, species_list,
+        reaction_list, system, flux_list)
 
-    # Calculate the particle fluxes
-    flux_list = GetParticleFlux(dens, temp, species_list,
-        reaction_list, system, V_sheath)
-    #print("Fluxes ",flux_list,"\n")
-
+    # Calculate the electron flux  
+    GetElectronFlux!(flux_list, species_list)
+    
     # Generate the dy array
     n = length(eq_list)
     for i in 1:n
         dy[i] = GatherListOfFunctions(dens, temp, flux_list, system, V_sheath,
-            eq_list[i])
+            eq_list[i], species_list)
     end
 end
 
 
 function GatherListOfFunctions(dens::Vector{Float64}, temp::Vector{Float64},
-    flux_list::Vector{Float64}, system::System, V_sheath::Float64,
-    funct_list::Vector{Tuple})
+    flux_list::Vector{Tuple}, system::System, V_sheath::Float64,
+    funct_list::Vector{Tuple}, species_list::Vector{Species})
 
-    f_out = 0
+    f_out = 0.0
     for current_tuple in funct_list
         flag = current_tuple[1]
         funct = current_tuple[2]
@@ -83,7 +78,7 @@ function GatherListOfFunctions(dens::Vector{Float64}, temp::Vector{Float64},
             f_curr = funct(dens,temp)
         elseif (flag == temp_eq_flux)
             # Energy fluxes
-            f_curr = funct(dens,temp, flux_list, system, V_sheath)
+            f_curr = funct(dens, temp, species_list, flux_list, system, V_sheath)
         elseif (flag == temp_eq_inpower)
             # Power absorption
             f_curr = funct(dens, system)

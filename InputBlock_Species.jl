@@ -58,7 +58,6 @@ function StartSpeciesBlock(read_step)
     global input_id += 1
     if (read_step == 2)
         global input_n_id= 0 
-        global input_elastic_id= 0
         global input_mass = 0.0
         global input_charge = 0.0
         global input_neq_flag = false
@@ -125,13 +124,6 @@ function ReadSpeciesEntry(name, var, read_step)
     if (name=="solve_temp")
         if (read_step == 2)
             global input_Teq_flag = parse(Bool, var)
-        end
-        errcode = 0
-    end
-
-    if (name=="dominant_reaction")
-        if (read_step == 2)
-            global input_elastic_id = parse(Int64, var)
         end
         errcode = 0
     end
@@ -219,7 +211,7 @@ function EndSpeciesBlock(read_step)
 
         errcode = AddSpeciesToList(input_id, input_mass,
             input_charge, input_neq_flag, input_Teq_flag, input_wl_flag,
-            input_P_flag, input_n_id, input_elastic_id, input_dens0, 
+            input_P_flag, input_n_id, input_dens0, 
             input_temp0)
     end
     return errcode 
@@ -228,12 +220,12 @@ end
 
 function AddSpeciesToList(id::Int64, mass::Float64, charge::Float64,
     neq_flag::Bool, Teq_flag::Bool, wl_flag::Bool, P_flag::Bool,
-    n_id::Int64, r_ela_id::Int64, dens0::Float64, temp0::Float64)
+    n_id::Int64, dens0::Float64, temp0::Float64)
     
     errcode = 0
     try
         # Add react to reaction_list
-        species = Species(id, n_id, r_ela_id, mass, charge, neq_flag,
+        species = Species(id, n_id, mass, charge, neq_flag,
             Teq_flag, wl_flag, P_flag, dens0, temp0) 
         push!(species_list, species)
     catch

@@ -23,9 +23,6 @@ struct Species
     species_id::Int64  # In case of ions or excited states, the ID of the
                        # neutral species. If it does not apply then = 0
 
-    # Total rate coefficient 
-    r_elastic_id::Int64
-
     # Physical constants
     mass::Float64
     charge::Float64
@@ -81,6 +78,12 @@ struct System
     drivI::Float64                          # criving current, Amps
 
     t_end::Float64                          # simulation time, seconds
+
+    electrode_area::Float64                 # m^2
+end
+
+struct Output
+    output_flag_list::Vector{Int64}
 end
 
 end

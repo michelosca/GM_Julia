@@ -10,11 +10,19 @@ using InputBlock_Reactions: r_elastic_id, r_excitat_id, r_recombi_id, r_ionizat_
 using InputBlock_Reactions: r_wall_loss
 using Printf
 
+###############################################################################
+################################  FUNCTIONS  ##################################
+###############################################################################
+# - PrintSpeciesList
+# - PrintReactionList
+# - PrintSystemList
+
+
 function PrintSpeciesList(species_list::Vector{Species})
 
     @printf("Loaded species\n")
-    @printf("%15s %15s %15s %15s %15s %10s %10s %10s %10s %15s %15s\n","Name",
-        "Species", "Elastic ID", "Mass [kg]", "Charge [C]","has n-eq",
+    @printf("%15s %15s %15s %15s %10s %10s %10s %10s %15s %15s\n","Name",
+        "Species", "Mass [kg]", "Charge [C]","has n-eq",
         "has T-eq", "has WL", "has P-input","Dens0 [m^-3]","Temp0 [eV]")
     for s in species_list
         # s.id -> species name
@@ -87,8 +95,8 @@ function PrintSpeciesList(species_list::Vector{Species})
             has_heating = "No"
         end
 
-        @printf("%15s %15s %15i %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
-            s_name, sn_name, s.r_elastic_id, s.mass, s.charge, 
+        @printf("%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
+            s_name, sn_name, s.mass, s.charge, 
             has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
             s.dens0, s.temp0*K_to_eV)
     end
@@ -219,6 +227,7 @@ function PrintSystemList(system_list::Vector{System})
             power_str = "Not defined"
         end
         print(" - Input power method: ",power_str,"\n")
+        @printf(" - Electrode area:     %15g m^2\n", s.electrode_area)
         @printf(" - Driving frequency:  %15.2f MHz\n", s.drivf)
         @printf("                       %15.f rad/s\n", s.drivOmega)
         @printf(" - Driving power:     %15.2f W\n", s.drivP)

@@ -47,6 +47,8 @@ function StartSystemBlock(read_step::Int64)
         global input_drivV = 0.0
         global input_drivI = 0.0
         global input_time = 0.0
+
+        global input_electrodeA = 0.0 
     end
 
     return errcode
@@ -85,6 +87,9 @@ function ReadSystemEntry(name, var, read_step)
         lname = lowercase(name)
         if (name=="A" || lname=="area")
             global input_area = parse(Float64,var)
+            errcode = 0
+        elseif (lname=="electrode_area")
+            global input_electrodeA = parse(Float64,var)
             errcode = 0
         elseif (lname=="v" || lname=="volume" || lname=="vol")
             global input_vol = parse(Float64, var)
@@ -169,6 +174,10 @@ function EndSystemBlock(read_step::Int64)
         if (input_power_method == 0)
             print("***ERROR*** System input power method has not been defined\n")
             return c_io_error 
+        elseif (input_power_method == p_ccp_id)
+            if (input_electrodeA == 0.0)
+                print("***ERROR*** The 'electrode_area' has not been defined\n")
+            end
         end
         if (input_drivf == 0)
             print("***ERROR*** System driving frequency has not been defined\n")
@@ -205,14 +214,15 @@ function EndSystemBlock(read_step::Int64)
 
         errcode = AddSystemToList(input_area, input_vol, input_len,
             input_power_method, input_drivf, input_drivP, input_drivV,
-            input_drivI, input_time, input_radius)
+            input_drivI, input_time, input_radius, input_electrodeA)
     end
     return errcode
 end
 
 function AddSystemToList(area::Float64, vol::Float64, l::Float64,
     p_method::Int64, drivf::Float64, drivP::Float64,
-    drivV::Float64, drivI::Float64, time::Float64, radius::Float64)
+    drivV::Float64, drivI::Float64, time::Float64, radius::Float64,
+    electrodeA::Float64)
     
     drivOmega = drivf * 2.0 * pi
 
@@ -220,7 +230,7 @@ function AddSystemToList(area::Float64, vol::Float64, l::Float64,
     try
         # Add react to reaction_list
         system = System(area, vol, l, radius, p_method, drivf, drivOmega, drivP,
-            drivV, drivI, time)
+            drivV, drivI, time, electrodeA)
         push!(system_list, system)
     catch
         print("***ERROR*** While attaching system\n")
