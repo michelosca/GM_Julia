@@ -1,6 +1,8 @@
 module InputData
 
 using SharedData: c_io_error
+using SharedData: p_icp_id, p_ccp_id 
+using SharedData: Species, Reaction, System
 
 using InputBlock_Species: StartFile_Species
 using InputBlock_Species: StartSpeciesBlock, EndSpeciesBlock, ReadSpeciesEntry
@@ -12,7 +14,9 @@ using InputBlock_Reactions: reaction_list
 
 using InputBlock_System: StartFile_System
 using InputBlock_System: StartSystemBlock, EndSystemBlock, ReadSystemEntry
-using InputBlock_System: system_list
+using InputBlock_System: system
+
+using PlasmaParameters: GetLambda, GetGamma
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -57,11 +61,7 @@ function SetupInputData(filename, setup_flag)
         print("***ERROR*** Failed to read the input deck. Abort code\n")
     end
 
-    if (setup_flag == setup_pre_run)
-        return errcode
-    elseif (setup_flag == setup_main_run)
-        return errcode, system_list, species_list, reaction_list 
-    end
+    return errcode
 end
 
 
@@ -88,6 +88,7 @@ function ReadInputData(filename, setup_flag)
             if (errcode == c_io_error) return errcode end
             print("End of input deck reading\n\n")
         end
+        SetSpeciesParameters!(species_list, reaction_list, system)
     else
         print("***ERROR*** Setup flag is not recognized\n")
     end
@@ -246,6 +247,28 @@ function ReadInputDeckEntry(name, var, block_id, read_step)
     end
 
     return errcode
+end
+
+
+function SetSpeciesParameters!(species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System)
+
+    for s in species_list
+        s_id = s.id
+        for r in reaction_list
+            # is species s involved?
+            i_involved = findall(x->x==s_id, r.reactant_species)
+            if i_involved==Int64[]
+                continue
+            else
+                push!(s.reaction_list, r)
+            end
+        end
+        if system.power_input_method == p_icp_id
+            s.Lambda = GetLambda(system)
+            s.gamma = GetGamma()
+        end
+    end
 end
 
 end

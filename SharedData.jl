@@ -12,35 +12,14 @@ const K_to_eV = kb / e
 const p_ccp_id = 1
 const p_icp_id = 2
 
+# Solving sheath potential methods
+const s_ohmic_power = 1
+const s_flux_balance = 2
+const s_flux_interpolation = 3
+
 # Read input flags 
 const c_io_error = 1
 
-
-# Species structure
-struct Species
-    # Species identification flags
-    id::Int64          # ID for this specific species. Links to the dens, temp vectors
-    species_id::Int64  # In case of ions or excited states, the ID of the
-                       # neutral species. If it does not apply then = 0
-
-    # Physical constants
-    mass::Float64
-    charge::Float64
-
-    # Dens and temp ODE flags
-    has_dens_eq::Bool
-    has_temp_eq::Bool
-    
-    # Wall flux functions
-    has_wall_loss::Bool
-
-    # Input power mechanism
-    has_heating_mechanism::Bool
-
-    # Initial conditions
-    dens0::Float64
-    temp0::Float64
-end
 
 # Reaction structure
 struct Reaction
@@ -63,14 +42,56 @@ struct Reaction
 end
 
 
+# Species structure
+mutable struct Species
+    # Species identification flags
+    id::Int64          # ID for this specific species. Links to the dens, temp vectors
+    species_id::Int64  # In case of ions or excited states, the ID of the
+                       # neutral species. If it does not apply then = 0
+
+    # Physical constants
+    mass::Float64
+    charge::Float64
+
+    # Dens and temp ODE flags
+    has_dens_eq::Bool
+    has_temp_eq::Bool
+    
+    # Wall flux functions
+    has_wall_loss::Bool
+
+    # Input power mechanism
+    has_heating_mechanism::Bool
+
+    # Density and temperature of the species
+    dens::Float64
+    temp::Float64
+
+    # Other features
+    reaction_list::Vector{Reaction}
+    mfp::Float64
+    v_thermal::Float64 # Thermal speed
+    v_Bohm::Float64    # Bohm speed
+    D::Float64         # Gudmundsson parameter
+    Lambda::Float64
+    h_R::Float64
+    h_L::Float64
+    gamma::Float64     # Sticking coefficient
+    n_sheath::Float64
+    flux::Float64
+
+    Species() = new()
+end
+
 # System structure
-struct System
+mutable struct System
     A::Float64                              # system area, m^2
     V::Float64                              # system volume, m^3
     l::Float64                              # system length, m
     radius::Float64                         # system radius, m
 
     power_input_method::Int64               # driving power method, flag
+    Vsheath_solving_method::Int64
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
@@ -80,6 +101,8 @@ struct System
     t_end::Float64                          # simulation time, seconds
 
     electrode_area::Float64                 # m^2
+
+    System() = new()
 end
 
 struct Output

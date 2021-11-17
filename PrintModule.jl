@@ -98,7 +98,7 @@ function PrintSpeciesList(species_list::Vector{Species})
         @printf("%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
             s_name, sn_name, s.mass, s.charge, 
             has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
-            s.dens0, s.temp0*K_to_eV)
+            s.dens, s.temp*K_to_eV)
     end
     print("\n")
 end
@@ -209,32 +209,27 @@ function PrintReactionList(reaction_list::Vector{Reaction})
 end
 
 
-function PrintSystemList(system_list::Vector{System})
+function PrintSystemList(s::System)
 
     @printf("System parameters\n")
-    i = 0
-    for s in system_list
-        i += 1
-        print("System $i\n")
-        @printf(" - Area:               %15g m^2\n", s.A)
-        @printf(" - Volume:             %15g m^3\n", s.V)
-        @printf(" - Length:             %15g m\n", s.l)
-        if (s.power_input_method == p_icp_id)
-            power_str = "ICP"
-        elseif (s.power_input_method == p_ccp_id)
-            power_str = "CCP"
-        else
-            power_str = "Not defined"
-        end
-        print(" - Input power method: ",power_str,"\n")
-        @printf(" - Electrode area:     %15g m^2\n", s.electrode_area)
-        @printf(" - Driving frequency:  %15.2f MHz\n", s.drivf)
-        @printf("                       %15.f rad/s\n", s.drivOmega)
-        @printf(" - Driving power:     %15.2f W\n", s.drivP)
-        @printf(" - Driving voltage:   %15.2f V\n", s.drivV)
-        @printf(" - Driving current:   %15.2f A\n", s.drivI)
-        @printf(" - Simulation time:   %15g s\n", s.t_end)
+    @printf(" - Area:               %15g m^2\n", s.A)
+    @printf(" - Volume:             %15g m^3\n", s.V)
+    @printf(" - Length:             %15g m\n", s.l)
+    if (s.power_input_method == p_icp_id)
+        power_str = "ICP"
+    elseif (s.power_input_method == p_ccp_id)
+        power_str = "CCP"
+    else
+        power_str = "Not defined"
     end
+    print(" - Input power method: ",power_str,"\n")
+    @printf(" - Electrode area:     %15g m^2\n", s.electrode_area)
+    @printf(" - Driving frequency:  %15.2f MHz\n", s.drivf)
+    @printf("                       %15.f rad/s\n", s.drivOmega)
+    @printf(" - Driving power:     %15.2f W\n", s.drivP)
+    @printf(" - Driving voltage:   %15.2f V\n", s.drivV)
+    @printf(" - Driving current:   %15.2f A\n", s.drivI)
+    @printf(" - Simulation time:   %15g s\n", s.t_end)
     print("\n")
 end
 

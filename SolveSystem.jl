@@ -1,7 +1,8 @@
 module SolveSystem
 
 using PlasmaSheath: GetSheathVoltage
-using WallFlux: GetIonFlux, GetElectronFlux!
+using PlasmaParameters: UpdateSpeciesParameters!
+using WallFlux: UpdateIonFlux!, UpdateElectronFlux!
 using SharedData: System, Species
 using GenerateODEs: dens_eq_gainloss, dens_eq_flux, eq_empty
 using GenerateODEs: temp_eq_elastic, temp_eq_gainloss
@@ -25,33 +26,39 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     eq_list = p[1]
     system = p[2]
     species_list = p[3]
-    reaction_list = p[4]
+    #reaction_list = p[4]
     n_species = length(species_list)
     temp = y[1:n_species]
     dens = y[n_species + 1:end]
 
+    # Update species parameters
+    UpdateSpeciesParameters!(temp, dens, species_list, system)
+
     # First get the positive ion fluxes
-    flux_list = GetIonFlux(dens, temp, species_list, reaction_list, system)
+    flux_list = UpdateIonFlux!(species_list, system)
 
     # Calculate the sheath potential
-    V_sheath = GetSheathVoltage(dens, temp, species_list,
-        reaction_list, system, flux_list)
+    V_sheath = GetSheathVoltage(species_list, system)
 
     # Calculate the electron flux  
-    GetElectronFlux!(flux_list, species_list)
+    UpdateElectronFlux!(species_list)
     
     # Generate the dy array
     n = length(eq_list)
+    n_species = length(species_list)
     for i in 1:n
-        dy[i] = GatherListOfFunctions(dens, temp, flux_list, system, V_sheath,
-            eq_list[i], species_list)
+        id = i - ((i-1)÷n_species)*n_species
+        species = species_list[id]
+
+        dy[i] = GatherListOfFunctions(dens, temp, species, species_list,
+            system, V_sheath, eq_list[i])
     end
 end
 
 
 function GatherListOfFunctions(dens::Vector{Float64}, temp::Vector{Float64},
-    flux_list::Vector{Tuple}, system::System, V_sheath::Float64,
-    funct_list::Vector{Tuple}, species_list::Vector{Species})
+    species::Species, species_list::Vector{Species}, system::System,
+    V_sheath::Float64, funct_list::Vector{Tuple})
 
     f_out = 0.0
     for current_tuple in funct_list
@@ -64,21 +71,16 @@ function GatherListOfFunctions(dens::Vector{Float64}, temp::Vector{Float64},
             f_curr = funct(dens,temp)
         elseif (flag == dens_eq_flux)
             # Particle fluxes 
-            f_curr = funct(flux_list, system)
+            f_curr = funct(species)
 
         # Temperature equations
-        elseif (flag == temp_eq_gainloss)
-            # Particle gain/loss
-            f_curr = funct(dens,temp)
-        elseif (flag == temp_eq_elastic)
-            # Elastic collisions
-            f_curr = funct(dens,temp)
-        elseif (flag == temp_eq_ethreshold)
-            # Intrinsic collision energy loss
+        elseif (flag == temp_eq_gainloss || flag == temp_eq_elastic ||
+            flag == temp_eq_ethreshold)
+            # Particle gain/loss, elastic or ethreshold
             f_curr = funct(dens,temp)
         elseif (flag == temp_eq_flux)
             # Energy fluxes
-            f_curr = funct(dens, temp, species_list, flux_list, system, V_sheath)
+            f_curr = funct(dens, temp, species_list, V_sheath)
         elseif (flag == temp_eq_inpower)
             # Power absorption
             f_curr = funct(dens, system)

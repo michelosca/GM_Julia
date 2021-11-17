@@ -3,6 +3,8 @@ module ReactionSet
 using SharedData: amu, e, kb
 using InputBlock_Species: s_electron_id, s_ArIon_id
 using InputBlock_Species: s_O2_id, s_O_id, s_Ar_id
+using InputBlock_Species: s_O2Ion_id, s_OIon_id
+using PlasmaParameters: GetBohmSpeed, GetThermalSpeed
 
 global K_funct_list = []
 

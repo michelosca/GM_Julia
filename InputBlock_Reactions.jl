@@ -385,8 +385,13 @@ function WriteRateCoefficientsToModule(str)
         if !(typeof(expr)==Float64)
             ReplaceSymbolS!(expr)
         end
+
         # Now that the expression is ready to be evaluated, write it down in a new file
-        write(f_ReactionSet, string("push!(K_funct_list, (temp) -> ",expr,")\n"))
+        if input_r_id == r_wall_loss
+            write(f_ReactionSet, string("push!(K_funct_list, (temp, species) -> ",expr,")\n"))
+        else
+            write(f_ReactionSet, string("push!(K_funct_list, (temp) -> ",expr,")\n"))
+        end
 
     catch
         errcode = c_io_error
@@ -409,6 +414,18 @@ function ReplaceSymbolS!(expr::Expr)
     ReplaceSymbol!(expr, :m_Ar,  Expr(:call,:*,:amu, 40 ))
     ReplaceSymbol!(expr, :m_O,   Expr(:call,:*,:amu, 16 ))
     ReplaceSymbol!(expr, :m_O2,  Expr(:call,:*,:amu, 32 ))
+    ReplaceSymbol!(expr, :m_O2,  Expr(:call,:*,:amu, 32 ))
+    ReplaceSymbol!(expr, :R, :(system.radius) )
+    ReplaceSymbol!(expr, :L, :(system.l) )
+    ReplaceSymbol!(expr, :A, :(system.A) )
+    ReplaceSymbol!(expr, :V, :(system.V) )
+    ReplaceSymbol!(expr, :h_R, :(species.h_R) )
+    ReplaceSymbol!(expr, :h_L, :(species.h_L) )
+    ReplaceSymbol!(expr, :uB, :(species.u_Bohm) )
+    ReplaceSymbol!(expr, :vth, :(species.u_thermal) )
+    ReplaceSymbol!(expr, :Lambda, :(species.Lambda) )
+    ReplaceSymbol!(expr, :gamma, :(species.gamma) )
+    ReplaceSymbol!(expr, :D, :(species.D) )
 end
 
 

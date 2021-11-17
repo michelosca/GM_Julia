@@ -5,6 +5,7 @@ using PowerInput: PowerInputFunction
 using SharedData: Species, Reaction, System
 using SharedData: me, K_to_eV, amu, e, eps0
 using SharedData: p_icp_id, p_ccp_id
+using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using InputBlock_Species: s_electron_id
 using Roots: find_zeros
 
@@ -16,21 +17,18 @@ using Roots: find_zeros
 #   - SheathVoltage_OhmicPowerSource
 #   - SheathVoltage_InterpolateFluxEquation 
 
-function GetSheathVoltage(dens::Vector{Float64}, temp::Vector{Float64},
-    species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, flux_list::Vector{Tuple})
+function GetSheathVoltage(species_list::Vector{Species}, system::System)
 
     # Obtain the positive and negatice charged particles flux and solve for the potential
-    ipower_method = system.power_input_method
+    solve_method = system.Vsheath_solving_method
 
-    if ipower_method == p_ccp_id
-        V_sheath = SheathVoltage_OhmicPowerSource(dens, temp, species_list,
-            reaction_list, system)
-        #V_sheath = SheathVoltage_FluxBalanceEquation(temp, species_list,
-        #    flux_list)
-    elseif ipower_method == p_icp_id
-        V_sheath = SheathVoltage_FluxBalanceEquation(temp, species_list,
-            flux_list)
+    if solve_method == s_ohmic_power 
+        electron_species = species_list[s_electron_id]
+        V_sheath = SheathVoltage_OhmicPowerSource(electron_species, system)
+    elseif solve_method == s_flux_balance 
+        V_sheath = SheathVoltage_FluxBalanceEquation(species_list)
+    elseif solve_method == s_flux_interpolation
+        V_sheath = SheathVoltage_InterpolateFluxEquation(species_list)
     else
         print("***WARNING*** No potential sheath calculation done\n")
         V_sheath = 0.0 
@@ -38,53 +36,51 @@ function GetSheathVoltage(dens::Vector{Float64}, temp::Vector{Float64},
     return V_sheath
 end
 
-function SheathVoltage_FluxBalanceEquation(temp::Vector{Float64},
-    species_list::Vector{Species}, flux_list::Vector{Tuple})
+function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species})
 
     flux_plus = 0.0 # Fluxes of positive charged particles
-    n_sheath_e = 0.0
+    n_e = 0.0
+    Te_eV = 0.0
+    v_th = 0.0
     for s in species_list
         if s.charge > 0
-            flux_plus += flux_list[s.id][1] 
-            n_sheath_e += flux_list[s.id][2]
+            flux_plus += s.flux 
+            n_e += s.n_sheath 
+        elseif s.id == s_electron_id
+            Te_eV += s.temp * K_to_eV
+            v_th += s.v_thermal
         end
     end
-    v_th = GetThermalSpeed(temp, species_list[s_electron_id])
-    Te_eV = temp[s_electron_id] * K_to_eV
-    V_sheath = -log(flux_plus / v_th / n_sheath_e * 4) * Te_eV
+    V_sheath = -log(flux_plus / v_th / n_e * 4) * Te_eV
 
     return V_sheath
 end
 
-function SheathVoltage_OhmicPowerSource(dens::Vector{Float64},
-    temp::Vector{Float64}, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System)
+function SheathVoltage_OhmicPowerSource(electrons::Species, system::System)
     # From: A. Hurlbatt et al. (2017)
 
-    electrons = species_list[s_electron_id]
     S_ohm = PowerInputFunction(electrons, system)
-    e_mfp = GetMFP(dens, temp, electrons, species_list, reaction_list)
-    v_th = GetThermalSpeed(temp, electrons)
-    V_sheath = 3/2*S_ohm*e*e_mfp/me/eps0/system.drivOmega^2/v_th
+    mfp = electrons.mfp 
+    v_th = electrons.v_thermal
+    V_sheath = 3.0/2.0 * S_ohm*e*mfp / (me*eps0*system.drivOmega^2*v_th)
 
     return V_sheath
 end
 
 
-function SheathVoltage_InterpolateFluxEquation( 
-    temp::Vector{Float64}, species_list::Vector{Species})
+function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species})
 
     flux_plus = 0.0        # Fluxes of positive charged particles
     flux_min = Function[]  # Fluxes of netive charged particles
     for s in species_list
         if s.charge > 0
-            flux_plus += flux_list[s.id][1]
+            flux_plus += s.flux
         elseif s.charge < 0
+            n_sheath = s.n_sheath 
+            v_th = s.v_thermal
+            T_eV = s.temp * K_to_eV
             push!(flux_min,
                 function (pot::Float64)
-                    n_sheath = flux_list[s.id][2]
-                    v_th = GetThermalSpeed(temp, s) 
-                    T_eV = temp[s.id] * K_to_eV
                     V_sheath = 0.25 * n_sheath * v_th * exp(-pot/T_eV) 
                 end
             )
