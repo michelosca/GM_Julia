@@ -2,30 +2,11 @@ module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu 
 using SharedData: c_io_error
-using SharedData: Species, Reaction
+using SharedData: Species, Reaction, SpeciesID
 
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
-global species_list = Species[]
-
-# SPECIES IDs 
-# In case more species need to be defined, they need to be added here
-global s_electron_id = 0
-
-global s_Ar_id = 0
-global s_O_id = 0
-global s_O2_id = 0
-
-global s_ArIon_id = 0
-global s_ArExc_id = 0
-
-global s_OnIon_id = 0
-global s_OIon_id = 0
-global s_O2Ion_id = 0
-global s_O3p_id = 0
-global s_O1d_id = 0
-global s_O2a1Ag_id = 0
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -39,26 +20,27 @@ global s_O2a1Ag_id = 0
 #   - AddSpeciesToList
 
 
-function StartFile_Species(read_step) 
+function StartFile_Species!(read_step::Int64, species_list::Vector{Species},
+    speciesID::SpeciesID) 
 
     errcode = 0
 
-    global input_id = 0 
-    if (read_step == 2)
-        global species_list = Species[]
+    if (read_step == 1)
+        InitializeSpeciesID!(speciesID)
     end
-
+    speciesID.current_id = 0
 
     return errcode
 end
 
-function StartSpeciesBlock(read_step)
+function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
+    speciesID::SpeciesID)
 
     errcode = 0
-    global input_id += 1
+    speciesID.current_id += 1
     if (read_step == 2)
-        global current_species = Species()
-        current_species.id = input_id
+        current_species = Species()
+        current_species.id = speciesID.current_id 
         current_species.species_id = 0
         current_species.mass = 0.0
         current_species.charge = 0.0
@@ -79,28 +61,33 @@ function StartSpeciesBlock(read_step)
         current_species.gamma = 0.0
         current_species.n_sheath = 0.0
         current_species.flux = 0.0
+        push!(species_list, current_species)
     end
     return errcode
 end
 
 
-function ReadSpeciesEntry(name, var, read_step)
+function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read_step::Int64,
+    species_list::Vector{Species}, sID::SpeciesID)
 
-    errcode = c_io_error 
+    errcode = c_io_error
+    if (read_step == 2)
+        current_species = species_list[end]
+    end
 
     if (name=="name")
         if (read_step == 2)
             if (var=="e" || var=="electrons" || var=="electron")
-                current_species.species_id = s_electron_id
+                current_species.species_id = sID.electron 
                 errcode = 0
             elseif (occursin("Ar",var))
-                current_species.species_id = s_Ar_id
+                current_species.species_id = sID.Ar
                 errcode = 0
             elseif (occursin("O2",var))
-                current_species.species_id = s_O2_id
+                current_species.species_id = sID.O2
                 errcode = 0
             elseif (occursin("O",var))
-                current_species.species_id = s_O_id
+                current_species.species_id = sID.O
                 errcode = 0
             else
                 print("***ERROR*** Neutral species id has not been found\n")
@@ -108,7 +95,7 @@ function ReadSpeciesEntry(name, var, read_step)
             end
         else 
             # This is set in the pre-run(read_step==0) and in main-run(read_step===1)
-            errcode = SetSpeciesID(var, input_id)
+            errcode = SetSpeciesID!(var, sID)
         end
     end
 
@@ -163,34 +150,35 @@ function ReadSpeciesEntry(name, var, read_step)
 end
 
 
-function SetSpeciesID(species_name, id)
+function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
 
     errcode = 0
+    id = speciesID.current_id
 
     if ("e" == species_name || "electrons" == species_name)
-        global s_electron_id = id
+        speciesID.electron = id
     elseif ("Ar" == species_name)
-        global s_Ar_id = id
+        speciesID.Ar = id
     elseif ("O" == species_name)
-        global s_O_id = id
+        speciesID.O = id
     elseif ("O2" == species_name)
-        global s_O2_id = id
+        speciesID.O2 = id
     elseif ("Ar+" == species_name)
-        global s_ArIon_id = id
+        speciesID.Ar_Ion = id
     elseif ("O+" == species_name)
-        global s_OIon_id = id
+        speciesID.O_Ion = id
     elseif ("O-" == species_name)
-        global s_OnIon_id = id
+        speciesID.O_negIon = id
     elseif ("O2+" == species_name)
-        global s_O2Ion_id = id
-    elseif ("Ar*" == species_name || "Ar excited" == species_name)
-        global s_ArExc_id = id
+        speciesID.O2_Ion = id
+    elseif ("Ar*" == species_name || "Ar_excited" == species_name)
+        speciesID.Ar_Exc = id
     elseif ("O(3p)" == species_name)
-        global s_O3p_id = id
+        speciesID.O_3p = id
     elseif ("O(1d)" == species_name)
-        global s_O1d_id = id
+        speciesID.O_1d = id
     elseif ("O2(a1Ag)" == species_name)
-        global s_O2a1Ag_id = id
+        speciesID.O2_a1Ag = id
     else
         errcode = 1
     end
@@ -198,13 +186,14 @@ function SetSpeciesID(species_name, id)
 end
 
 
-function EndSpeciesBlock(read_step)
+function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species})
 
     errcode = 0 
 
     if (read_step == 1)
         errcode = 0
     elseif (read_step == 2)
+        current_species = species_list[end]
         if (current_species.charge != 0)
             if (current_species.has_temp_eq)
                 current_species.has_heating_mechanism = true
@@ -221,10 +210,28 @@ function EndSpeciesBlock(read_step)
             print("***ERROR*** Species temperature has not been defined")
             return c_io_error
         end
-
-        push!(species_list, current_species)
     end
     return errcode 
+end
+
+function InitializeSpeciesID!(speciesID::SpeciesID)
+
+    speciesID.electron = 0
+    
+    speciesID.Ar = 0
+    speciesID.Ar_Ion = 0
+    speciesID.Ar_Exc = 0
+    
+    speciesID.O = 0
+    speciesID.O_negIon = 0
+    speciesID.O_Ion = 0
+    speciesID.O_1d = 0
+    speciesID.O_3p = 0
+
+    speciesID.O2 = 0
+    speciesID.O2_Ion = 0
+    speciesID.O2_a1Ag = 0
+
 end
 
 end

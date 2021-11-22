@@ -22,10 +22,11 @@ const c_io_error = 1
 
 
 # Reaction structure
-struct Reaction
+mutable struct Reaction
     # Reaction identifier
     id::Int64
-    neutral_species_id::Int64
+    case::Int64 # Reaction species case flag
+    neutral_species_id::Vector{Int64}
 
     # Species involved in the reaction
     involved_species::Vector{Int}
@@ -33,12 +34,13 @@ struct Reaction
     reactant_species::Vector{Int}
 
     # Rate coefficient function
-    rate_coefficient
+    rate_coefficient#::Expr
 
     # Energy threshold
     E_threshold::Float64
 
-    case::Int64 # Reaction species case flag
+
+    Reaction() = new()
 end
 
 
@@ -107,6 +109,30 @@ end
 
 struct Output
     output_flag_list::Vector{Int64}
+end
+
+
+mutable struct SpeciesID
+    current_id::Int64
+
+    electron::Int64
+
+    Ar::Int64
+    Ar_Ion::Int64
+    Ar_Exc::Int64
+
+    O::Int64
+    O_negIon::Int64
+    O_Ion::Int64
+    O_3p::Int64
+    O_1d::Int64
+
+
+    O2::Int64
+    O2_Ion::Int64
+    O2_a1Ag::Int64
+
+    SpeciesID() = new()
 end
 
 end

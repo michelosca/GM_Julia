@@ -1,11 +1,11 @@
 module PowerInput
 
-using SharedData: System, Species
-using InputBlock_Species: s_electron_id
+using SharedData: System, Species, SpeciesID
 
-function PowerInputFunction(species::Species, system::System)
+function PowerInputFunction(species::Species, system::System,
+    sID::SpeciesID)
 
-    if (species.id == s_electron_id)
+    if (species.id == sID.electron)
         S_abs = system.drivP/system.V
     else
         S_abs = 0

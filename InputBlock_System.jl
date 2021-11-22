@@ -8,7 +8,6 @@ using SharedData: System
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
-global system = System()
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -20,14 +19,15 @@ global system = System()
 # - EndSystemBlock
 #   - AddSystemToList
 
-function StartFile_System(read_step) 
+function StartFile_System!(read_step::Int64, system::System) 
 
     errcode = 0
+
     return errcode
 end
 
 
-function StartSystemBlock(read_step::Int64)
+function StartSystemBlock!(read_step::Int64, system::System)
 
     errcode = 0
     if (read_step == 1)
@@ -49,7 +49,8 @@ function StartSystemBlock(read_step::Int64)
 end
 
 
-function ReadSystemEntry(name, var, read_step)
+function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
+    read_step::Int64, system::System)
 
     errcode = c_io_error 
 
@@ -150,7 +151,7 @@ function ReadSystemEntry(name, var, read_step)
 end
 
 
-function EndSystemBlock(read_step::Int64)
+function EndSystemBlock!(read_step::Int64, system::System)
 
     errcode = 0
 
@@ -165,7 +166,7 @@ function EndSystemBlock(read_step::Int64)
         end
         if (system.V == 0)
             if (system.radius > 0 && system.l > 0)
-                system.V = 2.0*pi*system.radius * system.l
+                system.V = pi*system.radius^2 * system.l
             else
                 print("***ERROR*** System volume has not been defined\n")
                 return c_io_error 
@@ -190,7 +191,7 @@ function EndSystemBlock(read_step::Int64)
             return c_io_error 
         end
         if (system.drivP == 0)
-            if (system.drivV == 0 || system.drivI == 0)
+            if (system.drivV == 0 && system.drivI == 0)
                 print("***ERROR*** System input power has not been defined\n")
                 return c_io_error 
             else
@@ -198,7 +199,7 @@ function EndSystemBlock(read_step::Int64)
             end
         end
         if (system.drivV == 0)
-            if (system.drivP == 0 || system.drivI == 0)
+            if (system.drivP == 0 && system.drivI == 0)
                 print("***ERROR*** System input voltage has not been defined\n")
                 return c_io_error 
             else

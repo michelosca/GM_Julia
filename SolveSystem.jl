@@ -1,18 +1,17 @@
 module SolveSystem
 
-using PlasmaSheath: GetSheathVoltage
-using PlasmaParameters: UpdateSpeciesParameters!
-using WallFlux: UpdateIonFlux!, UpdateElectronFlux!
 using SharedData: System, Species
-using GenerateODEs: dens_eq_gainloss, dens_eq_flux, eq_empty
-using GenerateODEs: temp_eq_elastic, temp_eq_gainloss
-using GenerateODEs: temp_eq_ethreshold, temp_eq_flux, temp_eq_inpower
-using DifferentialEquations: ODEProblem, solve, Tsit5, Rosenbrock23
+using SharedData: e#, K_to_eV
+using PlasmaParameters: UpdateSpeciesParameters!
+using PlasmaSheath: GetSheathVoltage
+using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
+using FunctionTerms: GetDensRateFunction, GetTempRateFunction
+using DifferentialEquations: ODEProblem, solve, Tsit5, Euler 
 
 function ExecuteProblem(init::Vector{Float64}, tspan::Tuple, p::Tuple)
 
     prob = ODEProblem(ode_fn!, init, tspan, p)
-    sol = solve(prob, Tsit5(), maxiters=1.e7) #, reltol=1e-8, abstol=1e-8)
+    sol = solve(prob, Tsit5(), maxiters=1.e7, reltol=1e-8, abstol=1e-8)#, dt = 1.e-10)
     return sol
 end
 
@@ -22,77 +21,67 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     # p are the free parameters the y-functions may have
     # t is time
 
-    # Make sure lenght of y is the same as p
-    eq_list = p[1]
-    system = p[2]
-    species_list = p[3]
-    #reaction_list = p[4]
-    n_species = length(species_list)
-    temp = y[1:n_species]
-    dens = y[n_species + 1:end]
+    #print("Time ", t,"\n")
 
+    # Make sure lenght of y is the same as p
+    system = p[1]
+    sID = p[2]
+    species_list = p[3]
+    reaction_list = p[4]
+    n_species = length(species_list)
+    dens = y[n_species + 1:end]
+    temp = y[1:n_species]
+    #print(t, " densities ", dens[[1,3,4,6]],"\n neutrality ", dens[1]+dens[4]-dens[3]-dens[6],"\n")
+
+    #Te_eV = temp[sID.electron] * K_to_eV
+    #if Te_eV > 7 
+    #    print("***WARNING*** Te above threshold ", Te_eV," eV @ t =", t,"\n")
+    #end
     # Update species parameters
-    UpdateSpeciesParameters!(temp, dens, species_list, system)
+    UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
 
     # First get the positive ion fluxes
-    flux_list = UpdateIonFlux!(species_list, system)
+    UpdatePositiveFlux!(species_list, system)
 
     # Calculate the sheath potential
-    V_sheath = GetSheathVoltage(species_list, system)
+    V_sheath = GetSheathVoltage(species_list, system, sID)
 
     # Calculate the electron flux  
-    UpdateElectronFlux!(species_list)
+    UpdateNegativeFlux!(species_list, V_sheath)
     
     # Generate the dy array
-    n = length(eq_list)
-    n_species = length(species_list)
-    for i in 1:n
+    #print("Start\n")
+    #print(" - Time ", t,"\n")
+    #print(" - V_sheat ", V_sheath,"\n")
+    dens_balance = 0.0
+    flux_balance = 0.0
+    for i in 1:n_species
         id = i - ((i-1)÷n_species)*n_species
         species = species_list[id]
 
-        dy[i] = GatherListOfFunctions(dens, temp, species, species_list,
-            system, V_sheath, eq_list[i])
-    end
-end
+        # Temperature equation
+        dy[i] = GetTempRateFunction(temp, dens, species, species_list,
+            reaction_list, system, V_sheath, sID)
+        # Density equation
+        dy[i+n_species] = GetDensRateFunction(temp, dens, species,
+            reaction_list, system, sID)
 
-
-function GatherListOfFunctions(dens::Vector{Float64}, temp::Vector{Float64},
-    species::Species, species_list::Vector{Species}, system::System,
-    V_sheath::Float64, funct_list::Vector{Tuple})
-
-    f_out = 0.0
-    for current_tuple in funct_list
-        flag = current_tuple[1]
-        funct = current_tuple[2]
-
-        # Density equations
-        if (flag == dens_eq_gainloss)
-            # Particle gain/loss
-            f_curr = funct(dens,temp)
-        elseif (flag == dens_eq_flux)
-            # Particle fluxes 
-            f_curr = funct(species)
-
-        # Temperature equations
-        elseif (flag == temp_eq_gainloss || flag == temp_eq_elastic ||
-            flag == temp_eq_ethreshold)
-            # Particle gain/loss, elastic or ethreshold
-            f_curr = funct(dens,temp)
-        elseif (flag == temp_eq_flux)
-            # Energy fluxes
-            f_curr = funct(dens, temp, species_list, V_sheath)
-        elseif (flag == temp_eq_inpower)
-            # Power absorption
-            f_curr = funct(dens, system)
-        elseif (flag == eq_empty)
-            continue
-        else
-            print("Function flag is not recognized\n")
+        if (!(species.charge==0))
+            dens_balance += species.dens * species.charge
+            flux_balance += species.flux * species.charge
+            #print(" - Species ", species.id, "\n")
+            #print("   - Species dens: ", species.dens, " temp ", species.temp,"\n")
+            #print("   - Species flux: ", species.flux,"\n")
+            #print("   - Temp FUNCTION: ",dy[i],"\n")
+            #print("   - Dens FUNCTION: ",dy[i+n_species],"\n")
         end
-        f_out += f_curr
     end
-
-    return f_out
+    dens_balance /= e
+    flux_balance /= e
+    #print(t," - Dens BALANCE: ",dens_balance)
+    #print(" - Flux BALANCE: ",flux_balance)
+    #print(" - V_sheath: ",V_sheath,"\n")
+    #print("\n\n")
 end
 
 end
