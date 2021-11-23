@@ -2,21 +2,14 @@ module InputBlock_Reactions
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
+using SharedData: r_energy_sink, r_elastic, r_wall_loss, r_excitat
+using SharedData: r_ionizat, r_recombi, r_cx 
 using ReactionSet: K_funct_list
 
 
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
-# REACTION IDs 
-# In case more reaction need to be defined, they need to be added here
-const r_energy_sink = -1
-const r_wall_loss = -2
-const r_elastic= 1
-const r_excitat= 2
-const r_ionizat= 3
-const r_recombi= 4
-const r_cx= 5
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################

@@ -6,32 +6,32 @@ using SharedData: Species, System, SpeciesID
 
 function ReplaceTempSymbolS!(expr::Expr)
 
-    ReplaceSymbol!(expr, :Te,     :temp[sID.electron])
-    ReplaceSymbol!(expr, :TAr,    :temp[sID.Ar])
-    ReplaceSymbol!(expr, :TArIon, :temp[sID.Ar_Ion])
-    ReplaceSymbol!(expr, :TO2,    :temp[sID.O2])
-    ReplaceSymbol!(expr, :TO,     :temp[sID.O])
+    ReplaceSymbol!(expr, :Te,     :(temp[sID.electron]))
+    ReplaceSymbol!(expr, :TAr,    :(temp[sID.Ar]))
+    ReplaceSymbol!(expr, :TArIon, :(temp[sID.Ar_Ion]))
+    ReplaceSymbol!(expr, :TO2,    :(temp[sID.O2]))
+    ReplaceSymbol!(expr, :TO,     :(temp[sID.O]))
 end
 
 
 function ReplaceSpeciesSymbolS!(expr::Expr)
     # Species parameters
-    ReplaceSymbol!(expr, :h_R,       :species.h_R )
-    ReplaceSymbol!(expr, :h_L,       :species.h_L )
-    ReplaceSymbol!(expr, :uB,        :species.v_Bohm )
-    ReplaceSymbol!(expr, :vth,       :species.v_thermal )
-    ReplaceSymbol!(expr, :Lambda,    :species.Lambda )
-    ReplaceSymbol!(expr, :D,         :species.D )
-    ReplaceSymbol!(expr, :gamma,     :species.gamma )
+    ReplaceSymbol!(expr, :h_R,       :(species.h_R) )
+    ReplaceSymbol!(expr, :h_L,       :(species.h_L) )
+    ReplaceSymbol!(expr, :uB,        :(species.v_Bohm) )
+    ReplaceSymbol!(expr, :vth,       :(species.v_thermal) )
+    ReplaceSymbol!(expr, :Lambda,    :(species.Lambda) )
+    ReplaceSymbol!(expr, :D,         :(species.D) )
+    ReplaceSymbol!(expr, :gamma,     :(species.gamma) )
 end
 
 
 function ReplaceSystemSymbolS!(expr::Expr)
     # System parameters
-    ReplaceSymbol!(expr, :R,         :system.radius )
-    ReplaceSymbol!(expr, :L,         :system.l )
-    ReplaceSymbol!(expr, :A,         :system.A )
-    ReplaceSymbol!(expr, :V,         :system.V )
+    ReplaceSymbol!(expr, :R,         :(system.radius) )
+    ReplaceSymbol!(expr, :L,         :(system.l) )
+    ReplaceSymbol!(expr, :A,         :(system.A) )
+    ReplaceSymbol!(expr, :V,         :(system.V) )
 end
 
 

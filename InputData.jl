@@ -15,7 +15,6 @@ using InputBlock_System: StartFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
 
 using PlasmaParameters: GetLambda, GetGamma
-using EvaluateExpressions: ReplaceSystemSymbolS!
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -304,11 +303,6 @@ function CheckReactionList(species_list::Vector{Species},
     errcode = 0
 
     for r in reaction_list
-        # Update rate coefficient values
-        if !(typeof(r.rate_coefficient) == Float64)
-            ReplaceSystemSymbolS!(r.rate_coefficient, system)
-        end
-
         # Test reaction charge balance
         if !(r.case == r_wall_loss)
             charge_balance = 0.0

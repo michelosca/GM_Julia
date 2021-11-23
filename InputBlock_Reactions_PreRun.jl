@@ -1,11 +1,11 @@
-module InputBlock_Reactions
+module InputBlock_Reactions_PreRun
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
 using EvaluateExpressions: ReplaceConstantSymbolS!, ReplaceSystemSymbolS!
 using EvaluateExpressions: ReplaceSpeciesSymbolS!, ReplaceTempSymbolS!
-using InputBlock_Reactions: r_energy_sink, r_elastic, r_wall_loss, r_excitat
-using InputBlock_Reactions: r_ionizat, r_recombi, r_cx 
+using SharedData: r_energy_sink, r_elastic, r_wall_loss, r_excitat
+using SharedData: r_ionizat, r_recombi, r_cx 
 
 ###############################################################################
 ################################  VARIABLES  ##################################

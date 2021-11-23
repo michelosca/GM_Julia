@@ -9,7 +9,7 @@ using InputBlock_Species: StartSpeciesBlock!, EndSpeciesBlock!, ReadSpeciesEntry
 
 using InputBlock_Reactions_PreRun: StartFile_Reactions!
 using InputBlock_Reactions_PreRun: StartReactionsBlock!, EndReactionsBlock!, ReadReactionsEntry!
-using InputBlock_Reactions: r_elastic, r_wall_loss 
+using InputBlock_Reactions_PreRun: r_elastic, r_wall_loss 
 
 using InputBlock_System: StartFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!

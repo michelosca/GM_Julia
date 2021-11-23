@@ -158,7 +158,7 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             r_involved = string(r_involved, species_list[id].name,":",r.species_balance[i],", ")
             i += 1
         end
-        r_neutral = chop(r_neutral, tail=2)
+        r_involved = chop(r_involved, tail=2)
 
         # Reacting species
         r_reactants= ""

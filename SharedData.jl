@@ -20,6 +20,14 @@ const s_flux_interpolation = 3
 # Read input flags 
 const c_io_error = 1
 
+# REACTION IDs 
+const r_energy_sink = -1
+const r_wall_loss = -2
+const r_elastic= 1
+const r_excitat= 2
+const r_ionizat= 3
+const r_recombi= 4
+const r_cx= 5
 
 # Reaction structure
 mutable struct Reaction
