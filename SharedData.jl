@@ -34,7 +34,7 @@ mutable struct Reaction
     reactant_species::Vector{Int}
 
     # Rate coefficient function
-    rate_coefficient#::Expr
+    rate_coefficient
 
     # Energy threshold
     E_threshold::Float64

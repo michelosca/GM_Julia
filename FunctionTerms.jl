@@ -5,7 +5,6 @@ using SharedData: kb
 using InputBlock_Reactions: r_elastic, r_wall_loss, r_energy_sink
 using WallFlux: DensWallFluxFunction, TempWallFluxFunction
 using PowerInput: PowerInputFunction
-using EvaluateExpressions: EvaluateExpression
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -46,8 +45,12 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if !(sign == 0) 
-                K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
-                value = sign * prod(dens[r.reactant_species]) * eval(K)
+                if r.case == r_wall_loss
+                    K = r.rate_coefficient(temp, s, system, sID) 
+                else
+                    K = r.rate_coefficient(temp, sID) 
+                end
+                value = sign * prod(dens[r.reactant_species]) * K
                 dens_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             end
@@ -89,9 +92,12 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if (sign != 0)
-                K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
-                value = sign * prod(dens[r.reactant_species]) *
-                    eval(K) * Q1 / Q0
+                if r.case == r_wall_loss
+                    K = r.rate_coefficient(temp, s, system, sID) 
+                else
+                    K = r.rate_coefficient(temp, sID) 
+                end
+                value = sign * prod(dens[r.reactant_species]) * K * Q1 / Q0
                 temp_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             else
@@ -103,9 +109,9 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                     m_charged = s.mass
                     Q2 = -3.0 * kb * m_charged / m_neutral
                     t_neutral = temp[n_id]
-                    K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
+                    K = r.rate_coefficient(temp, sID) 
                     value = Q2 * prod(dens[r.reactant_species]) *
-                        eval(K) * (temp[s_id] - t_neutral) / Q0
+                        K * (temp[s_id] - t_neutral) / Q0
                     temp_funct += value
                     #print("   - Elastic:   ", r.id," - ", value, "\n")
                 end
@@ -122,8 +128,8 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             end
             Er = r.E_threshold
             if (Er != 0) 
-                K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
-                value = -Er * prod(dens[r.reactant_species]) * eval(K) / Q0
+                K = r.rate_coefficient(temp, sID) 
+                value = -Er * prod(dens[r.reactant_species]) * K / Q0
                 temp_funct += value
                 #print("   - Ethreshold: ", r.id," - ", value, "\n")
             end
