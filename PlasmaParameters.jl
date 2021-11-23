@@ -3,8 +3,7 @@ module PlasmaParameters
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
 using SharedData: p_icp_id, p_ccp_id
-using InputBlock_Reactions: r_wall_loss
-using EvaluateExpressions: EvaluateExpression
+using SharedData: r_wall_loss
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -55,7 +54,7 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
             continue
         end
         # Set collision cross section
-        sigma_expr = EvaluateExpression(r.rate_coefficient, sID, temp, species)
+        sigma_expr = r.rate_coefficient(temp, sID)
         cross_section = eval(sigma_expr) / v_th_s
 
         # Density of colliding partners
