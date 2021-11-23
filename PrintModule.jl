@@ -22,34 +22,6 @@ function PrintSpeciesList(species_list::Vector{Species}, sID::SpeciesID)
         "Species", "Mass [kg]", "Charge [C]","has n-eq",
         "has T-eq", "has WL", "has P-input","Dens0 [m^-3]","Temp0 [eV]")
     for s in species_list
-        # s.id -> species name
-        if (s.id == sID.electron)
-            s_name = "electrons"
-        elseif (s.id == sID.Ar)
-            s_name = "Ar"
-        elseif (s.id == sID.Ar_Ion)
-            s_name = "Ar+"
-        elseif (s.id == sID.Ar_Exc)
-            s_name = "Ar*"
-        elseif s.id == sID.O
-            s_name = "O"
-        elseif s.id == sID.O2
-            s_name = "O2"
-        elseif s.id == sID.O_Ion
-            s_name = "O+"
-        elseif s.id == sID.O_negIon
-            s_name = "O-"
-        elseif s.id == sID.O2_Ion
-            s_name = "O2+"
-        elseif s.id == sID.O_3p
-            s_name = "O(3p)"
-        elseif s.id == sID.O_1d
-            s_name = "O(1d)"
-        elseif s.id == sID.O2_a1Ag
-            s_name = "O2(a1Ag)"
-        else
-            s_name = "Not found!"
-        end
 
         # s.neutral_id -> species name
         if (s.species_id == sID.Ar)
@@ -93,7 +65,7 @@ function PrintSpeciesList(species_list::Vector{Species}, sID::SpeciesID)
         end
 
         @printf("%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
-            s_name, sn_name, s.mass, s.charge, 
+            s.name, sn_name, s.mass, s.charge, 
             has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
             s.dens, s.temp*K_to_eV)
     end
@@ -102,12 +74,13 @@ end
 
 
 
-function PrintReactionList(reaction_list::Vector{Reaction}, sID::SpeciesID)
+function PrintReactionList(reaction_list::Vector{Reaction},
+    species_list::Vector{Species}, sID::SpeciesID)
 
     @printf("Loaded reactions\n")
-    @printf("%15s %30s %15s %15s %15s %15s %15s\n",
-        "Name", "Reaction", "E-threshold [eV]",
-        "Neutral","Involved", "Balance", "Reactants")
+    @printf("%17s %30s %15s %15s %30s %15s\n",
+        "ID - description", "Reaction", "E-threshold [eV]",
+        "Neutral","Species balance", "Reactants")
 
     for r in reaction_list
 
@@ -118,11 +91,11 @@ function PrintReactionList(reaction_list::Vector{Reaction}, sID::SpeciesID)
         elseif (r.case == r_ionizat)
             r_name = string(r_name, "-Ionization")
         elseif (r.case == r_recombi)
-            r_name = string(r_name, "-Recombination")
+            r_name = string(r_name, "-Recombinat.")
         elseif (r.case == r_excitat)
             r_name = string(r_name, "-Excitation")
         elseif (r.case == r_wall_loss)
-            r_name = string(r_name, "-Wall reaction")
+            r_name = string(r_name, "-Wall react.")
         elseif (r.case == r_energy_sink)
             r_name = string(r_name, "-Energy sink")
         elseif (r.case == r_cx)
@@ -136,37 +109,15 @@ function PrintReactionList(reaction_list::Vector{Reaction}, sID::SpeciesID)
             s = r.involved_species[i]
             b = r.species_balance[i]
 
-            if (s == sID.electron)
-                s_name = "e"
-            elseif (s == sID.Ar)
-                s_name = "Ar"
-            elseif (s == sID.Ar_Ion)
-                s_name = "Ar+"
-            elseif (s == sID.Ar_Exc)
-                s_name = "Ar*"
-            elseif s == sID.O
-                s_name = "O"
-            elseif s == sID.O2
-                s_name = "O2"
-            elseif s == sID.O_Ion
-                s_name = "O+"
-            elseif s == sID.O_negIon
-                s_name = "O-"
-            elseif s == sID.O2_Ion
-                s_name = "O2+"
-            elseif s == sID.O_3p
-                s_name = "O(3p)"
-            elseif s == sID.O_1d
-                s_name = "O(1d)"
-            elseif s == sID.O2_a1Ag
-                s_name = "O2(a1Ag)"
-            else
-                s_name = "None"
-            end
+            s_name = species_list[s].name
             if b > 0
-                push!(products, s_name)
+                for i in 1:b 
+                    push!(products, s_name)
+                end
             elseif b < 0
-                push!(reactants, s_name)
+                for i in 1:-b
+                    push!(reactants, s_name)
+                end
             else
                 push!(reactants, s_name)
                 push!(products, s_name)
@@ -195,21 +146,29 @@ function PrintReactionList(reaction_list::Vector{Reaction}, sID::SpeciesID)
 
         # Neutral species
         r_neutral = ""
-        for n_id in r.neutral_species_id
-            if (n_id == sID.Ar)
-                r_neutral = string(r_neutral, "Ar,")
-            elseif (n_id == sID.O)
-                r_neutral = string(r_neutral, "O,")
-            elseif (n_id == sID.O2)
-                r_neutral = string(r_neutral, "O2,")
-            else
-                r_neutral = string(r_neutral, "??,")
-            end
+        for id in r.neutral_species_id
+            r_neutral = string(r_neutral, species_list[id].name,", ")
         end
-        r_neutral = chop(r_neutral, tail=1)
+        r_neutral = chop(r_neutral, tail=2)
 
-        @printf("%15s %30s %15.2f %15s %15s %15s %15s\n", r_name, reaction_str,
-            E_eV, r_neutral,r.involved_species, r.species_balance, r.reactant_species)
+        # Involved species and its balance
+        r_involved = ""
+        i = 1
+        for id in r.involved_species
+            r_involved = string(r_involved, species_list[id].name,":",r.species_balance[i],", ")
+            i += 1
+        end
+        r_neutral = chop(r_neutral, tail=2)
+
+        # Reacting species
+        r_reactants= ""
+        for id in r.reactant_species
+            r_reactants = string(r_reactants, species_list[id].name,", ")
+        end
+        r_reactants = chop(r_reactants, tail=2)
+
+        @printf("%17s %30s %15.2f %15s %30s %15s\n", r_name, reaction_str,
+            E_eV, r_neutral, r_involved, r_reactants)
     end
     print("\n")
 end

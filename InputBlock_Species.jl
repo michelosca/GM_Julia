@@ -1,6 +1,6 @@
 module InputBlock_Species
 
-using SharedData: K_to_eV, e, me, amu 
+using SharedData: K_to_eV, e, me, amu, kb 
 using SharedData: c_io_error
 using SharedData: Species, Reaction, SpeciesID
 
@@ -50,6 +50,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.has_heating_mechanism = false
         current_species.dens = 0.0
         current_species.temp = 0.0
+        current_species.pressure = 0.0
         current_species.reaction_list = Reaction[]
         current_species.mfp = 1.e100
         current_species.v_thermal = 0.0
@@ -61,6 +62,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.gamma = 0.0
         current_species.n_sheath = 0.0
         current_species.flux = 0.0
+        current_species.name = "None"
         push!(species_list, current_species)
     end
     return errcode
@@ -77,6 +79,7 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
 
     if (name=="name")
         if (read_step == 2)
+            current_species.name = var
             if (var=="e" || var=="electrons" || var=="electron")
                 current_species.species_id = sID.electron 
                 errcode = 0
@@ -135,7 +138,7 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
             else
                 units = 1.0
             end
-            current_species.temp = parse(Float64, var)*units
+            current_species.temp = parse(Float64, var) * units
         end
         errcode = 0
     end
@@ -143,6 +146,18 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
     if (name=="density" || name=="dens")
         if (read_step == 2)
             current_species.dens = parse(Float64, var)
+        end
+        errcode = 0
+    end
+
+    if (name=="pressure" || name=="p" || name=="p_mTorr")
+        if (read_step == 2)
+            if (name=="p_mTorr")
+                units = 0.13332237  
+            else
+                units = 1.0
+            end
+            current_species.pressure = parse(Float64, var) * units
         end
         errcode = 0
     end
@@ -207,7 +222,31 @@ function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species})
         end
 
         if (current_species.temp == 0)
-            print("***ERROR*** Species temperature has not been defined")
+            dens = current_species.dens
+            p = current_species.pressure
+            if (dens != 0 && p != 0)
+                current_species.temp = p / (kb * dens) 
+            end
+        end
+
+        if (current_species.dens == 0)
+            temp = current_species.temp
+            p = current_species.pressure
+            if (temp != 0 && p != 0)
+                current_species.dens = p / (kb * temp) 
+            end
+        end
+
+        if (current_species.pressure == 0)
+            temp = current_species.temp
+            dens = current_species.dens
+            if (temp != 0 && dens != 0)
+                current_species.pressure = dens * kb * temp 
+            end
+        end
+
+        if (current_species.temp == 0 && current_species.dens == 0)
+            print("***ERROR*** Species temp/dens/press has not been defined\n")
             return c_io_error
         end
     end

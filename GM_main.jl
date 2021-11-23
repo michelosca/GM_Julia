@@ -20,7 +20,7 @@ function run_GM(input_file, output_flag_list)
     # Print system, species and reaction lists to terminal
     PrintSystemList(system)
     PrintSpeciesList(species_list, speciesID)
-    PrintReactionList(reaction_list, speciesID)
+    PrintReactionList(reaction_list, species_list, speciesID)
 
     # Execute problem(s)
     output_list = Output[]

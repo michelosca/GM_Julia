@@ -3,6 +3,7 @@ module WallFlux
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb, e, K_to_eV 
 using SharedData: p_ccp_id, p_icp_id 
+using SharedData: s_ohmic_power
 using PlasmaParameters: GetMFP, GetBohmSpeed, GetThermalSpeed
 using PlasmaParameters: Get_h_Parameters
 
@@ -74,17 +75,33 @@ function UpdatePositiveFlux!(species_list::Vector{Species}, system::System)
 end
 
 
-function UpdateNegativeFlux!(species_list::Vector{Species}, V_sheath::Float64)
+function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
+    sID::SpeciesID, V_sheath::Float64)
 
     # Electron flux solved from the flux balance equation, i.e.
     # flux_electrons = SUM(flux_ions)
     # Negative ion species are assumed to have zero net flow through the walls
 
+    solve_method = system.Vsheath_solving_method
+    if solve_method == s_ohmic_power 
+        negative_flux = 0.0
+    end
+
     for s in species_list
-        if s.charge < 0
-            T_eV = s.temp * K_to_eV
-            s.flux = 0.25 * s.n_sheath * s.v_thermal * exp(-V_sheath / T_eV)
+        if solve_method == s_ohmic_power 
+            q = s.charge
+            if q > 0
+                negative_flux += s.flux * q 
+            end
+        else
+            if s.charge < 0
+                T_eV = s.temp * K_to_eV
+                s.flux = 0.25 * s.n_sheath * s.v_thermal * exp(-V_sheath / T_eV)
+            end
         end
+    end
+    if solve_method == s_ohmic_power 
+        species_list[sID.electron].flux = negative_flux / e 
     end
 
 end

@@ -1,10 +1,10 @@
 module PlasmaParameters
 
-using SharedData: Species, Reaction, System
-using SharedData: kb
+using SharedData: Species, Reaction, System, SpeciesID
+using SharedData: kb, K_to_eV, e
 using SharedData: p_icp_id, p_ccp_id
-using InputBlock_Species: s_electron_id
 using InputBlock_Reactions: r_wall_loss
+using EvaluateExpressions: EvaluateExpression
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -15,45 +15,55 @@ using InputBlock_Reactions: r_wall_loss
 # - GetMFP
 
 function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
-    species_list::Vector{Species}, system::System)
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
 
     for s in species_list
         s.temp = temp[s.id]
         s.dens = dens[s.id]
         s.v_thermal = GetThermalSpeed(s)
-        s.v_Bohm = GetBohmSpeed(temp, s)
-        s.mfp = GetMFP(temp, dens, s)
+        s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
+        s.mfp = GetMFP(temp, dens, s, sID)
         if system.power_input_method == p_ccp_id
             if s.charge > 0
                 s.n_sheath = GetSheathDensity(s, system)
-            end
-        elseif system.power_input_method == p_icp_id
-            if (s.id == s_electron_id)
-                continue
-            end
-            if s.charge > 0
+            else
                 s.n_sheath = s.dens
             end
-            s.h_L, s.h_R = Get_h_Parameters(temp, dens, s, species_list, system)
+        elseif system.power_input_method == p_icp_id
+            s.n_sheath = s.dens
+            if (s.id == sID.electron)
+                continue
+            end
+            #if s.charge > 0
+            #    s.n_sheath = GetSheathDensity(s, system)
+            #end
+            s.h_L, s.h_R = Get_h_Parameters(temp, dens, s, species_list,
+                system, sID.electron)
             s.D = GetD(s)
         end
     end
 end
 
-
-function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species)
+function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
+    sID::SpeciesID)
     # Get the species neutral mean-free-path
 
     ilambda = 0.0         # inverse mean-free-path
-    v_th_s = GetThermalSpeed(species)
+    v_th_s = species.v_thermal
     for r in species.reaction_list
-        cross_section = r.rate_coefficient(temp) / v_th_s
-        n = prod(dens[r.reactant_species]) / species.dens
+        if (r.case == r_wall_loss)
+            continue
+        end
+        # Set collision cross section
+        sigma_expr = EvaluateExpression(r.rate_coefficient, sID, temp, species)
+        cross_section = eval(sigma_expr) / v_th_s
+
+        # Density of colliding partners
+        n = prod(dens[r.neutral_species_id])
         ilambda += n * cross_section 
     end
 
     if ilambda == 0
-        #print("MFP of species ",species.id," is infinite!\n")
         ilambda = 1.e-100
     end
     lambda = 1.0/ilambda
@@ -61,13 +71,9 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species)
 end
 
 
-function GetBohmSpeed(temp::Vector{Float64}, species::Species)
-    if (species.id == s_electron_id)
-        return 0.0
-    end
-    Te = temp[s_electron_id]
-    ms = species.mass
-    uB = sqrt(kb * Te / ms)
+function GetBohmSpeed(Te::Float64, mass::Float64)
+
+    uB = sqrt(kb * Te / mass)
     return uB
 end
 
@@ -82,14 +88,14 @@ end
 
 
 function Get_h_Parameters(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
-    species_list::Vector{Species}, system::System)
+    species_list::Vector{Species}, system::System, electron_id::Int64)
     # See Gudmundsson (2000) On the plasma parameters of a planar inductive oxygen discharge
 
     L = system.l
     R = system.radius
 
     # Gamma parameter
-    Te = temp[s_electron_id]
+    Te = temp[electron_id]
     Ti = temp[species.id]
     gamma = Te / Ti
 
@@ -97,13 +103,13 @@ function Get_h_Parameters(temp::Vector{Float64}, dens::Vector{Float64}, species:
     alpha = 0.0
     for s in species_list
         q = s.charge
-        if s.id == s_electron_id
+        if s.id == electron_id
             continue
         elseif q < 0
             alpha += dens[s.id]
         end
     end
-    alpha /= dens[s_electron_id]
+    alpha /= dens[electron_id]
 
     # Get species mean free path
     lambda = species.mfp
@@ -131,7 +137,7 @@ end
 function GetD(species)
 
     T_eV = species.temp * K_to_eV
-    D = e * T_eV * species.mfp / (species.v_th / species.mass)
+    D = e * T_eV * species.mfp / (species.v_thermal / species.mass)
     return D
 end
 

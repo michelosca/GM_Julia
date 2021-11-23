@@ -158,7 +158,8 @@ function EndSystemBlock!(read_step::Int64, system::System)
     if (read_step == 1)
         if (system.A == 0)
             if (system.radius > 0 && system.l > 0)
-                system.A = pi*system.radius^2 + 2.0*pi*system.radius*system.l
+                system.A = 2.0*pi*system.radius^2 +
+                    2.0*pi*system.radius*system.l
             else
                 print("***ERROR*** System area has not been defined\n")
                 return c_io_error 

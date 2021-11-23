@@ -68,6 +68,7 @@ mutable struct Species
     # Density and temperature of the species
     dens::Float64
     temp::Float64
+    pressure::Float64
 
     # Other features
     reaction_list::Vector{Reaction}
@@ -82,6 +83,8 @@ mutable struct Species
     n_sheath::Float64
     flux::Float64
 
+    # Output features
+    name::String
     Species() = new()
 end
 
