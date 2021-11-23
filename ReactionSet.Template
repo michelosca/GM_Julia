@@ -1,7 +1,5 @@
 module ReactionSet
 
-using SharedData: amu, e, kb
-
 K_funct_list = []
 
 ### START REACTION STRINGS ###
