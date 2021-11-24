@@ -16,12 +16,19 @@ using SharedData: r_wall_loss
 function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
 
+    # Update first dens and temperature
     for s in species_list
         s.temp = temp[s.id]
         s.dens = dens[s.id]
+    end
+
+    UpdateAlpha!(dens, species_list, system, sID.electron)
+
+    for s in species_list
         s.v_thermal = GetThermalSpeed(s)
         s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
-        s.mfp = GetMFP(temp, dens, s, sID)
+        s.mfp = GetMFP(temp, dens, s, species_list, sID)
+
         if system.power_input_method == p_ccp_id
             if s.charge > 0
                 s.n_sheath = GetSheathDensity(s, system)
@@ -33,40 +40,81 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             if (s.id == sID.electron)
                 continue
             end
-            #if s.charge > 0
-            #    s.n_sheath = GetSheathDensity(s, system)
-            #end
-            s.h_L, s.h_R = Get_h_Parameters(temp, dens, s, species_list,
-                system, sID.electron)
+
+            if s.charge > 0
+                s.h_L, s.h_R = Get_h_Parameters(temp, dens, s, species_list,
+                    system, sID.electron)
+            end
+
             s.D = GetD(s)
         end
     end
 end
 
+
 function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
-    sID::SpeciesID)
-    # Get the species neutral mean-free-path
+    species_list::Vector{Species}, sID::SpeciesID)
+    # Neutrals >> general MFP (used in D)
+    # Electrons >> general MFP (used in n_sheath(CCP))
+    # Ions >> charged-neutral MFP (used in h_L and h_R)
 
     ilambda = 0.0         # inverse mean-free-path
     v_th_s = species.v_thermal
+    id = species.id
     for r in species.reaction_list
         if (r.case == r_wall_loss)
             continue
         end
+
+        # If netrual/electrons then consider all reactants
+        if species.charge == 0 || id == sID.electron
+            r_species = copy(r.reactant_species)
+            
+            # Exclude the species for which the mfp is calculated
+            index = findall( x -> x == id, r_species )
+            deleteat!(r_species, index)
+
+        else
+            # else, i.e. ions, only consider reactions with neutral species
+            r_species = r.neutral_species_id
+        end
+
+        # Get max. thermal speed of reacting species
+        v_th = v_th_s
+        for i in r_species
+            v_th_n = species_list[i].v_thermal
+            v_th = max(v_th_n, v_th)
+        end
+        
         # Set collision cross section
         sigma_expr = r.rate_coefficient(temp, sID)
-        cross_section = eval(sigma_expr) / v_th_s
+        cross_section = eval(sigma_expr) / v_th
 
         # Density of colliding partners
-        n = prod(dens[r.neutral_species_id])
+        n = prod(dens[r_species])
         ilambda += n * cross_section 
     end
 
-    if ilambda == 0
-        ilambda = 1.e-100
-    end
     lambda = 1.0/ilambda
     return lambda
+end
+
+
+function UpdateAlpha!(dens::Vector{Float64}, species_list::Vector{Species},
+    system::System, electron_id::Int64)
+
+    # Alpha parameter
+    alpha = 0.0
+    for s in species_list
+        q = s.charge
+        if s.id == electron_id
+            continue
+        elseif q < 0
+            alpha += dens[s.id]
+        end
+    end
+    alpha /= dens[electron_id]
+    system.alpha = alpha
 end
 
 
@@ -89,6 +137,7 @@ end
 function Get_h_Parameters(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
     species_list::Vector{Species}, system::System, electron_id::Int64)
     # See Gudmundsson (2000) On the plasma parameters of a planar inductive oxygen discharge
+    # Only valid for positive charged species
 
     L = system.l
     R = system.radius
@@ -97,18 +146,7 @@ function Get_h_Parameters(temp::Vector{Float64}, dens::Vector{Float64}, species:
     Te = temp[electron_id]
     Ti = temp[species.id]
     gamma = Te / Ti
-
-    # Alpha parameter
-    alpha = 0.0
-    for s in species_list
-        q = s.charge
-        if s.id == electron_id
-            continue
-        elseif q < 0
-            alpha += dens[s.id]
-        end
-    end
-    alpha /= dens[electron_id]
+    alpha = system.alpha
 
     # Get species mean free path
     lambda = species.mfp

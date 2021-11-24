@@ -20,7 +20,6 @@ function ReplaceSpeciesSymbolS!(expr::Expr)
     ReplaceSymbol!(expr, :h_L,       :(species.h_L) )
     ReplaceSymbol!(expr, :uB,        :(species.v_Bohm) )
     ReplaceSymbol!(expr, :vth,       :(species.v_thermal) )
-    ReplaceSymbol!(expr, :Lambda,    :(species.Lambda) )
     ReplaceSymbol!(expr, :D,         :(species.D) )
     ReplaceSymbol!(expr, :gamma,     :(species.gamma) )
 end
@@ -32,6 +31,7 @@ function ReplaceSystemSymbolS!(expr::Expr)
     ReplaceSymbol!(expr, :L,         :(system.l) )
     ReplaceSymbol!(expr, :A,         :(system.A) )
     ReplaceSymbol!(expr, :V,         :(system.V) )
+    ReplaceSymbol!(expr, :Lambda,    :(system.Lambda) )
 end
 
 

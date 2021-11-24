@@ -10,9 +10,42 @@ using DifferentialEquations: ODEProblem, solve, Tsit5, Euler
 
 function ExecuteProblem(init::Vector{Float64}, tspan::Tuple, p::Tuple)
 
-    prob = ODEProblem(ode_fn!, init, tspan, p)
-    sol = solve(prob, Tsit5(), maxiters=1.e7, reltol=1e-8, abstol=1e-8, dt = 1.e-13)
-    return sol
+    sol_list = []
+    rate = 1.0
+
+    system = p[1]
+    sID = p[2]
+    species_list = p[3]
+    reaction_list = p[4]
+    n_species = length(species_list)
+    while rate > 0.001
+
+        prob = ODEProblem(ode_fn!, init, tspan, p)
+        if rate >= 1
+            sol = solve(prob, Tsit5(), maxiters=1.e7, reltol=1e-8, abstol=1e-8, dt = 1.e-13)
+        else
+            sol = solve(prob, Tsit5(), maxiters=1.e7, reltol=1e-8, abstol=1e-8, dt = 1.e-10)
+        end
+
+        push!(sol_list, sol)
+
+        # Update species parameters
+        dens_0 = init[n_species + sID.electron]
+        for s in species_list
+            s.dens = sol[n_species + s.id, end]
+            s.temp = sol[s.id, end]
+            init[s.id] = s.temp
+            init[s.id + n_species] = s.dens
+        end
+        p = (system, sID, species_list, reaction_list)
+
+        # Check convergence rate
+        dens_end = species_list[sID.electron].dens
+        rate = abs(dens_end - dens_0)/dens_0
+        print("Convergence rate: ", rate,"\n")
+
+    end
+    return sol_list
 end
 
 function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)

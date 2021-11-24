@@ -2,6 +2,7 @@ module PlotModule
 
 using Plots
 #using LaTeXStrings
+using SharedData: Species
 
 function PlotDens(x,y)
     p = plot(x, y,
@@ -47,4 +48,44 @@ function PlotTemp(x,y)
     )
     return p
 end
+
+function PlotDensities_Charged(species_list::Vector{Species}, sol_list)
+    # Input: sol, is the output returned by DifferentialEquations.solve
+    p = plot(xlabel = "t [ms]", ylabel = "n [m^-3]")
+    n_species = length(species_list)
+    for s in species_list
+        if abs(s.charge) > 0
+            t0 = 0.0
+            for sol in sol_list
+                dens_id = s.id + n_species
+                dens = sol[dens_id, :]
+                time = sol.t/1.e-3 .+ t0
+                plot!(p, time, dens, legend=false, w = 2)
+                t0 += sol.t[end]/1.e-3
+            end
+        end
+    end
+    return p
+end
+
+function PlotDensities_Neutral(species_list::Vector{Species}, sol_list)
+    # Input: sol, is the output returned by DifferentialEquations.solve
+    p = plot(xlabel = "t [ms]", ylabel = "n [m^-3]")
+    n_species = length(species_list)
+    #for s in species_list
+    s = species_list[1]
+        t0 = 0.0
+        for sol in sol_list
+            if s.charge == 0
+                dens_id = s.id + n_species
+                dens = sol[dens_id, :]
+                time = sol.t/1.e-3 + t0
+                plot!(p, time, dens, label = s.name, w = 2)
+                t0 = time
+            end
+        end
+    #end
+    return p
+end
+
 end

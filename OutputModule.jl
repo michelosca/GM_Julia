@@ -62,8 +62,8 @@ function Output_PL(GM_tuple::Tuple, temp::Vector{Float64},
     Te = Float64[]
     ne = Float64[]
     pL = Float64[]
-    n_steps = 100
-    for e in [10^y for y in range(log10(19.5), log10(22), length=n_steps)]
+    n_steps = 150
+    for e in [10^y for y in range(log10(19.5), log10(25), length=n_steps)]
         dens[sID.Ar] = 9.5 * 10^e
         init = cat(temp,dens,dims=1)
         p = dens[sID.Ar] * kb * TAr
@@ -85,7 +85,7 @@ function Output_PL(GM_tuple::Tuple, temp::Vector{Float64},
         tspan = (0,t_end)
         sol = ExecuteProblem(init, tspan, GM_tuple)
         push!(Te, sol[1,end]*K_to_eV)
-        push!(ne, sol[5,end])
+        push!(ne, sol[4,end])
     end
 
     return ("pL", Te, ne, pL)

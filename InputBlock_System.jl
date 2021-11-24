@@ -4,6 +4,8 @@ using SharedData: c_io_error
 using SharedData: p_ccp_id, p_icp_id
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: System
+using PlasmaParameters: GetLambda
+
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -32,7 +34,6 @@ function StartSystemBlock!(read_step::Int64, system::System)
     errcode = 0
     if (read_step == 1)
         system.A = 0.0
-        system.electrode_area = 0.0
         system.V = 0.0
         system.l = 0.0
         system.radius = 0.0
@@ -41,9 +42,8 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivf = 0.0
         system.drivOmega = 0.0
         system.drivP = 0.0
-        system.drivI = 0.0
-        system.drivV = 0.0
         system.t_end = 0.0
+        system.Lambda = 0.0
     end
     return errcode
 end
@@ -199,27 +199,13 @@ function EndSystemBlock!(read_step::Int64, system::System)
                 system.drivP =  system.drivI * system.drivV
             end
         end
-        if (system.drivV == 0)
-            if (system.drivP == 0 && system.drivI == 0)
-                print("***ERROR*** System input voltage has not been defined\n")
-                return c_io_error 
-            else
-                system.drivV =  system.drivP / system.drivI
-            end
-        end
-        if (system.drivI == 0)
-            if (system.drivP == 0 || system.drivV == 0)
-                print("***ERROR*** System input current has not been defined\n")
-                return c_io_error 
-            else
-                system.drivI =  system.drivP / system.drivV
-            end
-        end
+
         if (system.t_end == 0)
             print("***ERROR*** Simulation time must be > 0 \n")
             return c_io_error 
         end
 
+        system.Lambda = GetLambda(system)
         system.drivOmega = system.drivf * 2.0 * pi
     end
     return errcode

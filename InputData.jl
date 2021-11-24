@@ -14,14 +14,11 @@ using InputBlock_Reactions: r_elastic, r_wall_loss
 using InputBlock_System: StartFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
 
-using PlasmaParameters: GetLambda, GetGamma
+using PlasmaParameters: GetGamma
 
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
-const setup_pre_run = 0
-const setup_main_run = 1
-
 # INPUT BLOCK IDs
 global block_id = 0
 const b_system = 1
@@ -50,13 +47,13 @@ const b_reactions = 3
 #           - EndtSpeciesBlock
 #           - EndtReactionsBlock
 
-function SetupInputData!(filename::String, setup_flag::Int64,
+function SetupInputData!(filename::String,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, speciesID::SpeciesID)
 
     errcode = c_io_error
 
-    errcode = ReadInputData!(filename, setup_flag,
+    errcode = ReadInputData!(filename,
         species_list, reaction_list, system, speciesID)
     if (errcode == c_io_error)
         print("***ERROR*** Failed to read the input deck. Abort code\n")
@@ -66,40 +63,24 @@ function SetupInputData!(filename::String, setup_flag::Int64,
 end
 
 
-function ReadInputData!(filename::String, setup_flag::Int64,
+function ReadInputData!(filename::String,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, speciesID::SpeciesID)
 
-    errcode = c_io_error 
-
-    if (setup_flag == setup_pre_run)
-        read_step = 0 
+    # Opens the file given in filename and reads each line
+    for read_step in 1:2
         print("Reading $read_step of the input deck...\n")
-        errcode = StartFile!(read_step, species_list, reaction_list, system,
-            speciesID)
-        if (errcode == c_io_error) return errcode end
-        errcode = ReadFile!(filename, read_step, species_list, reaction_list,
+        errcode = StartFile!(read_step, species_list, reaction_list,
             system, speciesID)
         if (errcode == c_io_error) return errcode end
+        errcode = ReadFile!(filename, read_step, species_list,
+            reaction_list, system, speciesID)
+        if (errcode == c_io_error) return errcode end
         print("End of input deck reading\n\n")
-
-    elseif (setup_flag == setup_main_run)
-        # Opens the file given in filename and reads each line
-        for read_step in 1:2
-            print("Reading $read_step of the input deck...\n")
-            errcode = StartFile!(read_step, species_list, reaction_list,
-                system, speciesID)
-            if (errcode == c_io_error) return errcode end
-            errcode = ReadFile!(filename, read_step, species_list,
-                reaction_list, system, speciesID)
-            if (errcode == c_io_error) return errcode end
-            print("End of input deck reading\n\n")
-        end
-        errcode = CheckSpeciesList(species_list, reaction_list, system)
-        errcode = CheckReactionList(species_list, reaction_list, system)
-    else
-        print("***ERROR*** Setup flag is not recognized\n")
     end
+    errcode = CheckSpeciesList(species_list, reaction_list, system)
+    errcode = CheckReactionList(species_list, reaction_list, system)
+
     return errcode
 end
 
@@ -289,7 +270,6 @@ function CheckSpeciesList(species_list::Vector{Species},
             end
         end
         if system.power_input_method == p_icp_id
-            s.Lambda = GetLambda(system)
             s.gamma = GetGamma()
         end
     end

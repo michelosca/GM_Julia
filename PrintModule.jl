@@ -19,22 +19,12 @@ function PrintSpeciesList(species_list::Vector{Species}, sID::SpeciesID)
 
     @printf("Loaded species\n")
     @printf("%15s %15s %15s %15s %10s %10s %10s %10s %15s %15s\n","Name",
-        "Species", "Mass [kg]", "Charge [C]","has n-eq",
-        "has T-eq", "has WL", "has P-input","Dens0 [m^-3]","Temp0 [eV]")
+        "Species", "Mass [kg]", "Charge [C]","n-eq.",
+        "T-eq.", "WL", "P-input","Dens0 [m^-3]","Temp0 [eV]")
     for s in species_list
 
         # s.neutral_id -> species name
-        if (s.species_id == sID.Ar)
-            sn_name = "Ar"
-        elseif (s.species_id == sID.electron)
-            sn_name = "electrons"
-        elseif (s.species_id == sID.O2)
-            sn_name = "O2"
-        elseif (s.species_id == sID.O)
-            sn_name = "O"
-        else
-            sn_name = "None"
-        end
+        sn_name = species_list[s.species_id].name
 
         # Density equations
         if (s.has_dens_eq)
@@ -188,12 +178,9 @@ function PrintSystemList(s::System)
         power_str = "Not defined"
     end
     print(" - Input power method: ",power_str,"\n")
-    @printf(" - Electrode area:     %15g m^2\n", s.electrode_area)
     @printf(" - Driving frequency:  %15.2f MHz\n", s.drivf)
     @printf("                       %15.f rad/s\n", s.drivOmega)
     @printf(" - Driving power:     %15.2f W\n", s.drivP)
-    @printf(" - Driving voltage:   %15.2f V\n", s.drivV)
-    @printf(" - Driving current:   %15.2f A\n", s.drivI)
     @printf(" - Simulation time:   %15g s\n", s.t_end)
     print("\n")
 end

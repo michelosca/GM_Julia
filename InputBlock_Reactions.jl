@@ -373,25 +373,7 @@ function EndReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction},
     species_list::Vector{Species})
     errcode = 0 
 
-    if (read_step == 0)
-        write_flag = false 
-        open("ReactionSet.Template","r") do f_temp
-            while ! eof(f_temp)
-                line_str = readline(f_temp, keep = true)
-
-                if write_flag
-                    write(f_ReactionSet,line_str)
-                end
-
-                if (line_str == "### END REACTION STRINGS ###\n")
-                    print("Found end reaction string\n")
-                    write_flag = true
-                end
-                    
-            end
-        end
-        close(f_ReactionSet)
-    elseif (read_step == 2)
+    if (read_step == 2)
         # Set reacting neutral species
         for reaction in reaction_list
             errcode = IdentifyReactingNeutralSpecies!(reaction,

@@ -73,8 +73,8 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
     temp_funct = 0.0 
     if (s.has_temp_eq)
         # "Constants" that are used later
-        Q0 = 3.0/2.0 * kb * s.dens
-        Q1 = -3.0/2.0 * kb * s.temp
+        Q0 = 1.5 * kb * s.dens
+        Q1 = -1.5 * kb * s.temp
         s_id = s.id
 
         # Loop over the reaction set

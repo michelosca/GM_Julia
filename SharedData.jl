@@ -84,7 +84,6 @@ mutable struct Species
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
     D::Float64         # Gudmundsson parameter
-    Lambda::Float64
     h_R::Float64
     h_L::Float64
     gamma::Float64     # Sticking coefficient
@@ -108,12 +107,11 @@ mutable struct System
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
-    drivV::Float64                          # driving voltage, V
-    drivI::Float64                          # criving current, Amps
 
     t_end::Float64                          # simulation time, seconds
 
-    electrode_area::Float64                 # m^2
+    alpha::Float64
+    Lambda::Float64
 
     System() = new()
 end
