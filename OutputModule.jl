@@ -12,6 +12,7 @@ using SolveSystem: ExecuteProblem
 ###############################################################################
 const o_pL = 1
 const o_singel_sol = 2
+const o_power = 3
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -24,23 +25,20 @@ function GenerateOutputs(
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, sID::SpeciesID, output_list::Vector{Output})
     
-    # Initial conditions
-    dens0, temp0 = SetupInitialConditions(species_list)
-
     output_tuple_list = Tuple[]
     for output in output_list
         for output_flag in output.output_flag_list
-            init = cat(temp0, dens0,dims=1)
-            tspan = (0, system.t_end)
-            GM_tuple = (system, sID, species_list, reaction_list)
-
             # The output flag come from a output-structure
             if output_flag == o_pL
                 output_tuple = Output_PL(GM_tuple, temp0, dens0)
 
+            elseif output_flag == o_power
+                output_tuple = Output_Power(species_list, reaction_list,
+                    system, sID)
+
             elseif (output_flag == o_singel_sol)
                 print("Solving single problem...\n")
-                sol = ExecuteProblem(init, tspan, GM_tuple)
+                sol = ExecuteProblem(species_list, reaction_list, system, sID)
                 output_tuple = ("single sol", sol)
             end
 
@@ -92,15 +90,22 @@ function Output_PL(GM_tuple::Tuple, temp::Vector{Float64},
 end
 
 
-function SetupInitialConditions(species_list::Vector{Species})
-    dens = Float64[]
-    temp = Float64[]
-    for s in species_list
-        push!(dens, s.dens)
-        push!(temp, s.temp)
+function Output_Power(species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
+
+    ne = Float64[]
+    Te = Float64[]
+    power = Float64[]
+    n_species = length(species_list)
+    for p in 50:800
+        system.drivP = Float64(p)
+        print("Power = ",p ,";Executing GM problem...\n")
+        sol = ExecuteProblem(species_list, reaction_list, system, sID)
+        push!(Te, sol[sID.electron,end]*K_to_eV)
+        push!(ne, sol[sID.electron + n_species,end])
+        push!(power, p)
     end
-    return dens, temp
+
+    return ("power", Te, ne, power)
 end
-
-
 end
