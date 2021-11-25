@@ -174,7 +174,7 @@ end
 function GetD(species)
 
     T_eV = species.temp * K_to_eV
-    D = e * T_eV * species.mfp / (species.v_thermal / species.mass)
+    D = e * T_eV * species.mfp / (species.v_thermal * species.mass)
     return D
 end
 
