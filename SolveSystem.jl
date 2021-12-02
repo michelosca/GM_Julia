@@ -12,14 +12,17 @@ function ExecuteProblem(species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
 
     # Initial conditions
-    dens, temp = SetupInitialConditions(species_list)
+    dens, temp = GetInitialConditions(species_list)
     init = cat(temp,dens,dims=1)
+
     tspan = (0, system.t_end)
     p = (system, sID, species_list, reaction_list )
 
 
     prob = ODEProblem(ode_fn!, init, tspan, p)
-    sol = solve(prob, Tsit5(), maxiters=1.e7, reltol=1e-8, abstol=1e-8, dt = 1.e-13)
+
+    print("Solving single problem...\n")
+    sol = solve(prob, Tsit5(), maxiters=1.e7, dt = 1.e-14)#, dt = 1.e-10, maxiters=1.e7) #, reltol=1e-8, abstol=1e-8, dt = 1.e-13)
 
     return sol
 end
@@ -61,12 +64,12 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
             reaction_list, system, V_sheath, sID)
         # Density equation
         dy[i+n_species] = GetDensRateFunction(temp, dens, species,
-            reaction_list, system, sID)
+            species_list, reaction_list, system, sID)
     end
 end
 
 
-function SetupInitialConditions(species_list::Vector{Species})
+function GetInitialConditions(species_list::Vector{Species})
     dens = Float64[]
     temp = Float64[]
     for s in species_list

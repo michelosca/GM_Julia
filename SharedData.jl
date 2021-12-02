@@ -29,9 +29,19 @@ const r_ionizat= 3
 const r_recombi= 4
 const r_cx= 5
 
+# OUTPUT constants
+const o_scale_lin = -1
+const o_scale_log = -2
+const o_single_run = 1
+const o_pL = 2
+const o_dens= 3
+const o_temp = 4
+const o_power = 5
+
 # Reaction structure
 mutable struct Reaction
     # Reaction identifier
+    name::String
     id::Int64
     case::Int64 # Reaction species case flag
     neutral_species_id::Vector{Int64}
@@ -81,6 +91,7 @@ mutable struct Species
     # Other features
     reaction_list::Vector{Reaction}
     mfp::Float64
+    cross_section::Float64
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
     D::Float64         # Gudmundsson parameter
@@ -116,12 +127,28 @@ mutable struct System
     System() = new()
 end
 
-struct Output
-    output_flag_list::Vector{Int64}
+
+mutable struct OutputBlock
+
+    case::Int64
+    species_id::Int64
+    scale::Int64
+    
+    x::Vector{Float64}
+    x_min::Float64
+    x_max::Float64
+    x_steps::Int64
+
+    n::Vector{Vector{Float64}}
+    T::Vector{Vector{Float64}}
+    K::Vector{Vector{Float64}}
+
+    OutputBlock() = new()
 end
 
 
 mutable struct SpeciesID
+
     current_id::Int64
 
     electron::Int64
@@ -133,7 +160,6 @@ mutable struct SpeciesID
     O::Int64
     O_negIon::Int64
     O_Ion::Int64
-    O_3p::Int64
     O_1d::Int64
 
 
@@ -142,6 +168,6 @@ mutable struct SpeciesID
     O2_a1Ag::Int64
 
     SpeciesID() = new()
-end
+end 
 
 end

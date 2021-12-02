@@ -100,6 +100,7 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
         # Parse each term of the input line
         current_reaction = Reaction()
         InitializeReaction!(current_reaction, reaction_list)
+        current_reaction.name = reaction_process_str
 
         errcode = ParseReaction!(reaction_process_str, current_reaction,
             speciesID)
@@ -125,6 +126,7 @@ end
 
 function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction})
 
+    reaction.name = ""
     reaction.id = length(reaction_list) + 1 
     reaction.case = 0
     reaction.neutral_species_id = Int64[]
@@ -168,23 +170,31 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
     while next_species
         idx = findfirst(" + ", str)
         if (idx===nothing)
-            s_id = SelectSpeciesID!(str, speciesID)
+            fact, str= GetSpeciesFactor!(str)
+            s_id = SelectSpeciesID(str, speciesID)
             if (s_id == 0)
                 print("***ERROR*** Reaction species ",str ," is not recognized\n")
                 return c_io_error
             else 
-                push!(s_list, s_id)
+                while fact >= 1
+                    push!(s_list, s_id)
+                    fact -= 1
+                end
             end
             next_species = false
         else
             s = strip(str[1:idx[1]-1])
             str = strip(str[idx[2]+1:end])
-            s_id = SelectSpeciesID!(s, speciesID)
+            fact, s = GetSpeciesFactor!(s)
+            s_id = SelectSpeciesID(s, speciesID)
             if (s_id == 0)
                 print("***ERROR*** Reaction species ",s ," is not recognized\n")
                 return c_io_error
             else 
-                push!(s_list, s_id)
+                while fact >= 1
+                    push!(s_list, s_id)
+                    fact -= 1
+                end
             end
         end
     end
@@ -192,7 +202,18 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
 end
 
 
-function SelectSpeciesID!(s::SubString{String}, speciesID::SpeciesID)
+function GetSpeciesFactor!(str::SubString{String})
+
+    fact = 1
+    if str[1:1] == "2"
+        fact = 2
+        str = str[2:end]
+    end
+    return fact, str
+end
+
+
+function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
 
     id = 0
     # Neutral species
@@ -219,21 +240,10 @@ function SelectSpeciesID!(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.O_negIon 
     elseif (s == "O2+")
         id = speciesID.O2_Ion 
-    elseif (s == "O(3p)")
-        id = speciesID.O_3p
-        if id == 0
-            id = speciesID.O
-        end
     elseif (s == "O(1d)")
         id = speciesID.O_1d 
-        if id == 0
-            id = speciesID.O
-        end
     elseif (s == "O2(a1Ag)")
         id = speciesID.O2_a1Ag 
-        if id == 0
-            id = speciesID.O2
-        end
     end
     return id 
 end
@@ -315,13 +325,14 @@ function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
     errcode = 0
 
     try
-        units_fact = 1.0
+        # Default energy units: eV
+        units_fact = e
         if (occursin("J", str))
+            units_fact = 1.0
             idx = findfirst("J", str)
             idx = idx[1]-1
             str = string(str[1:idx])
         elseif (occursin("eV", str))
-            units_fact = e
             idx = findfirst("eV", str)
             idx = idx[1]-1
             str = string(str[1:idx])
@@ -405,5 +416,50 @@ function IdentifyReactingNeutralSpecies!(reaction::Reaction,
     end
 end
 
+
+function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
+    species_list::Vector{Species})
+
+    errcode = 0
+    if read_step == 2
+        errcode = CheckReactionList!(species_list, reaction_list)
+    end
+
+    return errcode
+end
+
+
+function CheckReactionList!(species_list::Vector{Species},
+    reaction_list::Vector{Reaction})
+
+    errcode = 0
+
+    for r in reaction_list
+        # Test reaction charge balance
+        if !(r.case == r_wall_loss)
+            charge_balance = 0.0
+            i = 1
+            for id in r.involved_species 
+                fact = r.species_balance[i]
+                charge_balance += species_list[id].charge * fact
+                i += 1
+            end
+            if !(charge_balance == 0)
+                print("***ERROR*** Reaction ",r.id," is unbalanced\n")
+                return c_io_error
+            end
+        end
+
+        # Test elastic collisions
+        if r.case == r_elastic
+            if length(r.neutral_species_id) > 1
+                print("***ERROR*** Elastic collision ",r.id,
+                    " can only have one neutral reacting species\n")
+                return c_io_error
+            end
+        end
+    end
+    return errcode
+end
 
 end

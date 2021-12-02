@@ -22,8 +22,6 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         s.dens = dens[s.id]
     end
 
-    UpdateAlpha!(dens, species_list, system, sID.electron)
-
     for s in species_list
         s.v_thermal = GetThermalSpeed(s)
         s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
@@ -36,6 +34,8 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
                 s.n_sheath = s.dens
             end
         elseif system.power_input_method == p_icp_id
+            UpdateAlpha!(dens, species_list, system, sID.electron)
+
             s.n_sheath = s.dens
             if (s.id == sID.electron)
                 continue
@@ -46,7 +46,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
                     system, sID.electron)
             end
 
-            s.D = GetD(s)
+            s.D = GetNeutralDiffusionCoeff(s, species_list, sID)
         end
     end
 end
@@ -54,47 +54,71 @@ end
 
 function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
     species_list::Vector{Species}, sID::SpeciesID)
-    # Neutrals >> general MFP (used in D)
-    # Electrons >> general MFP (used in n_sheath(CCP))
-    # Ions >> charged-neutral MFP (used in h_L and h_R)
 
     ilambda = 0.0         # inverse mean-free-path
-    v_th_s = species.v_thermal
-    id = species.id
-    for r in species.reaction_list
-        if (r.case == r_wall_loss)
-            continue
-        end
 
-        # If netrual/electrons then consider all reactants
-        if species.charge == 0 || id == sID.electron
-            r_species = copy(r.reactant_species)
+    # In case there is a pre-defined cross-section value
+    sigma = species.cross_section
+    if sigma > 0
+        # Works out the ion-neutral mfp
+        charge = abs(species.charge)
+        if charge > 0
+            for s in species_list
+                if s.id == sID.electron || s.id == species.id
+                    continue
+                end
+                if s.charge == 0
+                    ilambda += s.dens * sigma
+                end
+            end
+        elseif charge==0
+            for s in species_list
+                if s.id == sID.electron || s.id == species.id
+                    continue
+                end
+                if s.charge != 0
+                    ilambda += s.dens * sigma
+                end
+            end
+        end
+    else
+        v_th_s = species.v_thermal
+        id = species.id
+
+        for r in species.reaction_list
+            if r.case == r_wall_loss
+                continue
+            elseif r.neutral_species_id == Int64[] 
+                continue
+            end
+
+            # Get max. thermal speed of reacting species
+            v_th = v_th_s
+            for i in r.reactant_species
+                v_th_n = species_list[i].v_thermal
+                v_th = max(v_th_n, v_th)
+            end
             
             # Exclude the species for which the mfp is calculated
+            r_species = copy(r.reactant_species)
             index = findall( x -> x == id, r_species )
             deleteat!(r_species, index)
+            
+            # Set collision cross section
+            K = r.rate_coefficient(temp, sID)
+            cross_section = K / v_th
 
-        else
-            # else, i.e. ions, only consider reactions with neutral species
-            r_species = r.neutral_species_id
+            # Density of colliding partners
+            n = prod(dens[r_species])
+
+            # Add to mfp-buffer
+            ilambda += n * cross_section 
         end
-
-        # Get max. thermal speed of reacting species
-        v_th = v_th_s
-        for i in r_species
-            v_th_n = species_list[i].v_thermal
-            v_th = max(v_th_n, v_th)
-        end
-        
-        # Set collision cross section
-        sigma_expr = r.rate_coefficient(temp, sID)
-        cross_section = eval(sigma_expr) / v_th
-
-        # Density of colliding partners
-        n = prod(dens[r_species])
-        ilambda += n * cross_section 
     end
 
+    if ilambda == 0
+        ilambda = 1.e-100
+    end
     lambda = 1.0/ilambda
     return lambda
 end
@@ -171,10 +195,13 @@ function GetGamma()
 end
 
 
-function GetD(species)
+function GetNeutralDiffusionCoeff(species::Species,
+    species_list::Vector{Species}, sID::SpeciesID)
+    # Neutral Diffusion Coefficient
 
     T_eV = species.temp * K_to_eV
-    D = e * T_eV * species.mfp / (species.v_thermal * species.mass)
+    mfp = species.mfp
+    D = e * T_eV * mfp / (species.v_thermal * species.mass)
     return D
 end
 

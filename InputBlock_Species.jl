@@ -1,8 +1,10 @@
 module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu, kb 
-using SharedData: c_io_error
-using SharedData: Species, Reaction, SpeciesID
+using SharedData: c_io_error, p_icp_id
+using SharedData: Species, Reaction, SpeciesID, System
+using PlasmaParameters: GetGamma
+using InputBlock_System: GetUnits!
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -38,7 +40,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
 
     errcode = 0
     speciesID.current_id += 1
-    if (read_step == 2)
+    if (read_step == 1)
         current_species = Species()
         current_species.id = speciesID.current_id 
         current_species.species_id = 0
@@ -53,6 +55,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.pressure = 0.0
         current_species.reaction_list = Reaction[]
         current_species.mfp = 1.e100
+        current_species.cross_section = 0.0
         current_species.v_thermal = 0.0
         current_species.v_Bohm = 0.0
         current_species.D = 0.0
@@ -71,14 +74,58 @@ end
 function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, sID::SpeciesID)
 
-    errcode = c_io_error
-    if (read_step == 2)
-        current_species = species_list[end]
-    end
+    errcode = 0 
 
-    if (name=="name")
-        if (read_step == 2)
+    if (read_step == 1)
+        units, name = GetUnits!(name)
+
+        if (name=="name")
+            # This is set in the pre-run(read_step==0) and in main-run(read_step===1)
+            errcode = SetSpeciesID!(var, sID)
+            current_species = species_list[sID.current_id]
             current_species.name = var
+        end
+
+        current_species = species_list[sID.current_id]
+
+        if (name=="charge")
+            current_species.charge = parse(Int64,var) * e * units
+        end
+
+        if (name=="mass")
+            expr = Meta.parse(var)
+            current_species.mass = eval(expr) * units
+        end
+
+        if (name=="solve_dens")
+            current_species.has_dens_eq = parse(Bool, var) 
+        end
+
+        if (name=="solve_temp")
+                current_species.has_temp_eq = parse(Bool, var)
+        end
+
+        if (name=="T")
+            current_species.temp = parse(Float64, var) * units
+        end
+
+        if (name=="density" || name=="dens")
+            current_species.dens = parse(Float64, var) *units
+        end
+
+        if (name=="pressure" || name=="p")
+            current_species.pressure = parse(Float64, var) * units
+        end
+
+        if (name=="cross_section")
+            current_species.cross_section = parse(Float64, var) * units
+        end
+
+    elseif (read_step == 2)
+
+        current_species = species_list[sID.current_id]
+
+        if (name=="name")
             if (var=="e" || var=="electrons" || var=="electron")
                 current_species.species_id = sID.electron 
                 errcode = 0
@@ -95,71 +142,9 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
                 print("***ERROR*** Neutral species id has not been found\n")
                 errcode = c_io_error 
             end
-        else 
-            # This is set in the pre-run(read_step==0) and in main-run(read_step===1)
-            errcode = SetSpeciesID!(var, sID)
         end
     end
 
-    if (name=="charge")
-        if (read_step == 2)
-            current_species.charge = parse(Int64,var) * e
-        end
-        errcode = 0
-    end
-
-    if (name=="mass")
-        if (read_step == 2)
-            expr = Meta.parse(var)
-            current_species.mass = eval(expr)
-        end
-        errcode = 0
-    end
-
-    if (name=="solve_dens")
-        if (read_step == 2)
-            current_species.has_dens_eq = parse(Bool, var) 
-        end
-        errcode = 0
-    end
-
-    if (name=="solve_temp")
-        if (read_step == 2)
-            current_species.has_temp_eq = parse(Bool, var)
-        end
-        errcode = 0
-    end
-
-    if (name=="T" || name=="T_eV")
-        if (read_step == 2)
-            if (name=="T_eV")
-                units = 1.0/K_to_eV
-            else
-                units = 1.0
-            end
-            current_species.temp = parse(Float64, var) * units
-        end
-        errcode = 0
-    end
-
-    if (name=="density" || name=="dens")
-        if (read_step == 2)
-            current_species.dens = parse(Float64, var)
-        end
-        errcode = 0
-    end
-
-    if (name=="pressure" || name=="p" || name=="p_mTorr")
-        if (read_step == 2)
-            if (name=="p_mTorr")
-                units = 0.13332237  
-            else
-                units = 1.0
-            end
-            current_species.pressure = parse(Float64, var) * units
-        end
-        errcode = 0
-    end
     return errcode 
 end
 
@@ -187,8 +172,6 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
         speciesID.O2_Ion = id
     elseif ("Ar*" == species_name || "Ar_excited" == species_name)
         speciesID.Ar_Exc = id
-    elseif ("O(3p)" == species_name)
-        speciesID.O_3p = id
     elseif ("O(1d)" == species_name)
         speciesID.O_1d = id
     elseif ("O2(a1Ag)" == species_name)
@@ -200,15 +183,15 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
 end
 
 
-function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species})
+function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
+    sID::SpeciesID)
 
     errcode = 0 
 
     if (read_step == 1)
-        errcode = 0
-    elseif (read_step == 2)
+        # Update equations/ wall losses flags
         current_species = species_list[end]
-        if (current_species.charge != 0)
+        if (current_species.charge > 0 || current_species.id == sID.electron)
             if (current_species.has_temp_eq)
                 current_species.has_heating_mechanism = true
             end
@@ -264,12 +247,43 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     speciesID.O_negIon = 0
     speciesID.O_Ion = 0
     speciesID.O_1d = 0
-    speciesID.O_3p = 0
 
     speciesID.O2 = 0
     speciesID.O2_Ion = 0
     speciesID.O2_a1Ag = 0
 
+end
+
+
+function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System)
+
+    errcode = 0
+    
+    if (read_step == 2)
+
+        for s in species_list
+            s_id = s.id
+
+            # Create reaction list associated to species s
+            for r in reaction_list
+                # is species s involved?
+                i_involved = findall(x->x==s_id, r.reactant_species)
+                if i_involved==Int64[]
+                    continue
+                else
+                    push!(s.reaction_list, r)
+                end
+            end
+
+            # Sticking coefficient
+            if system.power_input_method == p_icp_id
+                s.gamma = GetGamma()
+            end
+        end
+
+    end
+    return errcode
 end
 
 end

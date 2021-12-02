@@ -1,20 +1,20 @@
 module InputData
 
 using SharedData: c_io_error
-using SharedData: p_icp_id, p_ccp_id 
-using SharedData: Species, Reaction, System, SpeciesID
+using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
 
-using InputBlock_Species: StartFile_Species!
+using InputBlock_Species: StartFile_Species!, EndFile_Species!
 using InputBlock_Species: StartSpeciesBlock!, EndSpeciesBlock!, ReadSpeciesEntry!
 
-using InputBlock_Reactions: StartFile_Reactions!
+using InputBlock_Reactions: StartFile_Reactions!, EndFile_Reactions!
 using InputBlock_Reactions: StartReactionsBlock!, EndReactionsBlock!, ReadReactionsEntry!
 using InputBlock_Reactions: r_elastic, r_wall_loss 
 
-using InputBlock_System: StartFile_System!
+using InputBlock_System: StartFile_System!, EndFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
 
-using PlasmaParameters: GetGamma
+using InputBlock_Output: StartFile_Output!, EndFile_Output!
+using InputBlock_Output: StartOutputBlock!, EndOutputBlock!, ReadOutputEntry!
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -24,6 +24,7 @@ global block_id = 0
 const b_system = 1
 const b_species = 2
 const b_reactions = 3
+const b_output = 4
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -49,12 +50,12 @@ const b_reactions = 3
 
 function SetupInputData!(filename::String,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, speciesID::SpeciesID)
+    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID)
 
     errcode = c_io_error
 
     errcode = ReadInputData!(filename,
-        species_list, reaction_list, system, speciesID)
+        species_list, reaction_list, system, output_list, speciesID)
     if (errcode == c_io_error)
         print("***ERROR*** Failed to read the input deck. Abort code\n")
     end
@@ -65,21 +66,26 @@ end
 
 function ReadInputData!(filename::String,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, speciesID::SpeciesID)
+    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID)
+
+    errcode = 0
 
     # Opens the file given in filename and reads each line
     for read_step in 1:2
         print("Reading $read_step of the input deck...\n")
         errcode = StartFile!(read_step, species_list, reaction_list,
-            system, speciesID)
+            system, output_list, speciesID)
         if (errcode == c_io_error) return errcode end
+
         errcode = ReadFile!(filename, read_step, species_list,
-            reaction_list, system, speciesID)
+            reaction_list, system, output_list, speciesID)
+        if (errcode == c_io_error) return errcode end
+
+        errcode = EndFile!(read_step, species_list, reaction_list,
+            system, output_list, speciesID)
         if (errcode == c_io_error) return errcode end
         print("End of input deck reading\n\n")
     end
-    errcode = CheckSpeciesList(species_list, reaction_list, system)
-    errcode = CheckReactionList(species_list, reaction_list, system)
 
     return errcode
 end
@@ -87,7 +93,7 @@ end
 
 function ReadFile!(filename::String, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, speciesID::SpeciesID)
+    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID)
     
     errcode = 0
 
@@ -97,7 +103,7 @@ function ReadFile!(filename::String, read_step::Int64,
             s = readline(f)
             # ReadLine identifies each line on filename
             errcode = ReadLine!(s, read_step, species_list, reaction_list,
-                system, speciesID)
+                system, output_list, speciesID)
             if (errcode == c_io_error)
                 print("***ERROR*** Stop reading at file line ", line,"\n")
                 return errcode  
@@ -109,8 +115,9 @@ function ReadFile!(filename::String, read_step::Int64,
 end
 
 
-function ReadLine!(string::String, read_step::Int64, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
+function ReadLine!(string::String, read_step::Int64,
+    species_list::Vector{Species}, reaction_list::Vector{Reaction},
+    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID)
 
     errcode = c_io_error 
 
@@ -135,7 +142,7 @@ function ReadLine!(string::String, read_step::Int64, species_list::Vector{Specie
         global block_name = string[i_block+1:end]
         if (occursin("begin", string))
             errcode = StartBlock!(block_name, read_step, species_list,
-                reaction_list, system, speciesID)
+                reaction_list, system, output_list, speciesID)
             if (errcode == c_io_error)
                 print("***ERROR*** Something went wrong starting the ",
                     block_name, " block\n")
@@ -143,7 +150,7 @@ function ReadLine!(string::String, read_step::Int64, species_list::Vector{Specie
             end
         elseif (occursin("end", string))
             errcode = EndBlock!(block_name, read_step, species_list,
-                reaction_list, system)
+                reaction_list, system, output_list, speciesID)
             if (errcode == c_io_error)
                 print("***ERROR*** Something went wrong ending the ",
                     block_name, " block\n")
@@ -155,7 +162,7 @@ function ReadLine!(string::String, read_step::Int64, species_list::Vector{Specie
         name = strip(string[begin:i_eq-1])
         var = strip(string[i_eq+1:end])
         errcode = ReadInputDeckEntry!(name, var, read_step,
-            species_list, reaction_list, system, speciesID)
+            species_list, reaction_list, system, output_list, speciesID)
         if (errcode == c_io_error)
             print("***WARNING*** Entry in ", block_name,
                 "-block has not been located\n")
@@ -163,7 +170,7 @@ function ReadLine!(string::String, read_step::Int64, species_list::Vector{Specie
         end
     elseif !(i_react === nothing)
         errcode = ReadInputDeckEntry!(string, string, read_step,
-            species_list, reaction_list, system, speciesID) 
+            species_list, reaction_list, system, output_list, speciesID) 
         if (errcode == c_io_error)
             print("***WARNING*** Entry in ", block_name,
                 "-block has not been located\n")
@@ -177,7 +184,8 @@ end
 
 
 function StartFile!(read_step::Int64, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
+    reaction_list::Vector{Reaction}, system::System,
+    output_list::Vector{OutputBlock}, speciesID::SpeciesID)
 
     errcode = StartFile_Species!(read_step, species_list, speciesID) 
     if (errcode == c_io_error)
@@ -194,13 +202,47 @@ function StartFile!(read_step::Int64, species_list::Vector{Species},
         print("***ERROR*** While initializing the input system block")
     end
     
+    errcode = StartFile_Output!(read_step, output_list) 
+    if (errcode == c_io_error)
+        print("***ERROR*** While initializing the input output block")
+    end
+    
+    return errcode
+end
+
+
+function EndFile!(read_step::Int64, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System,
+    output_list::Vector{OutputBlock}, speciesID::SpeciesID)
+
+    errcode = EndFile_Species!(read_step, species_list, reaction_list, system)
+    if (errcode == c_io_error)
+        print("***ERROR*** While initializing the input species block")
+    end
+
+    errcode = EndFile_Reactions!(read_step, reaction_list, species_list)
+    if (errcode == c_io_error)
+        print("***ERROR*** While initializing the input reaction block")
+    end
+    
+    errcode = EndFile_System!(read_step, system) 
+    if (errcode == c_io_error)
+        print("***ERROR*** While initializing the input system block")
+    end
+    
+    errcode = EndFile_Output!(read_step, output_list, species_list,
+        reaction_list) 
+    if (errcode == c_io_error)
+        print("***ERROR*** While initializing the input output block")
+    end
+    
     return errcode
 end
 
 
 function StartBlock!(name::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, speciesID::SpeciesID)
+    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID)
 
     errcode = c_io_error
     if (occursin("system",name))
@@ -212,22 +254,27 @@ function StartBlock!(name::SubString{String}, read_step::Int64,
     elseif (occursin("reactions",name))
         global block_id = b_reactions
         errcode = StartReactionsBlock!(read_step, reaction_list)
+    elseif (occursin("output",name))
+        global block_id = b_output
+        errcode = StartOutputBlock!(read_step, output_list)
     end
     return errcode
 end
 
 function EndBlock!(name::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System)
+    system::System, output_list::Vector{OutputBlock}, sID::SpeciesID)
 
     errcode = c_io_error
     global block_id = 0
     if (occursin("system",name))
         errcode = EndSystemBlock!(read_step, system)
     elseif (occursin("species",name))
-        errcode = EndSpeciesBlock!(read_step, species_list)
+        errcode = EndSpeciesBlock!(read_step, species_list, sID)
     elseif (occursin("reactions",name))
         errcode = EndReactionsBlock!(read_step, reaction_list, species_list)
+    elseif (occursin("output",name))
+        errcode = EndOutputBlock!(read_step, output_list)
     end
     return errcode
 end
@@ -235,7 +282,8 @@ end
 
 function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
     read_step::Int64, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
+    reaction_list::Vector{Reaction}, system::System,
+    output_list::Vector{OutputBlock}, speciesID::SpeciesID)
 
     errcode = c_io_error 
     
@@ -247,67 +295,12 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
     elseif (block_id == b_reactions)
         errcode = ReadReactionsEntry!(name, var, read_step, reaction_list,
             speciesID)
+    elseif (block_id == b_output)
+        errcode = ReadOutputEntry!(name, var, read_step, output_list,
+            species_list)
     end
 
     return errcode 
-end
-
-
-function CheckSpeciesList(species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System)
-
-    errcode = 0
-
-    for s in species_list
-        s_id = s.id
-        for r in reaction_list
-            # is species s involved?
-            i_involved = findall(x->x==s_id, r.reactant_species)
-            if i_involved==Int64[]
-                continue
-            else
-                push!(s.reaction_list, r)
-            end
-        end
-        if system.power_input_method == p_icp_id
-            s.gamma = GetGamma()
-        end
-    end
-    return errcode
-end
-
-
-function CheckReactionList(species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System)
-
-    errcode = 0
-
-    for r in reaction_list
-        # Test reaction charge balance
-        if !(r.case == r_wall_loss)
-            charge_balance = 0.0
-            i = 1
-            for id in r.involved_species 
-                fact = r.species_balance[i]
-                charge_balance += species_list[id].charge * fact
-                i += 1
-            end
-            if !(charge_balance == 0)
-                print("***ERROR*** Reaction ",r.id," is unbalanced\n")
-                return c_io_error
-            end
-        end
-
-        # Test elastic collisions
-        if r.case == r_elastic
-            if length(r.neutral_species_id) > 1
-                print("***ERROR*** Elastic collision ",r.id,
-                    " can only have one neutral reacting species\n")
-                return c_io_error
-            end
-        end
-    end
-    return errcode
 end
 
 end

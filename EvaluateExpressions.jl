@@ -16,12 +16,20 @@ end
 
 function ReplaceSpeciesSymbolS!(expr::Expr)
     # Species parameters
-    ReplaceSymbol!(expr, :h_R,       :(species.h_R) )
-    ReplaceSymbol!(expr, :h_L,       :(species.h_L) )
-    ReplaceSymbol!(expr, :uB,        :(species.v_Bohm) )
-    ReplaceSymbol!(expr, :vth,       :(species.v_thermal) )
-    ReplaceSymbol!(expr, :D,         :(species.D) )
-    ReplaceSymbol!(expr, :gamma,     :(species.gamma) )
+
+    ReplaceSymbol!(expr, :uB_0,        :(species_list[sID.O].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O,       :(species_list[sID.O].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O,       :(species_list[sID.O].h_R) )
+    ReplaceSymbol!(expr, :h_L_O,       :(species_list[sID.O].h_L) )
+    ReplaceSymbol!(expr, :D_O,         :(species_list[sID.O].D) )
+    ReplaceSymbol!(expr, :gamma_O,    :(species_list[sID.O].gamma) )
+    
+    ReplaceSymbol!(expr, :uB_02,       :(species_list[sID.O].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O2,      :(species_list[sID.O2].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O2,      :(species_list[sID.O2].h_R) )
+    ReplaceSymbol!(expr, :h_L_O2,      :(species_list[sID.O2].h_L) )
+    ReplaceSymbol!(expr, :D_O2,        :(species_list[sID.O2].D) )
+    ReplaceSymbol!(expr, :gamma_O2,    :(species_list[sID.O2].gamma) )
 end
 
 

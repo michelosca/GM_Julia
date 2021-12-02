@@ -1,6 +1,6 @@
 module GM_prerun
 
-using SharedData: c_io_error, Species, Reaction, System, Output, SpeciesID
+using SharedData: c_io_error, Species, Reaction, System, SpeciesID
 using InputData_PreRun: SetupInputData!
 
 function prerun_GM(input_file)

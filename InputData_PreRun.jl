@@ -25,6 +25,7 @@ global block_id = 0
 const b_system = 1
 const b_species = 2
 const b_reactions = 3
+const b_output = 4
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -140,13 +141,15 @@ function ReadLine!(string::String, read_step::Int64, species_list::Vector{Specie
             end
         elseif (occursin("end", string))
             errcode = EndBlock!(block_name, read_step, species_list,
-                reaction_list, system)
+                reaction_list, system, speciesID)
             if (errcode == c_io_error)
                 print("***ERROR*** Something went wrong ending the ",
                     block_name, " block\n")
                 return c_io_error
             end
         end
+    elseif block_id == b_output
+        return 0 
     elseif !(i_eq === nothing)
         i_eq = i_eq[1]
         name = strip(string[begin:i_eq-1])
@@ -209,22 +212,27 @@ function StartBlock!(name::SubString{String}, read_step::Int64,
     elseif (occursin("reactions",name))
         global block_id = b_reactions
         errcode = StartReactionsBlock!(reaction_list)
+    elseif (occursin("output", name))
+        global block_id = b_output
+        errcode = 0
     end
     return errcode
 end
 
 function EndBlock!(name::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System)
+    system::System, sID::SpeciesID)
 
     errcode = c_io_error
     global block_id = 0
     if (occursin("system",name))
         errcode = EndSystemBlock!(read_step, system)
     elseif (occursin("species",name))
-        errcode = EndSpeciesBlock!(read_step, species_list)
+        errcode = EndSpeciesBlock!(read_step, species_list, sID)
     elseif (occursin("reactions",name))
         errcode = EndReactionsBlock!(reaction_list, species_list)
+    elseif (occursin("output", name))
+        errcode = 0
     end
     return errcode
 end

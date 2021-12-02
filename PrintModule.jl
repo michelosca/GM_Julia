@@ -99,18 +99,38 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             s = r.involved_species[i]
             b = r.species_balance[i]
 
+            reactant_species = false 
+            s_index = findall( x -> x == s, r.reactant_species )
+            if s_index != Int64[] && b > 0 
+                reactant_species = true
+            end
+
             s_name = species_list[s].name
+            b_prod = 0
+            b_reac = 0
             if b > 0
-                for i in 1:b 
-                    push!(products, s_name)
-                end
-            elseif b < 0
-                for i in 1:-b
-                    push!(reactants, s_name)
-                end
-            else
-                push!(reactants, s_name)
+                b_prod = b
+            end
+
+            if b < 0
+                b_reac = -b
+            end
+
+            if reactant_species || b==0
+                b_prod += 1
+                b_reac += 1
+            end
+
+            if b_prod == 1
                 push!(products, s_name)
+            elseif b_prod > 1
+                push!(products, string(b_prod, s_name))
+            end
+
+            if b_reac == 1
+                push!(reactants, s_name)
+            elseif b_reac > 1
+                push!(reactants, string(b_reac, s_name))
             end
         end
 

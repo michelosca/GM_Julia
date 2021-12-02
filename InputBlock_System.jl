@@ -4,6 +4,7 @@ using SharedData: c_io_error
 using SharedData: p_ccp_id, p_icp_id
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: System
+using SharedData: K_to_eV
 using PlasmaParameters: GetLambda
 
 
@@ -55,29 +56,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
     errcode = c_io_error 
 
     if (read_step == 1)
-        # Identify units definition
-        units_fact = 1.0
-        units_index = findlast("_", var)
-        if (units_index === nothing)
-            units = ""
-        else
-            units_index = units_index[1]
-            units_str = lowercase(var[units_index+1:end])
-            if (units_str=="kw" || units_str=="khz")
-                units_fact = 1.e3
-                var = var[1:units_index-1]
-            elseif (units_str=="mhz" || units_str=="mw")
-                units_fact = 1.e6
-                var = var[1:units_index-1]
-            elseif (units_str=="ghz")
-                units_fact = 1.e9
-                var = var[1:units_index-1]
-            elseif (units_str=="microns")
-                units_fact = 1.e-6
-                var = var[1:units_index-1]
-            end
-        end
         
+        units_fact, name = GetUnits!(name)
+
         # Identify variable
         lname = lowercase(name)
         if (name=="A" || lname=="area")
@@ -211,5 +192,45 @@ function EndSystemBlock!(read_step::Int64, system::System)
     return errcode
 end
     
+
+function EndFile_System!(read_step::Int64, system::System)
+    errcode = 0
+    return errcode
+end
+
+
+function GetUnits!(var::SubString{String})
+    # Identify units definition
+    units_fact = 1.0
+    units_index = findlast("_", var)
+    if !(units_index === nothing)
+        units_index = units_index[1]
+        units_str = lowercase(var[units_index+1:end])
+        match_flag = false
+        if (units_str=="ev")
+            units_fact = 1.0/K_to_eV
+            match_flag = true
+        elseif (units_str=="mtorr")
+            units_fact = 0.13332237
+            match_flag = true
+        elseif (units_str=="kw" || units_str=="khz")
+            units_fact = 1.e3
+            match_flag = true
+        elseif (units_str=="mhz" || units_str=="mw")
+            units_fact = 1.e6
+            match_flag = true
+        elseif (units_str=="ghz")
+            units_fact = 1.e9
+            match_flag = true
+        elseif (units_str=="microns")
+            units_fact = 1.e-6
+            match_flag = true
+        end
+        if match_flag
+            var = strip(var[1:units_index-1])
+        end
+    end
+    return units_fact, var
+end
 
 end

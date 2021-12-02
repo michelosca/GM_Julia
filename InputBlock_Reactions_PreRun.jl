@@ -353,7 +353,7 @@ function WriteRateCoefficientsToModule(str::SubString{String},
         # Now that the expression is ready to be evaluated, write it down in a new file
         if reaction.case == r_wall_loss
             write(f_ReactionSet,
-                string("push!(K_funct_list, (temp, species, system, sID) -> ",
+                string("push!(K_funct_list, (temp, species_list, system, sID) -> ",
                     expr,")\n"))
         else
             write(f_ReactionSet,
