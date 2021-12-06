@@ -225,6 +225,12 @@ function GetUnits!(var::SubString{String})
         elseif (units_str=="microns")
             units_fact = 1.e-6
             match_flag = true
+        elseif (units_str=="sccm")
+            # The units_fact still needs to be divided by system.V, however,
+            # just in case the volume changes, this is done in FunctionTerms.jl
+            ns = 2.686780111798444e25 # Standard density at Ps = 101325 Pa and Ts = 273.15 K
+            units_fact = 1.e-6 / 60 * ns
+            match_flag = true
         end
         if match_flag
             var = strip(var[1:units_index-1])

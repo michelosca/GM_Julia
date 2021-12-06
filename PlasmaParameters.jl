@@ -86,11 +86,6 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
         id = species.id
 
         for r in species.reaction_list
-            if r.case == r_wall_loss
-                continue
-            elseif r.neutral_species_id == Int64[] 
-                continue
-            end
 
             # Get max. thermal speed of reacting species
             v_th = v_th_s

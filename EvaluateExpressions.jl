@@ -13,6 +13,11 @@ function ReplaceTempSymbolS!(expr::Expr)
     ReplaceSymbol!(expr, :TO,     :(temp[sID.O]))
 end
 
+function ReplaceDensSymbolS!(expr::Expr)
+
+    ReplaceSymbol!(expr, :n_O2,     :(dens[sID.O2]))
+
+end
 
 function ReplaceSpeciesSymbolS!(expr::Expr)
     # Species parameters

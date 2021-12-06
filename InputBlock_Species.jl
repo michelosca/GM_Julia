@@ -2,6 +2,7 @@ module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu, kb 
 using SharedData: c_io_error, p_icp_id
+using SharedData: r_wall_loss
 using SharedData: Species, Reaction, SpeciesID, System
 using PlasmaParameters: GetGamma
 using InputBlock_System: GetUnits!
@@ -65,6 +66,8 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.n_sheath = 0.0
         current_species.flux = 0.0
         current_species.name = "None"
+        current_species.has_flow_rate = false
+        current_species.flow_rate = 0.0 
         push!(species_list, current_species)
     end
     return errcode
@@ -119,6 +122,11 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
 
         if (name=="cross_section")
             current_species.cross_section = parse(Float64, var) * units
+        end
+
+        if (name=="flow_rate")
+            current_species.has_flow_rate = true
+            current_species.flow_rate = parse(Float64, var) * units
         end
 
     elseif (read_step == 2)
@@ -267,6 +275,9 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
 
             # Create reaction list associated to species s
             for r in reaction_list
+                if r.case == r_wall_loss
+                    continue
+                end
                 # is species s involved?
                 i_involved = findall(x->x==s_id, r.reactant_species)
                 if i_involved==Int64[]

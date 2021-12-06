@@ -2,7 +2,7 @@ module FunctionTerms
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb 
-using InputBlock_Reactions: r_elastic, r_wall_loss, r_energy_sink
+using SharedData: r_elastic, r_wall_loss, r_energy_sink
 using WallFlux: DensWallFluxFunction, TempWallFluxFunction
 using PowerInput: PowerInputFunction
 
@@ -65,6 +65,11 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             dens_funct += value 
             #print("   - Flux loss:     ", value, "\n")
         end
+
+        if s.has_flow_rate
+            dens_funct += s.flow_rate / system.V
+        end
+
     end
     return dens_funct
 end
@@ -83,6 +88,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
 
         # Loop over the reaction set
         for r in reaction_list
+
             # Check whether species is involved in current reaction 
             s_index = findall( x -> x == s_id, r.involved_species )
             if s_index == Int64[]

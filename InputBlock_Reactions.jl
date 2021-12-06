@@ -3,7 +3,7 @@ module InputBlock_Reactions
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
 using SharedData: r_energy_sink, r_elastic, r_wall_loss, r_excitat
-using SharedData: r_ionizat, r_recombi, r_cx 
+using SharedData: r_ionizat, r_recombi, r_cx
 using ReactionSet: K_funct_list
 
 

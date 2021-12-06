@@ -100,6 +100,8 @@ mutable struct Species
     gamma::Float64     # Sticking coefficient
     n_sheath::Float64
     flux::Float64
+    flow_rate::Float64
+    has_flow_rate::Bool
 
     # Output features
     name::String

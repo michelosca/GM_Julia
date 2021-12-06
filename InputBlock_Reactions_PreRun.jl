@@ -4,6 +4,7 @@ using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
 using EvaluateExpressions: ReplaceConstantSymbolS!, ReplaceSystemSymbolS!
 using EvaluateExpressions: ReplaceSpeciesSymbolS!, ReplaceTempSymbolS!
+using EvaluateExpressions: ReplaceDensSymbolS!
 using SharedData: r_energy_sink, r_elastic, r_wall_loss, r_excitat
 using SharedData: r_ionizat, r_recombi, r_cx 
 
@@ -348,16 +349,19 @@ function WriteRateCoefficientsToModule(str::SubString{String},
             ReplaceSystemSymbolS!(expr)
             ReplaceSpeciesSymbolS!(expr)
             ReplaceTempSymbolS!(expr)
+            ReplaceDensSymbolS!(expr)
         end
 
         # Now that the expression is ready to be evaluated, write it down in a new file
         if reaction.case == r_wall_loss
             write(f_ReactionSet,
-                string("push!(K_funct_list, (temp, species_list, system, sID) -> ",
-                    expr,")\n"))
+                string("push!(K_funct_list, (temp::Vector{Float64},",
+                    " species_list::Vector{Species}, system::System,",
+                    " sID::SpeciesID) -> ", expr,")\n"))
         else
             write(f_ReactionSet,
-                string("push!(K_funct_list, (temp, sID) -> ",expr,")\n"))
+                string("push!(K_funct_list, (temp::Vector{Float64},",
+                    " sID::SpeciesID) -> ",expr,")\n"))
         end
 
     catch
