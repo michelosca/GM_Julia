@@ -215,7 +215,8 @@ function EndFile!(read_step::Int64, species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System,
     output_list::Vector{OutputBlock}, speciesID::SpeciesID)
 
-    errcode = EndFile_Species!(read_step, species_list, reaction_list, system)
+    errcode = EndFile_Species!(read_step, species_list, reaction_list, system,
+        speciesID)
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input species block")
     end

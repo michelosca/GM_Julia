@@ -5,8 +5,7 @@ using SharedData: Species, Reaction, SpeciesID
 using EvaluateExpressions: ReplaceConstantSymbolS!, ReplaceSystemSymbolS!
 using EvaluateExpressions: ReplaceSpeciesSymbolS!, ReplaceTempSymbolS!
 using EvaluateExpressions: ReplaceDensSymbolS!
-using SharedData: r_energy_sink, r_elastic, r_wall_loss, r_excitat
-using SharedData: r_ionizat, r_recombi, r_cx 
+using SharedData: r_energy_sink, r_elastic, r_wall_loss
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -207,11 +206,13 @@ function SelectSpeciesID!(s::SubString{String}, speciesID::SpeciesID)
     # Charged and excited species
     elseif (s == "Ar+")
         id = speciesID.Ar_Ion 
-    elseif (s == "Ar*")
-        id = speciesID.Ar_Exc 
-        if id == 0
-            id = speciesID.Ar
-        end
+    elseif (s == "Ar_m")
+        id = speciesID.Ar_m 
+    elseif (s == "Ar_r")
+        id = speciesID.Ar_r 
+    elseif (s == "Ar_4p")
+        id = speciesID.Ar_4p 
+
     elseif (s == "e")
         id = speciesID.electron 
     elseif (s == "O+")
@@ -225,12 +226,12 @@ function SelectSpeciesID!(s::SubString{String}, speciesID::SpeciesID)
         if id == 0
             id = speciesID.O
         end
-    elseif (s == "O(1d)")
+    elseif (s == "O_1d")
         id = speciesID.O_1d 
         if id == 0
             id = speciesID.O
         end
-    elseif (s == "O2(a1Ag)")
+    elseif (s == "O2_a1Ag")
         id = speciesID.O2_a1Ag 
         if id == 0
             id = speciesID.O2
@@ -382,15 +383,6 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
 
     if (str == "elastic")
         reaction.case = r_elastic
-    elseif (str == "excitation")
-        reaction.case = r_excitat
-    elseif (str == "ionization" || str == "ionisation")
-        reaction.case = r_ionizat
-    elseif (str == "recombination")
-        reaction.case = r_recombi
-    elseif (str == "charge exchange" || str == "charge-exchange" ||
-        str == "cx" || str == "charge_exchange")
-        reaction.case = r_cx
     elseif (str == "energy_sink" || str == "energy sink")
         reaction.case = r_energy_sink
     elseif (str == "wall_rate_coefficient")

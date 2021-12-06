@@ -3,8 +3,7 @@ module PrintModule
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: p_icp_id, p_ccp_id
-using InputBlock_Reactions: r_elastic, r_excitat, r_recombi, r_ionizat
-using InputBlock_Reactions: r_wall_loss, r_energy_sink, r_cx
+using InputBlock_Reactions: r_wall_loss, r_energy_sink, r_elastic
 using Printf
 
 ###############################################################################
@@ -78,18 +77,10 @@ function PrintReactionList(reaction_list::Vector{Reaction},
         # r.case -> reaction name
         if (r.case == r_elastic)
             r_name = string(r_name, "-Elastic")
-        elseif (r.case == r_ionizat)
-            r_name = string(r_name, "-Ionization")
-        elseif (r.case == r_recombi)
-            r_name = string(r_name, "-Recombinat.")
-        elseif (r.case == r_excitat)
-            r_name = string(r_name, "-Excitation")
         elseif (r.case == r_wall_loss)
             r_name = string(r_name, "-Wall react.")
         elseif (r.case == r_energy_sink)
             r_name = string(r_name, "-Energy sink")
-        elseif (r.case == r_cx)
-            r_name = string(r_name, "-CX")
         end
 
         # reaction description

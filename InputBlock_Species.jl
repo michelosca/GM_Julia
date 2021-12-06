@@ -178,11 +178,15 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
         speciesID.O_negIon = id
     elseif ("O2+" == species_name)
         speciesID.O2_Ion = id
-    elseif ("Ar*" == species_name || "Ar_excited" == species_name)
-        speciesID.Ar_Exc = id
-    elseif ("O(1d)" == species_name)
+    elseif ("Ar_m" == species_name)
+        speciesID.Ar_m = id
+    elseif ("Ar_r" == species_name)
+        speciesID.Ar_r = id
+    elseif ("Ar_4p" == species_name)
+        speciesID.Ar_4p = id
+    elseif ("O_1d" == species_name)
         speciesID.O_1d = id
-    elseif ("O2(a1Ag)" == species_name)
+    elseif ("O2_a1Ag" == species_name)
         speciesID.O2_a1Ag = id
     else
         errcode = 1
@@ -249,7 +253,9 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     
     speciesID.Ar = 0
     speciesID.Ar_Ion = 0
-    speciesID.Ar_Exc = 0
+    speciesID.Ar_m = 0
+    speciesID.Ar_r = 0
+    speciesID.Ar_4p = 0
     
     speciesID.O = 0
     speciesID.O_negIon = 0
@@ -259,31 +265,49 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     speciesID.O2 = 0
     speciesID.O2_Ion = 0
     speciesID.O2_a1Ag = 0
-
 end
 
 
 function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System)
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
 
     errcode = 0
     
     if (read_step == 2)
 
+        id_electrons = sID.electron
+
         for s in species_list
             s_id = s.id
 
             # Create reaction list associated to species s
+            # This is ONLY used in calculating the MFG, therefore
+            # - for ION SPECIES (positive and negative) only ion-neutral
+            #  reactions are included
+            # - for NEUTRAL SPECIES only ion-neutral reaction are included
+            # - for ELECTRONS all reaction are included
             for r in reaction_list
                 if r.case == r_wall_loss
                     continue
                 end
+
                 # is species s involved?
-                i_involved = findall(x->x==s_id, r.reactant_species)
-                if i_involved==Int64[]
-                    continue
+                if (s_id == id_electrons)
+                    # For the electron species
+                    e_involved = findall(x->x==s_id, r.reactant_species)
+                    if e_involved!=Int64[]
+                        push!(s.reaction_list, r)
+                    end
                 else
-                    push!(s.reaction_list, r)
+                    # For ions and neutral species
+                    s_involved = findall(x->x==s_id, r.reactant_species)
+                    if s_involved!=Int64[]
+                        e_involved = findall(x->x==id_electrons, r.reactant_species)
+                        if e_involved==Int64[]
+                            # Add it only if electron is not involved
+                            push!(s.reaction_list, r)
+                        end
+                    end
                 end
             end
 

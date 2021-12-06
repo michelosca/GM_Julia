@@ -23,11 +23,8 @@ const c_io_error = 1
 # REACTION IDs 
 const r_energy_sink = -1
 const r_wall_loss = -2
-const r_elastic= 1
-const r_excitat= 2
-const r_ionizat= 3
-const r_recombi= 4
-const r_cx= 5
+const r_elastic = 1
+const r_ion_neutral = 2
 
 # OUTPUT constants
 const o_scale_lin = -1
@@ -157,7 +154,9 @@ mutable struct SpeciesID
 
     Ar::Int64
     Ar_Ion::Int64
-    Ar_Exc::Int64
+    Ar_m::Int64
+    Ar_r::Int64
+    Ar_4p::Int64
 
     O::Int64
     O_negIon::Int64

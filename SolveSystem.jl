@@ -53,7 +53,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
 
     # Calculate the electron flux  
     UpdateNegativeFlux!(species_list, system, sID, V_sheath)
-    
+
     # Generate the dy array
     for i in 1:n_species
         id = i - ((i-1)÷n_species)*n_species

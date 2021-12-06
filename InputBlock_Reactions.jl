@@ -2,8 +2,7 @@ module InputBlock_Reactions
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
-using SharedData: r_energy_sink, r_elastic, r_wall_loss, r_excitat
-using SharedData: r_ionizat, r_recombi, r_cx
+using SharedData: r_energy_sink, r_elastic, r_wall_loss
 using ReactionSet: K_funct_list
 
 
@@ -227,11 +226,12 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
     # Charged and excited species
     elseif (s == "Ar+")
         id = speciesID.Ar_Ion 
-    elseif (s == "Ar*")
-        id = speciesID.Ar_Exc 
-        if id == 0
-            id = speciesID.Ar
-        end
+    elseif (s == "Ar_m")
+        id = speciesID.Ar_m 
+    elseif (s == "Ar_r")
+        id = speciesID.Ar_r 
+    elseif (s == "Ar_4p")
+        id = speciesID.Ar_4p 
     elseif (s == "e")
         id = speciesID.electron 
     elseif (s == "O+")
@@ -240,9 +240,9 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.O_negIon 
     elseif (s == "O2+")
         id = speciesID.O2_Ion 
-    elseif (s == "O(1d)")
+    elseif (s == "O_1d")
         id = speciesID.O_1d 
-    elseif (s == "O2(a1Ag)")
+    elseif (s == "O2_a1Ag")
         id = speciesID.O2_a1Ag 
     end
     return id 
@@ -356,15 +356,6 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
 
     if (str == "elastic")
         reaction.case = r_elastic
-    elseif (str == "excitation")
-        reaction.case = r_excitat
-    elseif (str == "ionization" || str == "ionisation")
-        reaction.case = r_ionizat
-    elseif (str == "recombination")
-        reaction.case = r_recombi
-    elseif (str == "charge exchange" || str == "charge-exchange" ||
-        str == "cx" || str == "charge_exchange")
-        reaction.case = r_cx
     elseif (str == "energy_sink" || str == "energy sink")
         reaction.case = r_energy_sink
     elseif (str == "wall_rate_coefficient")
@@ -422,43 +413,33 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
 
     errcode = 0
     if read_step == 2
-        errcode = CheckReactionList!(species_list, reaction_list)
-    end
-
-    return errcode
-end
-
-
-function CheckReactionList!(species_list::Vector{Species},
-    reaction_list::Vector{Reaction})
-
-    errcode = 0
-
-    for r in reaction_list
-        # Test reaction charge balance
-        if !(r.case == r_wall_loss)
-            charge_balance = 0.0
-            i = 1
-            for id in r.involved_species 
-                fact = r.species_balance[i]
-                charge_balance += species_list[id].charge * fact
-                i += 1
+        for r in reaction_list
+            # Test reaction charge balance
+            if !(r.case == r_wall_loss)
+                charge_balance = 0.0
+                i = 1
+                for id in r.involved_species 
+                    fact = r.species_balance[i]
+                    charge_balance += species_list[id].charge * fact
+                    i += 1
+                end
+                if !(charge_balance == 0)
+                    print("***ERROR*** Reaction ",r.id," is unbalanced\n")
+                    return c_io_error
+                end
             end
-            if !(charge_balance == 0)
-                print("***ERROR*** Reaction ",r.id," is unbalanced\n")
-                return c_io_error
-            end
-        end
 
-        # Test elastic collisions
-        if r.case == r_elastic
-            if length(r.neutral_species_id) > 1
-                print("***ERROR*** Elastic collision ",r.id,
-                    " can only have one neutral reacting species\n")
-                return c_io_error
+            # Test elastic collisions
+            if r.case == r_elastic
+                if length(r.neutral_species_id) > 1
+                    print("***ERROR*** Elastic collision ",r.id,
+                        " can only have one neutral reacting species\n")
+                    return c_io_error
+                end
             end
         end
     end
+
     return errcode
 end
 

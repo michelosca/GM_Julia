@@ -3,7 +3,6 @@ module PlasmaParameters
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
 using SharedData: p_icp_id, p_ccp_id
-using SharedData: r_wall_loss
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
