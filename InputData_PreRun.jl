@@ -14,7 +14,6 @@ using InputBlock_Reactions_PreRun: r_elastic, r_wall_loss
 using InputBlock_System: StartFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
 
-using PlasmaParameters: GetLambda, GetGamma
 using EvaluateExpressions: ReplaceSystemSymbolS!
 
 ###############################################################################

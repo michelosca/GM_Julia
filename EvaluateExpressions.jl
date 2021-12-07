@@ -6,11 +6,11 @@ using SharedData: Species, System, SpeciesID
 
 function ReplaceTempSymbolS!(expr::Expr)
 
-    ReplaceSymbol!(expr, :Te,     :(temp[sID.electron]))
-    ReplaceSymbol!(expr, :TAr,    :(temp[sID.Ar]))
-    ReplaceSymbol!(expr, :TArIon, :(temp[sID.Ar_Ion]))
-    ReplaceSymbol!(expr, :TO2,    :(temp[sID.O2]))
-    ReplaceSymbol!(expr, :TO,     :(temp[sID.O]))
+    ReplaceSymbol!(expr, :T_e,      :(temp[sID.electron]))
+    ReplaceSymbol!(expr, :T_Ar,     :(temp[sID.Ar]))
+    ReplaceSymbol!(expr, :T_Ar_Ion, :(temp[sID.Ar_Ion]))
+    ReplaceSymbol!(expr, :T_O2,     :(temp[sID.O2]))
+    ReplaceSymbol!(expr, :T_O,      :(temp[sID.O]))
 end
 
 function ReplaceDensSymbolS!(expr::Expr)
@@ -27,14 +27,21 @@ function ReplaceSpeciesSymbolS!(expr::Expr)
     ReplaceSymbol!(expr, :h_R_O,       :(species_list[sID.O].h_R) )
     ReplaceSymbol!(expr, :h_L_O,       :(species_list[sID.O].h_L) )
     ReplaceSymbol!(expr, :D_O,         :(species_list[sID.O].D) )
-    ReplaceSymbol!(expr, :gamma_O,    :(species_list[sID.O].gamma) )
+    ReplaceSymbol!(expr, :gamma_O,     :(species_list[sID.O].gamma) )
     
-    ReplaceSymbol!(expr, :uB_02,       :(species_list[sID.O].v_Bohm) )
+    ReplaceSymbol!(expr, :uB_02,       :(species_list[sID.O2].v_Bohm) )
     ReplaceSymbol!(expr, :vth_O2,      :(species_list[sID.O2].v_thermal) )
     ReplaceSymbol!(expr, :h_R_O2,      :(species_list[sID.O2].h_R) )
     ReplaceSymbol!(expr, :h_L_O2,      :(species_list[sID.O2].h_L) )
     ReplaceSymbol!(expr, :D_O2,        :(species_list[sID.O2].D) )
     ReplaceSymbol!(expr, :gamma_O2,    :(species_list[sID.O2].gamma) )
+
+    ReplaceSymbol!(expr, :uB_Ar,       :(species_list[sID.Ar].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_Ar,      :(species_list[sID.Ar].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_Ar,      :(species_list[sID.Ar].h_R) )
+    ReplaceSymbol!(expr, :h_L_Ar,      :(species_list[sID.Ar].h_L) )
+    ReplaceSymbol!(expr, :D_Ar,        :(species_list[sID.Ar].D) )
+    ReplaceSymbol!(expr, :gamma_Ar,    :(species_list[sID.Ar].gamma) )
 end
 
 
@@ -49,14 +56,14 @@ end
 
 
 function ReplaceConstantSymbolS!(expr::Expr)
-    ReplaceSymbol!(expr, :m_Ar,      Expr(:call,:*,amu, 40 ))
-    ReplaceSymbol!(expr, :m_O,       Expr(:call,:*,amu, 16 ))
-    ReplaceSymbol!(expr, :m_O2,      Expr(:call,:*,amu, 32 ))
-    ReplaceSymbol!(expr, :Te_eV,     Expr(:call,:*,:Te, K_to_eV))
-    ReplaceSymbol!(expr, :TArIon_eV, Expr(:call,:*,:TArIon, K_to_eV))
-    ReplaceSymbol!(expr, :kb,        kb)
-    ReplaceSymbol!(expr, :e,         e)
-    ReplaceSymbol!(expr, :pi,        pi)
+    ReplaceSymbol!(expr, :m_Ar,        Expr(:call,:*,amu, 40 ))
+    ReplaceSymbol!(expr, :m_O,         Expr(:call,:*,amu, 16 ))
+    ReplaceSymbol!(expr, :m_O2,        Expr(:call,:*,amu, 32 ))
+    ReplaceSymbol!(expr, :T_e_eV,      Expr(:call,:*,:T_e, K_to_eV))
+    ReplaceSymbol!(expr, :T_Ar_Ion_eV, Expr(:call,:*,:T_Ar_Ion, K_to_eV))
+    ReplaceSymbol!(expr, :kb,          kb)
+    ReplaceSymbol!(expr, :e,           e)
+    ReplaceSymbol!(expr, :pi,          pi)
 end
 
 

@@ -4,7 +4,6 @@ using SharedData: K_to_eV, e, me, amu, kb
 using SharedData: c_io_error, p_icp_id
 using SharedData: r_wall_loss
 using SharedData: Species, Reaction, SpeciesID, System
-using PlasmaParameters: GetGamma
 using InputBlock_System: GetUnits!
 
 ###############################################################################
@@ -56,7 +55,6 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.pressure = 0.0
         current_species.reaction_list = Reaction[]
         current_species.mfp = 1.e100
-        current_species.cross_section = 0.0
         current_species.v_thermal = 0.0
         current_species.v_Bohm = 0.0
         current_species.D = 0.0
@@ -120,13 +118,13 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
             current_species.pressure = parse(Float64, var) * units
         end
 
-        if (name=="cross_section")
-            current_species.cross_section = parse(Float64, var) * units
-        end
-
         if (name=="flow_rate")
             current_species.has_flow_rate = true
             current_species.flow_rate = parse(Float64, var) * units
+        end
+
+        if (name=="gamma" || name=="sticking_coefficient")
+            current_species.gamma = parse(Float64, var)
         end
 
     elseif (read_step == 2)
@@ -309,11 +307,6 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                         end
                     end
                 end
-            end
-
-            # Sticking coefficient
-            if system.power_input_method == p_icp_id
-                s.gamma = GetGamma()
             end
         end
 

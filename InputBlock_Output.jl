@@ -2,7 +2,7 @@ module InputBlock_Output
 
 using SharedData: OutputBlock, Species, Reaction
 using SharedData: o_scale_lin, o_scale_log
-using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power
+using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using InputBlock_System: GetUnits!
 
 function StartFile_Output!(read_step::Int64, output_list::Vector{OutputBlock})
@@ -79,6 +79,10 @@ function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
             if current_output.species_id == 0
                 print("***ERROR*** Must specify the 'species' entry for dens outputs\n")
             end
+        elseif (current_output.case == o_pressure)
+            if current_output.species_id == 0
+                print("***ERROR*** Must specify the 'species' entry for pressure outputs\n")
+            end
         elseif (current_output.case == o_temp)
             if current_output.species_id == 0
                 print("***ERROR*** Must specify the 'species' entry for temp outputs\n")
@@ -109,6 +113,8 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
             output_list[end].case = o_dens
         elseif (var=="temp" || var=="temperature")
             output_list[end].case = o_temp
+        elseif (var=="pressure")
+            output_list[end].case = o_pressure
         elseif (var=="input_power" || var=="power")
             output_list[end].case = o_power
         end

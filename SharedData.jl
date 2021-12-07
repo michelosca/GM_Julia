@@ -34,6 +34,7 @@ const o_pL = 2
 const o_dens= 3
 const o_temp = 4
 const o_power = 5
+const o_pressure = 6
 
 # Reaction structure
 mutable struct Reaction
@@ -88,7 +89,6 @@ mutable struct Species
     # Other features
     reaction_list::Vector{Reaction}
     mfp::Float64
-    cross_section::Float64
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
     D::Float64         # Gudmundsson parameter

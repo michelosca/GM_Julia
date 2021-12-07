@@ -4,11 +4,12 @@ using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
 using SharedData: kb, K_to_eV
 using SharedData: c_io_error, r_wall_loss
 using SharedData: o_scale_lin, o_scale_log
-using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power
+using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
+using Printf
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -48,13 +49,15 @@ function GenerateOutputs!(
                 label = "n"
             elseif output.case == o_temp
                 label = "T"
+            elseif output.case == o_pressure
+                label = "P"
             else
                 label = "None"
             end
             for x in x_array
                 errcode = UpdateOutputParameters!(species_list, reaction_list,
                     system, sID, output, x)
-                print(string(label," = ",x," - "))
+                @printf("%4s = %10f - ", label,x)
                 sol = ExecuteProblem(species_list, reaction_list, system, sID)
                 errcode = LoadOutputBlock!(output, sol, species_list,
                     reaction_list, sID, x)
@@ -82,6 +85,10 @@ function UpdateOutputParameters!(species_list::Vector{Species},
     elseif (output.case == o_dens)
         s_id = output.species_id
         species_list[s_id].dens = x 
+    elseif (output.case == o_pressure)
+        s_id = output.species_id
+        T = species_list[s_id].temp
+        species_list[s_id].dens = x / kb / T
     elseif (output.case == o_temp)
         s_id = output.species_id
         species_list[s_id].temp = x 

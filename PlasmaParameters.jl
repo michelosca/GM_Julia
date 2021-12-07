@@ -56,63 +56,38 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
 
     ilambda = 0.0         # inverse mean-free-path
 
-    # In case there is a pre-defined cross-section value
-    sigma = species.cross_section
-    if sigma > 0
-        # Works out the ion-neutral mfp
-        charge = abs(species.charge)
-        if charge > 0
-            for s in species_list
-                if s.id == sID.electron || s.id == species.id
-                    continue
-                end
-                if s.charge == 0
-                    ilambda += s.dens * sigma
-                end
-            end
-        elseif charge==0
-            for s in species_list
-                if s.id == sID.electron || s.id == species.id
-                    continue
-                end
-                if s.charge != 0
-                    ilambda += s.dens * sigma
-                end
-            end
+    v_th_s = species.v_thermal
+    id = species.id
+
+    for r in species.reaction_list
+
+        # Get max. thermal speed of reacting species
+        v_th = v_th_s
+        for i in r.reactant_species
+            v_th_n = species_list[i].v_thermal
+            v_th = max(v_th_n, v_th)
         end
-    else
-        v_th_s = species.v_thermal
-        id = species.id
+        
+        # Exclude the species for which the mfp is calculated
+        r_species = copy(r.reactant_species)
+        index = findall( x -> x == id, r_species )
+        deleteat!(r_species, index)
+        
+        # Set collision cross section
+        K = r.rate_coefficient(temp, sID)
+        cross_section = K / v_th
 
-        for r in species.reaction_list
+        # Density of colliding partners
+        n = prod(dens[r_species])
 
-            # Get max. thermal speed of reacting species
-            v_th = v_th_s
-            for i in r.reactant_species
-                v_th_n = species_list[i].v_thermal
-                v_th = max(v_th_n, v_th)
-            end
-            
-            # Exclude the species for which the mfp is calculated
-            r_species = copy(r.reactant_species)
-            index = findall( x -> x == id, r_species )
-            deleteat!(r_species, index)
-            
-            # Set collision cross section
-            K = r.rate_coefficient(temp, sID)
-            cross_section = K / v_th
-
-            # Density of colliding partners
-            n = prod(dens[r_species])
-
-            # Add to mfp-buffer
-            ilambda += n * cross_section 
-        end
+        # Add to mfp-buffer
+        ilambda += n * cross_section 
     end
 
     if ilambda == 0
         ilambda = 1.e-100
     end
+
     lambda = 1.0/ilambda
     return lambda
 end
@@ -181,11 +156,6 @@ function GetLambda(system::System)
     Lambda = 1.0/sqrt((pi/L)^2 + (2.405/R)^2)
 
     return Lambda
-end
-
-
-function GetGamma()
-    return 1.0
 end
 
 
