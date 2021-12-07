@@ -25,6 +25,7 @@ const b_system = 1
 const b_species = 2
 const b_reactions = 3
 const b_output = 4
+const b_constants = 5
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -98,12 +99,13 @@ function ReadFile!(filename::String, read_step::Int64,
     errcode = 0
 
     open(filename,"r") do f
+        constants = Tuple{SubString{String}, SubString{String}}[]
         line = 1
         while ! eof(f)
             s = readline(f)
             # ReadLine identifies each line on filename
             errcode = ReadLine!(s, read_step, species_list, reaction_list,
-                system, output_list, speciesID)
+                system, output_list, speciesID, constants)
             if (errcode == c_io_error)
                 print("***ERROR*** Stop reading at file line ", line,"\n")
                 return errcode  
@@ -115,32 +117,33 @@ function ReadFile!(filename::String, read_step::Int64,
 end
 
 
-function ReadLine!(string::String, read_step::Int64,
+function ReadLine!(str::String, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID)
+    system::System, output_list::Vector{OutputBlock}, speciesID::SpeciesID,
+    constants::Vector{Tuple{SubString{String},SubString{String}}})
 
     errcode = c_io_error 
 
     # Trimm out commets
-    i_comment = findfirst("#", string)
+    i_comment = findfirst("#", str)
     if !(i_comment === nothing)
         i_comment = i_comment[1]
-        string = string[begin:i_comment-1]
+        str = str[begin:i_comment-1]
     end
-    string = strip(string)
+    str = strip(str)
 
     # Signal wether this is a begin/end:block 
-    i_block = findfirst(":", string)
+    i_block = findfirst(":", str)
     # Signla whether it is a "name = var" line
-    i_eq = findfirst("=", string)
+    i_eq = findfirst("=", str)
     # Signla whether it is a reaction line
-    i_react = findfirst(";", string)
+    i_react = findfirst(";", str)
 
     # Check line
     if !(i_block === nothing)
         i_block = i_block[1]
-        global block_name = string[i_block+1:end]
-        if (occursin("begin", string))
+        global block_name = str[i_block+1:end]
+        if (occursin("begin", str))
             errcode = StartBlock!(block_name, read_step, species_list,
                 reaction_list, system, output_list, speciesID)
             if (errcode == c_io_error)
@@ -148,7 +151,7 @@ function ReadLine!(string::String, read_step::Int64,
                     block_name, " block\n")
                 return c_io_error
             end
-        elseif (occursin("end", string))
+        elseif (occursin("end", str))
             errcode = EndBlock!(block_name, read_step, species_list,
                 reaction_list, system, output_list, speciesID)
             if (errcode == c_io_error)
@@ -159,22 +162,24 @@ function ReadLine!(string::String, read_step::Int64,
         end
     elseif !(i_eq === nothing)
         i_eq = i_eq[1]
-        name = strip(string[begin:i_eq-1])
-        var = strip(string[i_eq+1:end])
+        name = strip(str[begin:i_eq-1])
+        var = strip(str[i_eq+1:end])
         errcode = ReadInputDeckEntry!(name, var, read_step,
-            species_list, reaction_list, system, output_list, speciesID)
+            species_list, reaction_list, system, output_list, speciesID,
+            constants)
         if (errcode == c_io_error)
             print("***WARNING*** Entry in ", block_name,
                 "-block has not been located\n")
             print("  - Input entry: ", name ," = ",var ,"\n")
         end
     elseif !(i_react === nothing)
-        errcode = ReadInputDeckEntry!(string, string, read_step,
-            species_list, reaction_list, system, output_list, speciesID) 
+        errcode = ReadInputDeckEntry!(str, str, read_step,
+            species_list, reaction_list, system, output_list, speciesID,
+            constants) 
         if (errcode == c_io_error)
             print("***WARNING*** Entry in ", block_name,
                 "-block has not been located\n")
-            print("  - Input entry: ", string ,"\n")
+            print("  - Input entry: ", str ,"\n")
         end
     else
         errcode = 0
@@ -258,6 +263,9 @@ function StartBlock!(name::SubString{String}, read_step::Int64,
     elseif (occursin("output",name))
         global block_id = b_output
         errcode = StartOutputBlock!(read_step, output_list)
+    elseif (occursin("constants",name))
+        global block_id = b_constants
+        errcode = 0
     end
     return errcode
 end
@@ -276,6 +284,8 @@ function EndBlock!(name::SubString{String}, read_step::Int64,
         errcode = EndReactionsBlock!(read_step, reaction_list, species_list)
     elseif (occursin("output",name))
         errcode = EndOutputBlock!(read_step, output_list)
+    elseif (occursin("constants",name))
+        errcode = 0
     end
     return errcode
 end
@@ -284,9 +294,12 @@ end
 function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
     read_step::Int64, species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System,
-    output_list::Vector{OutputBlock}, speciesID::SpeciesID)
+    output_list::Vector{OutputBlock}, speciesID::SpeciesID,
+    constants::Vector{Tuple{SubString{String},SubString{String}}})
 
     errcode = c_io_error 
+
+    var = CheckConstantValues!(var, constants)
     
     if (block_id == b_system)
         errcode = ReadSystemEntry!(name, var, read_step, system)
@@ -299,9 +312,25 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
     elseif (block_id == b_output)
         errcode = ReadOutputEntry!(name, var, read_step, output_list,
             species_list)
+    elseif (block_id == b_constants)
+        push!(constants, (name,var))
+        errcode = 0
     end
 
     return errcode 
+end
+
+
+function CheckConstantValues!(var::SubString{String}, constants::Vector{Tuple{SubString{String},SubString{String}}})
+
+    for c in constants
+        if var == c[1]
+            var = c[2]
+            break
+        end
+    end
+
+    return var
 end
 
 end
