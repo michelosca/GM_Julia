@@ -125,6 +125,7 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             end
         end
 
+        """
         # Reactant string
         react = reactants[1]
         n = length(reactants)
@@ -141,6 +142,7 @@ function PrintReactionList(reaction_list::Vector{Reaction},
 
         # Reaction string
         reaction_str = string(react," -> ",prod)
+        """
 
         # Threshold energy
         E_eV = r.E_threshold / e
@@ -168,7 +170,7 @@ function PrintReactionList(reaction_list::Vector{Reaction},
         end
         r_reactants = chop(r_reactants, tail=2)
 
-        @printf("%17s %30s %15.2f %15s %30s %15s\n", r_name, reaction_str,
+        @printf("%17s %30s %15.2f %15s %30s %15s\n", r_name, r.name,
             E_eV, r_neutral, r_involved, r_reactants)
     end
     print("\n")

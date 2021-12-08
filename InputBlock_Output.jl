@@ -208,7 +208,8 @@ function InitializeOutputBlockVectors!(output::OutputBlock,
         if r.case == r_wall_loss
             continue
         end
-        output.K_data_frame[!,string("r",r.id)] = Float64[]
+        description = string("r",r.id,": ",r.name)
+        output.K_data_frame[!,description] = Float64[]
     end
 
     return errcode

@@ -4,6 +4,7 @@ using SharedData: c_io_error, Species, Reaction, System, SpeciesID, OutputBlock
 using InputData: SetupInputData!
 using PrintModule: PrintSpeciesList, PrintReactionList, PrintSystemList
 using OutputModule: GenerateOutputs!
+using CSV
 
 function run_GM(input)
 
@@ -39,6 +40,15 @@ function run_GM(input)
     errcode = @time GenerateOutputs!(species_list, reaction_list, system,
         output_list, speciesID)
     if (errcode == c_io_error) return errcode end
+
+    for output in output_list
+        T_filename = string("T_vs_",output.parameter,".csv")
+        n_filename = string("n_vs_",output.parameter,".csv")
+        K_filename = string("K_vs_",output.parameter,".csv")
+        CSV.write(T_filename, output.T_data_frame )
+        CSV.write(n_filename, output.n_data_frame )
+        CSV.write(K_filename, output.K_data_frame )
+    end
 
     return species_list, reaction_list, system, speciesID, output_list
 end
