@@ -6,9 +6,6 @@ using SharedData: c_io_error, r_wall_loss
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using EvaluateExpressions: ReplaceExpressionValues
-using PlasmaParameters: UpdateSpeciesParameters!
-using PlasmaSheath: GetSheathVoltage
-using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
 using Printf
 
@@ -43,19 +40,6 @@ function GenerateOutputs!(
             elseif (output.scale == o_scale_log)
                 x_array = LogRange(output.x_min, output.x_max, output.x_steps)
             end
-            if output.case == o_pL
-                label = "pL"
-            elseif output.case == o_power
-                label = "P"
-            elseif output.case == o_dens
-                label = "n"
-            elseif output.case == o_temp
-                label = "T"
-            elseif output.case == o_pressure
-                label = "P"
-            else
-                label = "None"
-            end
             
             # Start parameter loop
             for x in x_array
@@ -63,7 +47,7 @@ function GenerateOutputs!(
                     system, sID, output, x)
                 if (errcode == c_io_error) return errcode end
 
-                @printf("%4s = %10f - ", label,x)
+                @printf("%4s = %10f - ", output.parameter, x)
                 sol = ExecuteProblem(species_list, reaction_list, system, sID)
                 errcode = LoadOutputBlock!(output, sol, species_list,
                     reaction_list, system, sID, x)
@@ -116,25 +100,39 @@ function LoadOutputBlock!(output::OutputBlock, sol,
 
     n_species = length(species_list)
     if output.case == o_single_run
-        output.x = sol.t
-        n_steps = length(output.x)
+        output.n_data_frame.time = sol.t
+        output.T_data_frame.time = sol.t
+        n_steps = length(sol.t)
 
         # Dump dens/temp into output block
         for s in species_list
-            output.n[s.id] = sol[s.id+n_species, :]
-            output.T[s.id] = sol[s.id, : ]
+            if s.has_dens_eq
+                output.n_data_frame[!,s.name] = sol[s.id+n_species, :]
+            end
+            if s.has_temp_eq
+                output.T_data_frame[!,s.name] = sol[s.id, : ]
+            end
         end
 
-        # Get collision rate coefficient values vs. time
+        # Initialize temp array 
         temp = zeros(n_species)
+        for s in species_list
+            if !s.has_temp_eq
+                temp[s.id] = s.temp 
+            end
+        end
+
         # Loop over every time step
         for i in 1:n_steps
             # Update temperature values for each species
-            for j in 1:n_species
-                temp[j] = output.T[j][i]
+            for s in species_list
+                if s.has_temp_eq
+                    temp[s.id] = output.T_data_frame[i,s.name]
+                end
             end
 
             # Get K values for the curren time step
+            K_list = Float64[sol.t[i]]
             for r in reaction_list
                 if r.case == r_wall_loss
                     continue
@@ -143,32 +141,37 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                     # such as h_R, h_L, D, gamma, etc.
                 else
                     if system.prerun
-                        K = r.rate_coefficient(temp, sID)
+                        push!(K_list, r.rate_coefficient(temp, sID))
                     else
-                        K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                            species_list, system, sID)
+                        push!(K_list, ReplaceExpressionValues(r.rate_coefficient, temp,
+                            species_list, system, sID))
                     end
                 end
-                push!(output.K[r.id], K)
             end
+            push!(output.K_data_frame, K_list)
         end
     else
-        push!(output.x, param)
 
-        # Dump dens/temp into output block
-        for s in species_list
-            push!(output.n[s.id], sol[s.id+n_species, end])
-            push!(output.T[s.id], sol[s.id, end])
-        end
-
-        # Get collision rate coefficient values vs. time
-        # First, generate temperature array
+        # Initialize buffer lists
+        dens_list = Float64[param]
+        temp_list = Float64[param]
+        K_list = Float64[param]
         temp = zeros(n_species)
-        for j in 1:n_species
-            temp[j] = output.T[j][end]
-        end
 
-        # Second, get K values for the curren x-parameter value 
+        # Dump dens/temp into buffer lists 
+        for s in species_list
+            if s.has_dens_eq
+                push!(dens_list, sol[s.id+n_species, end])
+            end
+            if s.has_temp_eq
+                push!(temp_list, sol[s.id, end])
+            end
+            temp[s.id] = s.temp 
+        end
+        push!(output.T_data_frame, temp_list)
+        push!(output.n_data_frame, dens_list)
+
+        # Dump K values into buffer 
         for r in reaction_list
             if r.case == r_wall_loss
                 continue
@@ -177,14 +180,14 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                 # such as h_R, h_L, D, gamma, etc.
             else
                 if system.prerun
-                    K = r.rate_coefficient(temp, sID)
+                    push!(K_list, r.rate_coefficient(temp, sID))
                 else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
+                    push!(K_list, ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID))
                 end
             end
-            push!(output.K[r.id], K)
         end
+        push!(output.K_data_frame, K_list)
     end
 
     return errcode

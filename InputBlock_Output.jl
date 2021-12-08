@@ -2,8 +2,10 @@ module InputBlock_Output
 
 using SharedData: OutputBlock, Species, Reaction
 using SharedData: o_scale_lin, o_scale_log
+using SharedData: r_wall_loss
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using InputBlock_System: GetUnits!
+using DataFrames: DataFrame
 
 function StartFile_Output!(read_step::Int64, output_list::Vector{OutputBlock})
     
@@ -155,13 +157,13 @@ function InitializeOutputBlock!(outputblock::OutputBlock)
     outputblock.case = 0
     outputblock.species_id = 0
     outputblock.scale = o_scale_lin
-    outputblock.x = Float64[]
+    outputblock.x = 0.0 
     outputblock.x_min = 0.0
     outputblock.x_max = 0.0
     outputblock.x_steps = 0
-    outputblock.n = Vector[]
-    outputblock.T = Vector[]
-    outputblock.K = Vector[]
+    outputblock.n_data_frame = DataFrame()
+    outputblock.T_data_frame = DataFrame()
+    outputblock.K_data_frame = DataFrame()
 end
 
 
@@ -170,21 +172,43 @@ function InitializeOutputBlockVectors!(output::OutputBlock,
 
     errcode = 0
 
-    # Initialize dens and temp vectors
-    n_species = length(species_list)
-    i = 1
-    while i <= n_species
-        push!(output.n, Float64[])
-        push!(output.T, Float64[])
-        i += 1
+    if output.case == o_pL
+        output.parameter = "pL"
+    elseif output.case == o_power
+        output.parameter = "P"
+    elseif output.case == o_dens
+        output.parameter = "n"
+    elseif output.case == o_temp
+        output.parameter = "T"
+    elseif output.case == o_pressure
+        output.parameter = "P"
+    elseif output.case == o_single_run
+        output.parameter = "time"
+    else
+        errcode = c_io_error
+        print("***ERROR*** Output parameter not recognized\n")
     end
 
-    # Initialize rate coefficient vectors
-    n_reactions = length(reaction_list)
-    i = 1
-    while i <= n_reactions
-        push!(output.K, Float64[])
-        i += 1
+    if output.case != o_single_run
+        output.n_data_frame[!, output.parameter] = Float64[]
+        output.T_data_frame[!, output.parameter] = Float64[]
+        for s in species_list
+            if s.has_dens_eq
+                output.n_data_frame[!, s.name] = Float64[]
+            end
+            if s.has_temp_eq
+                output.T_data_frame[!, s.name] = Float64[]
+            end
+        end
+    end
+
+    # Initialize rate coefficient K_data_frame
+    output.K_data_frame[!, output.parameter] = Float64[]
+    for r in reaction_list
+        if r.case == r_wall_loss
+            continue
+        end
+        output.K_data_frame[!,string("r",r.id)] = Float64[]
     end
 
     return errcode

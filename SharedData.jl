@@ -1,5 +1,7 @@
 module SharedData
 
+using DataFrames
+
 # Physical constants
 const kb = 1.380649e-23
 const e = 1.602176634e-19     # C
@@ -135,14 +137,15 @@ mutable struct OutputBlock
     species_id::Int64
     scale::Int64
     
-    x::Vector{Float64}
+    parameter::String
+    x::Float64
     x_min::Float64
     x_max::Float64
     x_steps::Int64
 
-    n::Vector{Vector{Float64}}
-    T::Vector{Vector{Float64}}
-    K::Vector{Vector{Float64}}
+    n_data_frame::DataFrame
+    T_data_frame::DataFrame
+    K_data_frame::DataFrame
 
     OutputBlock() = new()
 end
