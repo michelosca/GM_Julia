@@ -1,8 +1,10 @@
 module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu, kb 
-using SharedData: c_io_error
-using SharedData: Species, Reaction, SpeciesID
+using SharedData: c_io_error, p_icp_id
+using SharedData: r_wall_loss
+using SharedData: Species, Reaction, SpeciesID, System
+using InputBlock_System: GetUnits!
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -38,7 +40,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
 
     errcode = 0
     speciesID.current_id += 1
-    if (read_step == 2)
+    if (read_step == 1)
         current_species = Species()
         current_species.id = speciesID.current_id 
         current_species.species_id = 0
@@ -56,13 +58,14 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.v_thermal = 0.0
         current_species.v_Bohm = 0.0
         current_species.D = 0.0
-        current_species.Lambda = 0.0
         current_species.h_R = 0.0
         current_species.h_L = 0.0
         current_species.gamma = 0.0
         current_species.n_sheath = 0.0
         current_species.flux = 0.0
         current_species.name = "None"
+        current_species.has_flow_rate = false
+        current_species.flow_rate = 0.0 
         push!(species_list, current_species)
     end
     return errcode
@@ -72,14 +75,63 @@ end
 function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, sID::SpeciesID)
 
-    errcode = c_io_error
-    if (read_step == 2)
-        current_species = species_list[end]
-    end
+    errcode = 0 
 
-    if (name=="name")
-        if (read_step == 2)
+    if (read_step == 1)
+        units, name = GetUnits!(name)
+
+        if (name=="name")
+            # This is set in the pre-run(read_step==0) and in main-run(read_step===1)
+            errcode = SetSpeciesID!(var, sID)
+            current_species = species_list[sID.current_id]
             current_species.name = var
+        end
+
+        current_species = species_list[sID.current_id]
+
+        if (name=="charge")
+            current_species.charge = parse(Int64,var) * e * units
+        end
+
+        if (name=="mass")
+            expr = Meta.parse(var)
+            current_species.mass = eval(expr) * units
+        end
+
+        if (name=="solve_dens")
+            current_species.has_dens_eq = parse(Bool, var) 
+        end
+
+        if (name=="solve_temp")
+                current_species.has_temp_eq = parse(Bool, var)
+        end
+
+        if (name=="T")
+            current_species.temp = parse(Float64, var) * units
+        end
+
+        if (name=="density" || name=="dens")
+            current_species.dens = parse(Float64, var) *units
+        end
+
+        if (name=="pressure" || name=="p")
+            current_species.pressure = parse(Float64, var) * units
+        end
+
+        if (name=="flow_rate")
+            current_species.has_flow_rate = true
+            current_species.flow_rate = parse(Float64, var) * units
+        end
+
+        if (name=="gamma" || name=="sticking_coefficient")
+            current_species.gamma = parse(Float64, var)
+        end
+
+    elseif (read_step == 2)
+
+        current_species = species_list[sID.current_id]
+
+        if (name=="name")
             if (var=="e" || var=="electrons" || var=="electron")
                 current_species.species_id = sID.electron 
                 errcode = 0
@@ -96,71 +148,9 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
                 print("***ERROR*** Neutral species id has not been found\n")
                 errcode = c_io_error 
             end
-        else 
-            # This is set in the pre-run(read_step==0) and in main-run(read_step===1)
-            errcode = SetSpeciesID!(var, sID)
         end
     end
 
-    if (name=="charge")
-        if (read_step == 2)
-            current_species.charge = parse(Int64,var) * e
-        end
-        errcode = 0
-    end
-
-    if (name=="mass")
-        if (read_step == 2)
-            expr = Meta.parse(var)
-            current_species.mass = eval(expr)
-        end
-        errcode = 0
-    end
-
-    if (name=="solve_dens")
-        if (read_step == 2)
-            current_species.has_dens_eq = parse(Bool, var) 
-        end
-        errcode = 0
-    end
-
-    if (name=="solve_temp")
-        if (read_step == 2)
-            current_species.has_temp_eq = parse(Bool, var)
-        end
-        errcode = 0
-    end
-
-    if (name=="T" || name=="T_eV")
-        if (read_step == 2)
-            if (name=="T_eV")
-                units = 1.0/K_to_eV
-            else
-                units = 1.0
-            end
-            current_species.temp = parse(Float64, var) * units
-        end
-        errcode = 0
-    end
-
-    if (name=="density" || name=="dens")
-        if (read_step == 2)
-            current_species.dens = parse(Float64, var)
-        end
-        errcode = 0
-    end
-
-    if (name=="pressure" || name=="p" || name=="p_mTorr")
-        if (read_step == 2)
-            if (name=="p_mTorr")
-                units = 0.13332237  
-            else
-                units = 1.0
-            end
-            current_species.pressure = parse(Float64, var) * units
-        end
-        errcode = 0
-    end
     return errcode 
 end
 
@@ -186,13 +176,15 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
         speciesID.O_negIon = id
     elseif ("O2+" == species_name)
         speciesID.O2_Ion = id
-    elseif ("Ar*" == species_name || "Ar_excited" == species_name)
-        speciesID.Ar_Exc = id
-    elseif ("O(3p)" == species_name)
-        speciesID.O_3p = id
-    elseif ("O(1d)" == species_name)
+    elseif ("Ar_m" == species_name)
+        speciesID.Ar_m = id
+    elseif ("Ar_r" == species_name)
+        speciesID.Ar_r = id
+    elseif ("Ar_4p" == species_name)
+        speciesID.Ar_4p = id
+    elseif ("O_1d" == species_name)
         speciesID.O_1d = id
-    elseif ("O2(a1Ag)" == species_name)
+    elseif ("O2_a1Ag" == species_name)
         speciesID.O2_a1Ag = id
     else
         errcode = 1
@@ -201,15 +193,15 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
 end
 
 
-function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species})
+function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
+    sID::SpeciesID)
 
     errcode = 0 
 
     if (read_step == 1)
-        errcode = 0
-    elseif (read_step == 2)
+        # Update equations/ wall losses flags
         current_species = species_list[end]
-        if (current_species.charge != 0)
+        if (current_species.charge > 0 || current_species.id == sID.electron)
             if (current_species.has_temp_eq)
                 current_species.has_heating_mechanism = true
             end
@@ -259,18 +251,67 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     
     speciesID.Ar = 0
     speciesID.Ar_Ion = 0
-    speciesID.Ar_Exc = 0
+    speciesID.Ar_m = 0
+    speciesID.Ar_r = 0
+    speciesID.Ar_4p = 0
     
     speciesID.O = 0
     speciesID.O_negIon = 0
     speciesID.O_Ion = 0
     speciesID.O_1d = 0
-    speciesID.O_3p = 0
 
     speciesID.O2 = 0
     speciesID.O2_Ion = 0
     speciesID.O2_a1Ag = 0
+end
 
+
+function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
+
+    errcode = 0
+    
+    if (read_step == 2)
+
+        id_electrons = sID.electron
+
+        for s in species_list
+            s_id = s.id
+
+            # Create reaction list associated to species s
+            # This is ONLY used in calculating the MFG, therefore
+            # - for ION SPECIES (positive and negative) only ion-neutral
+            #  reactions are included
+            # - for NEUTRAL SPECIES only ion-neutral reaction are included
+            # - for ELECTRONS all reaction are included
+            for r in reaction_list
+                if r.case == r_wall_loss
+                    continue
+                end
+
+                # is species s involved?
+                if (s_id == id_electrons)
+                    # For the electron species
+                    e_involved = findall(x->x==s_id, r.reactant_species)
+                    if e_involved!=Int64[]
+                        push!(s.reaction_list, r)
+                    end
+                else
+                    # For ions and neutral species
+                    s_involved = findall(x->x==s_id, r.reactant_species)
+                    if s_involved!=Int64[]
+                        e_involved = findall(x->x==id_electrons, r.reactant_species)
+                        if e_involved==Int64[]
+                            # Add it only if electron is not involved
+                            push!(s.reaction_list, r)
+                        end
+                    end
+                end
+            end
+        end
+
+    end
+    return errcode
 end
 
 end

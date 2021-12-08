@@ -4,8 +4,6 @@ using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb, e, K_to_eV 
 using SharedData: p_ccp_id, p_icp_id 
 using SharedData: s_ohmic_power
-using PlasmaParameters: GetMFP, GetBohmSpeed, GetThermalSpeed
-using PlasmaParameters: Get_h_Parameters
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################

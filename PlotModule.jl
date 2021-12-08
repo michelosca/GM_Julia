@@ -2,49 +2,127 @@ module PlotModule
 
 using Plots
 #using LaTeXStrings
+using SharedData: Species, OutputBlock, Reaction
+using SharedData: K_to_eV
 
-function PlotDens(x,y)
-    p = plot(x, y,
-    xlabel = "p·L [Pa·m]",
-    ylabel = "Electron Density [m^{-3}]",
-    title = "Ar discharge 1kW @ 200V",
-    xlims = (5.e-2,1.e4),
-    ylims = (1.e14, 1.e17),
-    w = 4,
-    linestyle = :dot,
-    grid = false,
-    xticks = [1.e-1,1.e0,1.e1,1.e2,1.e3,1.e4],
-    yticks = [1.e14,1.e15,1.e16,1.e17],
-    xscale = :log10,
-    minorticks = true,
-    yscale = :log10,
-    #xtickfont = font(20, "Courier"),
-    #ytickfont = font(20, "Courier"),
-    legend = false,
-    framestyle = :box
-    )
+function PlotDensities_Charged(output::OutputBlock,
+    species_list::Vector{Species})
+
+    p = plot()#xlabel = "t [ms]",
+        #ylabel = "n [m^-3]",
+        #xscale = :log10,
+        #xlims = (5.e-2, 1.e4),
+        #yscale = :log10,
+        #ylims = (1.e14, 1.e17))
+
+    time = output.x#/1.e-3
+    for s in species_list
+        if !s.has_dens_eq
+            continue
+        end
+        if abs(s.charge) > 0
+            dens = output.n[s.id]
+            plot!(p, time, dens, label=s.name, w = 2)
+        end
+    end
     return p
 end
 
-function PlotTemp(x,y)
-    p = plot(x, y,
-    xlabel = "p·L [Pa·m]",
-    ylabel = "Electron Temp [eV]",
-    title = "Ar discharge 1kW @ 200V",
-    xlims = (5.e-2,1.e4),
-    ylims = (0, 5),
-    w = 4,
-    linestyle = :dot,
-    grid = false,
-    xticks = [1.e-1,1.e0,1.e1,1.e2,1.e3,1.e4],
-    yticks = [0,1,2,3,4,5],
-    xscale = :log10,
-    minorticks = true,
-    #xtickfont = font(20, "Courier"),
-    #ytickfont = font(20, "Courier"),
-    legend = false,
-    framestyle = :box
-    )
+
+function PlotDensities_Neutral(output::OutputBlock,
+    species_list::Vector{Species})
+
+    p = plot(xlabel = "t [ms]", ylabel = "n [m^-3]")#,
+    #yscale = :log10, xlims = (1.e15, 1.e22))
+
+    time = output.x / 5.0
+    for s in species_list
+        if !s.has_dens_eq
+            continue
+        end
+        if s.charge == 0
+            dens = output.n[s.id]
+            plot!(p, time, dens, label = s.name, w = 2)
+        end
+    end
     return p
 end
+
+
+function PlotTemperatures_Charged(output::OutputBlock,
+    species_list::Vector{Species})
+
+    p = plot(xlabel = "t [ms]", ylabel = "T [eV]")#,
+        #xscale = :log10, xlims = (5.e-2, 1.e4),
+        #ylims = (0, 5))
+
+    time = output.x#/1.e-3
+    for s in species_list
+        if !s.has_temp_eq
+            continue
+        end
+        if abs(s.charge) > 0
+            temp = output.T[s.id] * K_to_eV
+            plot!(p, time, temp, label=s.name, w = 2)
+        end
+    end
+    return p
+end
+
+
+function PlotTemperatures_Neutral(output::OutputBlock,
+    species_list::Vector{Species})
+
+    p = plot(xlabel = "t [ms]", ylabel = "T [eV]")
+
+    time = output.x/1.e-3
+    for s in species_list
+        if !s.has_temp_eq
+            continue
+        end
+        if s.charge == 0
+            temp = output.n[s.id] * K_to_eV
+            plot!(p, time, temp, label = s.name, w = 2)
+        end
+    end
+    return p
+end
+
+
+function PlotRateCoefficients(output::OutputBlock,
+    reaction_list::Vector{Reaction}, reaction_id::Int64 = 0)
+
+    p = plot(xlabel = "Reaction ID", ylabel = "",
+        kind = "bar",
+        yscale = :log10)
+        #ylims = (1.e-20, 1.e-10),
+        #legend=:outertopright,
+        #ylims = (0, 5))
+    time = output.x#/1.e-3
+    if reaction_id == 0
+        for r in reaction_list 
+            K = output.K[r.id]
+            if K == Float64[]
+                continue
+            elseif K[end] == 0
+                continue
+            else
+                dens_list = output.n[r.reactant_species]
+                dens = 1
+                for n in dens_list
+                    dens *= n[end]
+                end
+                #print("ID ", r.id, " dens product ", dens,"  K ", K[end]," Kn ",K[end]*dens ,"\n")
+                plot!(p, [r.id], [K[end]*dens], w = 2, markershape=:circle, legend = false)
+            end
+        end
+    else
+        r = reaction_list[reaction_id]
+        K = output.K[r.id]
+        plot!(p, time, K, label=r.name, w = 2, yscale=:log10)
+    end
+
+    return p
+end
+
 end

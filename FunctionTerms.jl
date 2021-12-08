@@ -2,10 +2,9 @@ module FunctionTerms
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb 
-using InputBlock_Reactions: r_elastic, r_wall_loss, r_energy_sink
+using SharedData: r_elastic, r_wall_loss, r_energy_sink
 using WallFlux: DensWallFluxFunction, TempWallFluxFunction
 using PowerInput: PowerInputFunction
-using EvaluateExpressions: EvaluateExpression
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -20,7 +19,8 @@ using EvaluateExpressions: EvaluateExpression
 
 
 function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
-    s::Species, reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
+    s::Species, species_list::Vector{Species}, reaction_list::Vector{Reaction},
+    system::System, sID::SpeciesID)
 
     # This function generates the function terms required in the density ODE function
     # This is for a sigle species s
@@ -29,14 +29,17 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
 
     # Check if species is meant to have a density ODE 
     if (s.has_dens_eq)
+        s_id = s.id
         # Loop over the reaction setreaction_lists species s 
         for r in reaction_list
 
-            # Check if species s is involved in current reaction
-            s_index = findall( x -> x == s.id, r.involved_species )
-            if s_index == Int64[] 
+            if r.case == r_energy_sink
                 continue
-            elseif r.case == r_energy_sink
+            end
+
+            # Get species index in involved_species list
+            s_index = findall( x -> x == s_id, r.involved_species )
+            if s_index == Int64[]
                 continue
             else
                 s_index = s_index[1]
@@ -46,8 +49,12 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if !(sign == 0) 
-                K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
-                value = sign * prod(dens[r.reactant_species]) * eval(K)
+                if r.case == r_wall_loss
+                    K = r.rate_coefficient(temp, species_list, system, sID) 
+                else
+                    K = r.rate_coefficient(temp, sID) 
+                end
+                value = sign * prod(dens[r.reactant_species]) * K
                 dens_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             end
@@ -58,6 +65,11 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             dens_funct += value 
             #print("   - Flux loss:     ", value, "\n")
         end
+
+        if s.has_flow_rate
+            dens_funct += s.flow_rate / system.V
+        end
+
     end
     return dens_funct
 end
@@ -70,16 +82,16 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
     temp_funct = 0.0 
     if (s.has_temp_eq)
         # "Constants" that are used later
-        Q0 = 3.0/2.0 * kb * s.dens
-        Q1 = -3.0/2.0 * kb * s.temp
+        Q0 = 1.5 * kb * s.dens
+        Q1 = -1.5 * kb * s.temp
         s_id = s.id
 
         # Loop over the reaction set
         for r in reaction_list
-            # Check whether reaction r involves species s_id
+
+            # Check whether species is involved in current reaction 
             s_index = findall( x -> x == s_id, r.involved_species )
-            if s_index == Int64[] 
-                # Species is not involved in reaction -> move to next reaction
+            if s_index == Int64[]
                 continue
             else
                 s_index = s_index[1]
@@ -89,9 +101,12 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if (sign != 0)
-                K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
-                value = sign * prod(dens[r.reactant_species]) *
-                    eval(K) * Q1 / Q0
+                if r.case == r_wall_loss
+                    K = r.rate_coefficient(temp, species_list, system, sID) 
+                else
+                    K = r.rate_coefficient(temp, sID) 
+                end
+                value = sign * prod(dens[r.reactant_species]) * K * Q1 / Q0
                 temp_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             else
@@ -103,9 +118,9 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                     m_charged = s.mass
                     Q2 = -3.0 * kb * m_charged / m_neutral
                     t_neutral = temp[n_id]
-                    K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
+                    K = r.rate_coefficient(temp, sID) 
                     value = Q2 * prod(dens[r.reactant_species]) *
-                        eval(K) * (temp[s_id] - t_neutral) / Q0
+                        K * (temp[s_id] - t_neutral) / Q0
                     temp_funct += value
                     #print("   - Elastic:   ", r.id," - ", value, "\n")
                 end
@@ -113,20 +128,23 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             end
 
             # COLLISION INTRINSIC ENERGY GAIN/LOSS
+            Er = r.E_threshold
+            if (Er == 0)
+                continue 
+            end
+
             # Check that species is part of the reacting species
-            s_index = findall( x -> x == s_id, r.involved_species )
-            if s_index == Int64[] 
+            s_index = findall( x -> x == s_id, r.reactant_species)
+            if s_index == Int64[]
                 continue
             else
                 s_index = s_index[1]
             end
-            Er = r.E_threshold
-            if (Er != 0) 
-                K = EvaluateExpression(r.rate_coefficient, sID, temp, s) 
-                value = -Er * prod(dens[r.reactant_species]) * eval(K) / Q0
-                temp_funct += value
-                #print("   - Ethreshold: ", r.id," - ", value, "\n")
-            end
+
+            K = r.rate_coefficient(temp, sID) 
+            value = -Er * prod(dens[r.reactant_species]) * K / Q0
+            temp_funct += value
+            #print("   - Ethreshold: ", r.id," - ", value, "\n")
         end
 
         if (s.has_wall_loss)

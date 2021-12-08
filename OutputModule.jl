@@ -1,17 +1,19 @@
 module OutputModule
 
-using SharedData: Species, Reaction, System, SpeciesID, Output
+using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
 using SharedData: kb, K_to_eV
+using SharedData: c_io_error, r_wall_loss
+using SharedData: o_scale_lin, o_scale_log
+using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
+using Printf
 
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
-const o_pL = 1
-const o_singel_sol = 2
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -20,87 +22,165 @@ const o_singel_sol = 2
 #   - SetupInitialConditions
 #   - Output_PL
 
-function GenerateOutputs(
+function GenerateOutputs!(
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, sID::SpeciesID, output_list::Vector{Output})
+    system::System, output_list::Vector{OutputBlock}, sID::SpeciesID)
     
-    # Initial conditions
-    dens0, temp0 = SetupInitialConditions(species_list)
+    errcode = 0
 
-    output_tuple_list = Tuple[]
     for output in output_list
-        for output_flag in output.output_flag_list
-            init = cat(temp0, dens0,dims=1)
-            tspan = (0, system.t_end)
-            GM_tuple = (system, sID, species_list, reaction_list)
 
-            # The output flag come from a output-structure
-            if output_flag == o_pL
-                output_tuple = Output_PL(GM_tuple, temp0, dens0)
-
-            elseif (output_flag == o_singel_sol)
-                print("Solving single problem...\n")
-                sol = ExecuteProblem(init, tspan, GM_tuple)
-                output_tuple = ("single sol", sol)
+        if output.case == o_single_run
+            sol = ExecuteProblem(species_list, reaction_list, system, sID)
+            errcode = LoadOutputBlock!(output, sol, species_list,
+                reaction_list, sID)
+            if (errcode == c_io_error) return errcode end
+        else
+            # Setup the parameter list to be looped through
+            if (output.scale == o_scale_lin)
+                x_array = range(output.x_min, output.x_max, length=output.x_steps)
+            elseif (output.scale == o_scale_log)
+                x_array = LogRange(output.x_min, output.x_max, output.x_steps)
             end
+            if output.case == o_pL
+                label = "pL"
+            elseif output.case == o_power
+                label = "P"
+            elseif output.case == o_dens
+                label = "n"
+            elseif output.case == o_temp
+                label = "T"
+            elseif output.case == o_pressure
+                label = "P"
+            else
+                label = "None"
+            end
+            
+            # Start parameter loop
+            for x in x_array
+                errcode = UpdateOutputParameters!(species_list, reaction_list,
+                    system, sID, output, x)
+                if (errcode == c_io_error) return errcode end
 
-            push!(output_tuple_list, output_tuple)
-
-        end # Output flags loop
+                @printf("%4s = %10f - ", label,x)
+                sol = ExecuteProblem(species_list, reaction_list, system, sID)
+                errcode = LoadOutputBlock!(output, sol, species_list,
+                    reaction_list, sID, x)
+                if (errcode == c_io_error) return errcode end
+            end
+        end
     end # Output list loop
 
-    return output_tuple_list
+    return errcode
 end
 
-function Output_PL(GM_tuple::Tuple, temp::Vector{Float64},
-    dens::Vector{Float64})
 
-    sID = GM_tuple[2]
-    system = GM_tuple[1]
+function UpdateOutputParameters!(species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System, sID, output::OutputBlock,
+    x::Float64)
+    errcode = 0
 
-    TAr = temp[sID.Ar]
-    Te = Float64[]
-    ne = Float64[]
-    pL = Float64[]
-    n_steps = 100
-    for e in [10^y for y in range(log10(19.5), log10(22), length=n_steps)]
-        dens[sID.Ar] = 9.5 * 10^e
-        init = cat(temp,dens,dims=1)
-        p = dens[sID.Ar] * kb * TAr
-        push!(pL, p * system.l)
-        print("P*L = ",p*system.l,";Executing GM problem...\n")
-        if (pL[end] > 1.e4) # n = 1.e25
-            t_end = 1.0 
-        elseif (pL[end] > 1.e3) # n = 1.e24
-            t_end = 3.e-1  
-        elseif (pL[end] > 1.e2) # n = 1.e23
-            t_end = 2.e-1 # pL is between 1.e3 and 1.e2
-        elseif (pL[end] > 1.e1) # n = 1.e22
-            t_end = 1.e-1 # pL is between 1.e2 and 1.e1
-        elseif (pL[end] > 1.e0) # n = 1.e21
-            t_end = 2.e-2 # pL is between 1.e1 and 1.e0
-        else
-            t_end = 2.e-3 # pL is lower than 1.e0
+    if (output.case == o_pL)
+        # L is kept constant but p is being changed
+        # Ideal gas law, p = n kb T, temperature is kept constant
+        p = x / system.l 
+        s_id = output.species_id
+        T = species_list[s_id].temp
+        species_list[s_id].dens = p / kb / T
+    elseif (output.case == o_dens)
+        s_id = output.species_id
+        species_list[s_id].dens = x 
+    elseif (output.case == o_pressure)
+        s_id = output.species_id
+        T = species_list[s_id].temp
+        species_list[s_id].dens = x / kb / T
+    elseif (output.case == o_temp)
+        s_id = output.species_id
+        species_list[s_id].temp = x 
+    elseif (output.case == o_power)
+        system.drivP = x
+    end
+
+
+
+    return errcode
+end
+
+
+function LoadOutputBlock!(output::OutputBlock, sol,
+    species_list::Vector{Species}, reaction_list::Vector{Reaction},
+    sID::SpeciesID, param::Float64 = 0.0)
+
+    errcode = 0
+
+    n_species = length(species_list)
+    if output.case == o_single_run
+        output.x = sol.t
+        n_steps = length(output.x)
+
+        # Dump dens/temp into output block
+        for s in species_list
+            output.n[s.id] = sol[s.id+n_species, :]
+            output.T[s.id] = sol[s.id, : ]
         end
-        tspan = (0,t_end)
-        sol = ExecuteProblem(init, tspan, GM_tuple)
-        push!(Te, sol[1,end]*K_to_eV)
-        push!(ne, sol[5,end])
+
+        # Get collision rate coefficient values vs. time
+        temp = zeros(n_species)
+        # Loop over every time step
+        for i in 1:n_steps
+            # Update temperature values for each species
+            for j in 1:n_species
+                temp[j] = output.T[j][i]
+            end
+
+            # Get K values for the curren time step
+            for r in reaction_list
+                if r.case == r_wall_loss
+                    continue
+                    #K = r.rate_coefficient(temp, species_list, system, sID) 
+                    # Wall loss reactions require to update species parameters
+                    # such as h_R, h_L, D, gamma, etc.
+                else
+                    K = r.rate_coefficient(temp, sID)
+                end
+                push!(output.K[r.id], K)
+            end
+        end
+    else
+        push!(output.x, param)
+
+        # Dump dens/temp into output block
+        for s in species_list
+            push!(output.n[s.id], sol[s.id+n_species, end])
+            push!(output.T[s.id], sol[s.id, end])
+        end
+
+        # Get collision rate coefficient values vs. time
+        # First, generate temperature array
+        temp = zeros(n_species)
+        for j in 1:n_species
+            temp[j] = output.T[j][end]
+        end
+
+        # Second, get K values for the curren x-parameter value 
+        for r in reaction_list
+            if r.case == r_wall_loss
+                continue
+                #K = r.rate_coefficient(temp, species_list, system, sID) 
+                # Wall loss reactions require to update species parameters
+                # such as h_R, h_L, D, gamma, etc.
+            else
+                K = r.rate_coefficient(temp, sID)
+            end
+            push!(output.K[r.id], K)
+        end
     end
 
-    return ("pL", Te, ne, pL)
+    return errcode
 end
 
-
-function SetupInitialConditions(species_list::Vector{Species})
-    dens = Float64[]
-    temp = Float64[]
-    for s in species_list
-        push!(dens, s.dens)
-        push!(temp, s.temp)
-    end
-    return dens, temp
+function LogRange(x_min::Float64, x_max::Float64, steps::Int64)
+    return [10^y for y in range(log10(x_min), log10(x_max), length=steps)]
 end
-
 
 end

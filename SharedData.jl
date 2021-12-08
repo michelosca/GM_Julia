@@ -20,10 +20,26 @@ const s_flux_interpolation = 3
 # Read input flags 
 const c_io_error = 1
 
+# REACTION IDs 
+const r_energy_sink = -1
+const r_wall_loss = -2
+const r_elastic = 1
+const r_ion_neutral = 2
+
+# OUTPUT constants
+const o_scale_lin = -1
+const o_scale_log = -2
+const o_single_run = 1
+const o_pL = 2
+const o_dens= 3
+const o_temp = 4
+const o_power = 5
+const o_pressure = 6
 
 # Reaction structure
 mutable struct Reaction
     # Reaction identifier
+    name::String
     id::Int64
     case::Int64 # Reaction species case flag
     neutral_species_id::Vector{Int64}
@@ -34,7 +50,7 @@ mutable struct Reaction
     reactant_species::Vector{Int}
 
     # Rate coefficient function
-    rate_coefficient#::Expr
+    rate_coefficient
 
     # Energy threshold
     E_threshold::Float64
@@ -76,12 +92,13 @@ mutable struct Species
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
     D::Float64         # Gudmundsson parameter
-    Lambda::Float64
     h_R::Float64
     h_L::Float64
     gamma::Float64     # Sticking coefficient
     n_sheath::Float64
     flux::Float64
+    flow_rate::Float64
+    has_flow_rate::Bool
 
     # Output features
     name::String
@@ -100,34 +117,50 @@ mutable struct System
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
-    drivV::Float64                          # driving voltage, V
-    drivI::Float64                          # criving current, Amps
 
     t_end::Float64                          # simulation time, seconds
 
-    electrode_area::Float64                 # m^2
+    alpha::Float64
+    Lambda::Float64
 
     System() = new()
 end
 
-struct Output
-    output_flag_list::Vector{Int64}
+
+mutable struct OutputBlock
+
+    case::Int64
+    species_id::Int64
+    scale::Int64
+    
+    x::Vector{Float64}
+    x_min::Float64
+    x_max::Float64
+    x_steps::Int64
+
+    n::Vector{Vector{Float64}}
+    T::Vector{Vector{Float64}}
+    K::Vector{Vector{Float64}}
+
+    OutputBlock() = new()
 end
 
 
 mutable struct SpeciesID
+
     current_id::Int64
 
     electron::Int64
 
     Ar::Int64
     Ar_Ion::Int64
-    Ar_Exc::Int64
+    Ar_m::Int64
+    Ar_r::Int64
+    Ar_4p::Int64
 
     O::Int64
     O_negIon::Int64
     O_Ion::Int64
-    O_3p::Int64
     O_1d::Int64
 
 
@@ -136,6 +169,6 @@ mutable struct SpeciesID
     O2_a1Ag::Int64
 
     SpeciesID() = new()
-end
+end 
 
 end

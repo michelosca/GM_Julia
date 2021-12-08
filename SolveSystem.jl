@@ -1,17 +1,31 @@
 module SolveSystem
 
-using SharedData: System, Species
+using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Tsit5, Euler 
+using DifferentialEquations: ODEProblem, solve, Tsit5, Rosenbrock23 
+using Printf
 
-function ExecuteProblem(init::Vector{Float64}, tspan::Tuple, p::Tuple)
+function ExecuteProblem(species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
 
-    prob = ODEProblem(ode_fn!, init, tspan, p)
-    sol = solve(prob, Tsit5(), maxiters=1.e7, reltol=1e-8, abstol=1e-8, dt = 1.e-13)
+    # Initial conditions
+    dens, temp = GetInitialConditions(species_list)
+    init = cat(temp,dens,dims=1)
+
+    tspan = (0, system.t_end)
+    p = (system, sID, species_list, reaction_list )
+
+
+    prob = ODEProblem{true}(ode_fn!, init, tspan, p)
+
+    print("Solving single problem ...\n")
+    #sol = solve(prob, Tsit5(), maxiters=1.e7, dt = 1.e-12) #, reltol=1e-8, abstol=1e-8)
+    sol = solve(prob, Rosenbrock23(autodiff=false), dt = 1.e-10) 
+
     return sol
 end
 
@@ -41,7 +55,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
 
     # Calculate the electron flux  
     UpdateNegativeFlux!(species_list, system, sID, V_sheath)
-    
+
     # Generate the dy array
     for i in 1:n_species
         id = i - ((i-1)÷n_species)*n_species
@@ -52,8 +66,20 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
             reaction_list, system, V_sheath, sID)
         # Density equation
         dy[i+n_species] = GetDensRateFunction(temp, dens, species,
-            reaction_list, system, sID)
+            species_list, reaction_list, system, sID)
     end
 end
+
+
+function GetInitialConditions(species_list::Vector{Species})
+    dens = Float64[]
+    temp = Float64[]
+    for s in species_list
+        push!(dens, s.dens)
+        push!(temp, s.temp)
+    end
+    return dens, temp
+end
+
 
 end

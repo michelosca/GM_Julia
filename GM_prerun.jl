@@ -1,13 +1,17 @@
 module GM_prerun
 
-using InputData: SetupInputData
-using InputData: setup_pre_run
-using SharedData: c_io_error
+using SharedData: c_io_error, Species, Reaction, System, SpeciesID
+using InputData_PreRun: SetupInputData!
 
-function prerun_GM()
+function prerun_GM(input_file)
 
-    # Reads data from the input.deck file and generated the ReactionSet module
-    errcode = SetupInputData("input.deck", setup_pre_run)
+    # Reads data from the input.deck file
+    species_list = Species[]
+    reaction_list = Reaction[]
+    system = System()
+    speciesID = SpeciesID()
+    errcode = SetupInputData!(input_file, species_list, reaction_list, system,
+        speciesID)
     if (errcode == c_io_error)
         return errcode
     end

@@ -1,10 +1,11 @@
-module InputBlock_Reactions
+module InputBlock_Reactions_PreRun
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
+using EvaluateExpressions: ReplaceConstantSymbolS!, ReplaceSystemSymbolS!
+using EvaluateExpressions: ReplaceSpeciesSymbolS!, ReplaceTempSymbolS!
+using EvaluateExpressions: ReplaceDensSymbolS!
 using SharedData: r_energy_sink, r_elastic, r_wall_loss
-using ReactionSet: K_funct_list
-
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -27,23 +28,36 @@ using ReactionSet: K_funct_list
 #   - AddReactionToList 
 # - EndReactionsBlock
 
-function StartFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction}) 
+function StartFile_Reactions!(reaction_list::Vector{Reaction}) 
 
     errcode = 0
 
     return errcode
 end
 
-function StartReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction})
+function StartReactionsBlock!(reaction_list::Vector{Reaction})
 
     errcode = 0
+
+    global f_ReactionSet = open("ReactionSet.jl","w") 
+    open("ReactionSet.Template","r") do f_temp
+        while ! eof(f_temp)
+            line_str = readline(f_temp, keep = true)
+            if (line_str == "### START REACTION STRINGS ###\n")
+                print("Found start reaction string\n")
+                break
+            else
+                write(f_ReactionSet,line_str)
+            end
+        end
+    end
 
     return errcode
 end
 
 
 function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
-    read_step::Int64, reaction_list::Vector{Reaction}, speciesID::SpeciesID)
+    reaction_list::Vector{Reaction}, speciesID::SpeciesID)
     # Splits the input line contained in var into four parts
     # The fourth part is actually not necessary, but it is 
     # recommended to be included
@@ -94,30 +108,16 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
     end
     if (errcode == c_io_error) return errcode end
 
-    if (read_step ==1)
+    # Parse each term of the input line
+    current_reaction = Reaction()
+    InitializeReaction!(current_reaction, reaction_list)
 
-        # Parse each term of the input line
-        current_reaction = Reaction()
-        InitializeReaction!(current_reaction, reaction_list)
-        current_reaction.name = reaction_process_str
-
-        errcode = ParseReaction!(reaction_process_str, current_reaction,
-            speciesID)
+    if !(description_str === nothing)
+        errcode = ParseDescription!(description_str, current_reaction)
         if (errcode == c_io_error) return errcode end
-
-        errcode = ParseEThreshold!(e_threshold_str, current_reaction)
-        if (errcode == c_io_error) return errcode end
-
-        if !(description_str === nothing)
-            errcode = ParseDescription!(description_str, current_reaction)
-            if (errcode == c_io_error) return errcode end
-        end
-        
-        current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
-
-        # Add current_reaction to reaction_list
-        push!(reaction_list, current_reaction)
     end
+    errcode = WriteRateCoefficientsToModule(rate_coeff_str, current_reaction)
+    if (errcode == c_io_error) return errcode end
 
     return errcode
 end
@@ -125,7 +125,6 @@ end
 
 function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction})
 
-    reaction.name = ""
     reaction.id = length(reaction_list) + 1 
     reaction.case = 0
     reaction.neutral_species_id = Int64[]
@@ -169,31 +168,23 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
     while next_species
         idx = findfirst(" + ", str)
         if (idx===nothing)
-            fact, str= GetSpeciesFactor!(str)
-            s_id = SelectSpeciesID(str, speciesID)
+            s_id = SelectSpeciesID!(str, speciesID)
             if (s_id == 0)
                 print("***ERROR*** Reaction species ",str ," is not recognized\n")
                 return c_io_error
             else 
-                while fact >= 1
-                    push!(s_list, s_id)
-                    fact -= 1
-                end
+                push!(s_list, s_id)
             end
             next_species = false
         else
             s = strip(str[1:idx[1]-1])
             str = strip(str[idx[2]+1:end])
-            fact, s = GetSpeciesFactor!(s)
-            s_id = SelectSpeciesID(s, speciesID)
+            s_id = SelectSpeciesID!(s, speciesID)
             if (s_id == 0)
                 print("***ERROR*** Reaction species ",s ," is not recognized\n")
                 return c_io_error
             else 
-                while fact >= 1
-                    push!(s_list, s_id)
-                    fact -= 1
-                end
+                push!(s_list, s_id)
             end
         end
     end
@@ -201,18 +192,7 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
 end
 
 
-function GetSpeciesFactor!(str::SubString{String})
-
-    fact = 1
-    if str[1:1] == "2"
-        fact = 2
-        str = str[2:end]
-    end
-    return fact, str
-end
-
-
-function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
+function SelectSpeciesID!(s::SubString{String}, speciesID::SpeciesID)
 
     id = 0
     # Neutral species
@@ -232,6 +212,7 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.Ar_r 
     elseif (s == "Ar_4p")
         id = speciesID.Ar_4p 
+
     elseif (s == "e")
         id = speciesID.electron 
     elseif (s == "O+")
@@ -240,10 +221,21 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.O_negIon 
     elseif (s == "O2+")
         id = speciesID.O2_Ion 
+    elseif (s == "O(3p)")
+        id = speciesID.O_3p
+        if id == 0
+            id = speciesID.O
+        end
     elseif (s == "O_1d")
         id = speciesID.O_1d 
+        if id == 0
+            id = speciesID.O
+        end
     elseif (s == "O2_a1Ag")
         id = speciesID.O2_a1Ag 
+        if id == 0
+            id = speciesID.O2
+        end
     end
     return id 
 end
@@ -325,14 +317,13 @@ function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
     errcode = 0
 
     try
-        # Default energy units: eV
-        units_fact = e
+        units_fact = 1.0
         if (occursin("J", str))
-            units_fact = 1.0
             idx = findfirst("J", str)
             idx = idx[1]-1
             str = string(str[1:idx])
         elseif (occursin("eV", str))
+            units_fact = e
             idx = findfirst("eV", str)
             idx = idx[1]-1
             str = string(str[1:idx])
@@ -343,6 +334,42 @@ function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
         errcode = c_io_error
     end
         
+    return errcode
+end
+
+
+function WriteRateCoefficientsToModule(str::SubString{String},
+    reaction::Reaction)
+
+    errcode = 0 
+
+    try
+        expr = Meta.parse(str)
+        if !(typeof(expr)==Float64)
+            ReplaceConstantSymbolS!(expr)
+            ReplaceSystemSymbolS!(expr)
+            ReplaceSpeciesSymbolS!(expr)
+            ReplaceTempSymbolS!(expr)
+            ReplaceDensSymbolS!(expr)
+        end
+
+        # Now that the expression is ready to be evaluated, write it down in a new file
+        if reaction.case == r_wall_loss
+            write(f_ReactionSet,
+                string("push!(K_funct_list, (temp::Vector{Float64},",
+                    " species_list::Vector{Species}, system::System,",
+                    " sID::SpeciesID) -> ", expr,")\n"))
+        else
+            write(f_ReactionSet,
+                string("push!(K_funct_list, (temp::Vector{Float64},",
+                    " sID::SpeciesID) -> ",expr,")\n"))
+        end
+
+    catch
+        errcode = c_io_error
+        print("***ERROR*** While writing rate coefficient to module\n")
+    end
+
     return errcode
 end
 
@@ -371,18 +398,28 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
 end
 
 
-function EndReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction},
+function EndReactionsBlock!(reaction_list::Vector{Reaction},
     species_list::Vector{Species})
+
     errcode = 0 
 
-    if (read_step == 2)
-        # Set reacting neutral species
-        for reaction in reaction_list
-            errcode = IdentifyReactingNeutralSpecies!(reaction,
-                species_list)
-            if (errcode == c_io_error) return errcode end
+    write_flag = false 
+    open("ReactionSet.Template","r") do f_temp
+        while ! eof(f_temp)
+            line_str = readline(f_temp, keep = true)
+
+            if write_flag
+                write(f_ReactionSet,line_str)
+            end
+
+            if (line_str == "### END REACTION STRINGS ###\n")
+                print("Found end reaction string\n")
+                write_flag = true
+            end
+                
         end
     end
+    close(f_ReactionSet)
 
     return errcode
 end
@@ -407,40 +444,5 @@ function IdentifyReactingNeutralSpecies!(reaction::Reaction,
     end
 end
 
-
-function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
-    species_list::Vector{Species})
-
-    errcode = 0
-    if read_step == 2
-        for r in reaction_list
-            # Test reaction charge balance
-            if !(r.case == r_wall_loss)
-                charge_balance = 0.0
-                i = 1
-                for id in r.involved_species 
-                    fact = r.species_balance[i]
-                    charge_balance += species_list[id].charge * fact
-                    i += 1
-                end
-                if !(charge_balance == 0)
-                    print("***ERROR*** Reaction ",r.id," is unbalanced\n")
-                    return c_io_error
-                end
-            end
-
-            # Test elastic collisions
-            if r.case == r_elastic
-                if length(r.neutral_species_id) > 1
-                    print("***ERROR*** Elastic collision ",r.id,
-                        " can only have one neutral reacting species\n")
-                    return c_io_error
-                end
-            end
-        end
-    end
-
-    return errcode
-end
 
 end

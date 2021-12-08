@@ -4,6 +4,9 @@ using SharedData: c_io_error
 using SharedData: p_ccp_id, p_icp_id
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: System
+using SharedData: K_to_eV
+using PlasmaParameters: GetLambda
+
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -32,7 +35,6 @@ function StartSystemBlock!(read_step::Int64, system::System)
     errcode = 0
     if (read_step == 1)
         system.A = 0.0
-        system.electrode_area = 0.0
         system.V = 0.0
         system.l = 0.0
         system.radius = 0.0
@@ -41,9 +43,8 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivf = 0.0
         system.drivOmega = 0.0
         system.drivP = 0.0
-        system.drivI = 0.0
-        system.drivV = 0.0
         system.t_end = 0.0
+        system.Lambda = 0.0
     end
     return errcode
 end
@@ -55,29 +56,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
     errcode = c_io_error 
 
     if (read_step == 1)
-        # Identify units definition
-        units_fact = 1.0
-        units_index = findlast("_", var)
-        if (units_index === nothing)
-            units = ""
-        else
-            units_index = units_index[1]
-            units_str = lowercase(var[units_index+1:end])
-            if (units_str=="kw" || units_str=="khz")
-                units_fact = 1.e3
-                var = var[1:units_index-1]
-            elseif (units_str=="mhz" || units_str=="mw")
-                units_fact = 1.e6
-                var = var[1:units_index-1]
-            elseif (units_str=="ghz")
-                units_fact = 1.e9
-                var = var[1:units_index-1]
-            elseif (units_str=="microns")
-                units_fact = 1.e-6
-                var = var[1:units_index-1]
-            end
-        end
         
+        units_fact, name = GetUnits!(name)
+
         # Identify variable
         lname = lowercase(name)
         if (name=="A" || lname=="area")
@@ -199,31 +180,63 @@ function EndSystemBlock!(read_step::Int64, system::System)
                 system.drivP =  system.drivI * system.drivV
             end
         end
-        if (system.drivV == 0)
-            if (system.drivP == 0 && system.drivI == 0)
-                print("***ERROR*** System input voltage has not been defined\n")
-                return c_io_error 
-            else
-                system.drivV =  system.drivP / system.drivI
-            end
-        end
-        if (system.drivI == 0)
-            if (system.drivP == 0 || system.drivV == 0)
-                print("***ERROR*** System input current has not been defined\n")
-                return c_io_error 
-            else
-                system.drivI =  system.drivP / system.drivV
-            end
-        end
+
         if (system.t_end == 0)
             print("***ERROR*** Simulation time must be > 0 \n")
             return c_io_error 
         end
 
+        system.Lambda = GetLambda(system)
         system.drivOmega = system.drivf * 2.0 * pi
     end
     return errcode
 end
     
+
+function EndFile_System!(read_step::Int64, system::System)
+    errcode = 0
+    return errcode
+end
+
+
+function GetUnits!(var::SubString{String})
+    # Identify units definition
+    units_fact = 1.0
+    units_index = findlast("_", var)
+    if !(units_index === nothing)
+        units_index = units_index[1]
+        units_str = lowercase(var[units_index+1:end])
+        match_flag = false
+        if (units_str=="ev")
+            units_fact = 1.0/K_to_eV
+            match_flag = true
+        elseif (units_str=="mtorr")
+            units_fact = 0.13332237
+            match_flag = true
+        elseif (units_str=="kw" || units_str=="khz")
+            units_fact = 1.e3
+            match_flag = true
+        elseif (units_str=="mhz" || units_str=="mw")
+            units_fact = 1.e6
+            match_flag = true
+        elseif (units_str=="ghz")
+            units_fact = 1.e9
+            match_flag = true
+        elseif (units_str=="microns")
+            units_fact = 1.e-6
+            match_flag = true
+        elseif (units_str=="sccm")
+            # The units_fact still needs to be divided by system.V, however,
+            # just in case the volume changes, this is done in FunctionTerms.jl
+            ns = 2.686780111798444e25 # Standard density at Ps = 101325 Pa and Ts = 273.15 K
+            units_fact = 1.e-6 / 60 * ns
+            match_flag = true
+        end
+        if match_flag
+            var = strip(var[1:units_index-1])
+        end
+    end
+    return units_fact, var
+end
 
 end
