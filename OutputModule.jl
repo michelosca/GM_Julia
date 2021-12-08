@@ -36,6 +36,7 @@ function GenerateOutputs!(
                 reaction_list, sID)
             if (errcode == c_io_error) return errcode end
         else
+            # Setup the parameter list to be looped through
             if (output.scale == o_scale_lin)
                 x_array = range(output.x_min, output.x_max, length=output.x_steps)
             elseif (output.scale == o_scale_log)
@@ -54,9 +55,13 @@ function GenerateOutputs!(
             else
                 label = "None"
             end
+            
+            # Start parameter loop
             for x in x_array
                 errcode = UpdateOutputParameters!(species_list, reaction_list,
                     system, sID, output, x)
+                if (errcode == c_io_error) return errcode end
+
                 @printf("%4s = %10f - ", label,x)
                 sol = ExecuteProblem(species_list, reaction_list, system, sID)
                 errcode = LoadOutputBlock!(output, sol, species_list,
