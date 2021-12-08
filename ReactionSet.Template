@@ -1,6 +1,8 @@
 module ReactionSet
 
-K_funct_list = []
+using SharedData: Species, System, SpeciesID
+
+K_funct_list = Function[]
 
 ### START REACTION STRINGS ###
 
