@@ -45,6 +45,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivP = 0.0
         system.t_end = 0.0
         system.Lambda = 0.0
+        system.prerun = true
     end
     return errcode
 end
@@ -124,6 +125,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
                 errcode = c_io_error 
             end
             system.Vsheath_solving_method = solve_method 
+        elseif (lname=="prerun")
+            system.prerun = parse(Bool, var)
+            errcode = 0
         end
     else
         errcode = 0

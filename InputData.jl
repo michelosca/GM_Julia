@@ -218,10 +218,10 @@ end
 
 function EndFile!(read_step::Int64, species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System,
-    output_list::Vector{OutputBlock}, speciesID::SpeciesID)
+    output_list::Vector{OutputBlock}, sID::SpeciesID)
 
     errcode = EndFile_Species!(read_step, species_list, reaction_list, system,
-        speciesID)
+        sID)
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input species block")
     end
@@ -308,7 +308,7 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
             speciesID)
     elseif (block_id == b_reactions)
         errcode = ReadReactionsEntry!(name, var, read_step, reaction_list,
-            speciesID)
+            system, speciesID)
     elseif (block_id == b_output)
         errcode = ReadOutputEntry!(name, var, read_step, output_list,
             species_list)

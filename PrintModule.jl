@@ -159,11 +159,7 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             r_involved = string(r_involved, species_list[id].name,":",r.species_balance[i],", ")
             i += 1
         end
-<<<<<<< HEAD
-        r_involved= chop(r_involved, tail=2)
-=======
         r_involved = chop(r_involved, tail=2)
->>>>>>> GM_with_prerun
 
         # Reacting species
         r_reactants= ""

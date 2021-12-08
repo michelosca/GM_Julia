@@ -1,9 +1,17 @@
 module InputBlock_Reactions
 
 using SharedData: c_io_error, e
-using SharedData: Species, Reaction, SpeciesID
+using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: r_energy_sink, r_elastic, r_wall_loss
+try
 using ReactionSet: K_funct_list
+catch
+    print("ReactionSet module is not present\n")
+end
+using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
+using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
+using EvaluateExpressions: ReplaceDensSymbols!
+
 
 
 ###############################################################################
@@ -43,7 +51,8 @@ end
 
 
 function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
-    read_step::Int64, reaction_list::Vector{Reaction}, speciesID::SpeciesID)
+    read_step::Int64, reaction_list::Vector{Reaction}, system::System, 
+    speciesID::SpeciesID)
     # Splits the input line contained in var into four parts
     # The fourth part is actually not necessary, but it is 
     # recommended to be included
@@ -113,7 +122,12 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
             if (errcode == c_io_error) return errcode end
         end
         
+        if system.prerun
         current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
+        else
+            errcode = GetRateCoefficientExpr(rate_coeff_str, current_reaction)
+            if (errcode == c_io_error) return errcode end
+        end
 
         # Add current_reaction to reaction_list
         push!(reaction_list, current_reaction)
@@ -365,6 +379,28 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
     else
         errcode = c_io_error
         print("***ERROR*** Reaction description was not recognized\n")
+    end
+
+    return errcode
+end
+
+
+function GetRateCoefficientExpr(str::SubString{String},
+    reaction::Reaction)
+
+    errcode = 0 
+
+    try
+        expr = Meta.parse(str)
+        if typeof(expr)==Expr
+            ReplaceConstantValues!(expr)
+        end
+
+        reaction.rate_coefficient = expr
+
+    catch
+        errcode = c_io_error
+        print("***ERROR*** While getting rate coefficient expression\n")
     end
 
     return errcode

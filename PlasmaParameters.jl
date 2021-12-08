@@ -3,6 +3,7 @@ module PlasmaParameters
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
 using SharedData: p_icp_id, p_ccp_id
+using EvaluateExpressions: ReplaceExpressionValues
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -24,7 +25,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     for s in species_list
         s.v_thermal = GetThermalSpeed(s)
         s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
-        s.mfp = GetMFP(temp, dens, s, species_list, sID)
+        s.mfp = GetMFP(temp, dens, s, species_list, system, sID)
 
         if system.power_input_method == p_ccp_id
             if s.charge > 0
@@ -52,7 +53,7 @@ end
 
 
 function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
-    species_list::Vector{Species}, sID::SpeciesID)
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
 
     ilambda = 0.0         # inverse mean-free-path
 
@@ -74,7 +75,12 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
         deleteat!(r_species, index)
         
         # Set collision cross section
-        K = r.rate_coefficient(temp, sID)
+        if system.prerun
+            K = r.rate_coefficient(temp, sID)
+        else
+            K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                species_list, system, sID)
+        end
         cross_section = K / v_th
 
         # Density of colliding partners

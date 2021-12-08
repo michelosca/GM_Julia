@@ -50,7 +50,7 @@ mutable struct Reaction
     reactant_species::Vector{Int}
 
     # Rate coefficient function
-    rate_coefficient
+    rate_coefficient::Union{Float64, Expr, Function}
 
     # Energy threshold
     E_threshold::Float64
@@ -122,6 +122,8 @@ mutable struct System
 
     alpha::Float64
     Lambda::Float64
+
+    prerun::Bool
 
     System() = new()
 end

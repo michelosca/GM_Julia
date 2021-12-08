@@ -5,6 +5,7 @@ using SharedData: kb, K_to_eV
 using SharedData: c_io_error, r_wall_loss
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
+using EvaluateExpressions: ReplaceExpressionValues
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
@@ -33,7 +34,7 @@ function GenerateOutputs!(
         if output.case == o_single_run
             sol = ExecuteProblem(species_list, reaction_list, system, sID)
             errcode = LoadOutputBlock!(output, sol, species_list,
-                reaction_list, sID)
+                reaction_list, system, sID)
             if (errcode == c_io_error) return errcode end
         else
             # Setup the parameter list to be looped through
@@ -65,7 +66,7 @@ function GenerateOutputs!(
                 @printf("%4s = %10f - ", label,x)
                 sol = ExecuteProblem(species_list, reaction_list, system, sID)
                 errcode = LoadOutputBlock!(output, sol, species_list,
-                    reaction_list, sID, x)
+                    reaction_list, system, sID, x)
                 if (errcode == c_io_error) return errcode end
             end
         end
@@ -109,7 +110,7 @@ end
 
 function LoadOutputBlock!(output::OutputBlock, sol,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    sID::SpeciesID, param::Float64 = 0.0)
+    system::System, sID::SpeciesID, param::Float64 = 0.0)
 
     errcode = 0
 
@@ -141,7 +142,12 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                     # Wall loss reactions require to update species parameters
                     # such as h_R, h_L, D, gamma, etc.
                 else
-                    K = r.rate_coefficient(temp, sID)
+                    if system.prerun
+                        K = r.rate_coefficient(temp, sID)
+                    else
+                        K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                            species_list, system, sID)
+                    end
                 end
                 push!(output.K[r.id], K)
             end
@@ -170,7 +176,12 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                 # Wall loss reactions require to update species parameters
                 # such as h_R, h_L, D, gamma, etc.
             else
-                K = r.rate_coefficient(temp, sID)
+                if system.prerun
+                    K = r.rate_coefficient(temp, sID)
+                else
+                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID)
+                end
             end
             push!(output.K[r.id], K)
         end

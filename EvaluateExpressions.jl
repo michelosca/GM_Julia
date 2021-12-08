@@ -3,8 +3,21 @@ module EvaluateExpressions
 using SharedData: e, K_to_eV, amu, kb
 using SharedData: Species, System, SpeciesID
 
+function ReplaceExpressionValues(expr::Union{Float64, Expr}, temp::Vector{Float64},
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
 
-function ReplaceTempSymbolS!(expr::Expr)
+    copy_expr = copy(expr)
+    if typeof(copy_expr)==Expr
+        ReplaceSymbolValues!(copy_expr, temp, species_list, system, sID)
+    end
+
+    value = eval(copy_expr)
+    return value
+
+end
+
+
+function ReplaceTempSymbols!(expr::Expr)
 
     ReplaceSymbol!(expr, :T_e,      :(temp[sID.electron]))
     ReplaceSymbol!(expr, :T_Ar,     :(temp[sID.Ar]))
@@ -13,15 +26,69 @@ function ReplaceTempSymbolS!(expr::Expr)
     ReplaceSymbol!(expr, :T_O,      :(temp[sID.O]))
 end
 
-function ReplaceDensSymbolS!(expr::Expr)
 
-    ReplaceSymbol!(expr, :n_O2,     :(dens[sID.O2]))
+function ReplaceSymbolValues!(expr::Expr, temp::Vector{Float64},
+    species_list::Vector{Species}, system::System,
+    sID::SpeciesID)
 
+    # electrons
+    ReplaceSymbol!(expr, :T_e,      temp[sID.electron])
+
+    # Ar neutrals
+    if sID.Ar != 0
+        ReplaceSymbol!(expr, :T_Ar,     temp[sID.Ar])
+        ReplaceSymbol!(expr, :uB_Ar,    species_list[sID.Ar].v_Bohm)
+        ReplaceSymbol!(expr, :vth_Ar,   species_list[sID.Ar].v_thermal)
+        ReplaceSymbol!(expr, :h_R_Ar,   species_list[sID.Ar].h_R)
+        ReplaceSymbol!(expr, :h_L_Ar,   species_list[sID.Ar].h_L)
+        ReplaceSymbol!(expr, :D_Ar,     species_list[sID.Ar].D)
+        ReplaceSymbol!(expr, :gamma_Ar, species_list[sID.Ar].gamma)
+    end
+
+    # Ar ions
+    if sID.Ar_Ion != 0
+        ReplaceSymbol!(expr, :T_Ar_Ion, temp[sID.Ar_Ion])
+    end
+
+    # O2 neutrals
+    if sID.O2 != 0
+        ReplaceSymbol!(expr, :T_O2,     temp[sID.O2])
+        ReplaceSymbol!(expr, :uB_02,    species_list[sID.O2].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O2,   species_list[sID.O2].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O2,   species_list[sID.O2].h_R)
+        ReplaceSymbol!(expr, :h_L_O2,   species_list[sID.O2].h_L)
+        ReplaceSymbol!(expr, :D_O2,     species_list[sID.O2].D)
+        ReplaceSymbol!(expr, :gamma_O2, species_list[sID.O2].gamma)
+    end
+
+    # O neutrals
+    if sID.O != 0
+        ReplaceSymbol!(expr, :T_O,      temp[sID.O])
+        ReplaceSymbol!(expr, :uB_0,     species_list[sID.O].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O,    species_list[sID.O].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O,    species_list[sID.O].h_R)
+        ReplaceSymbol!(expr, :h_L_O,    species_list[sID.O].h_L)
+        ReplaceSymbol!(expr, :D_O,      species_list[sID.O].D)
+        ReplaceSymbol!(expr, :gamma_O,  species_list[sID.O].gamma)
+    end
+
+    # System values
+    ReplaceSymbol!(expr, :R,         system.radius)
+    ReplaceSymbol!(expr, :L,         system.l)
+    ReplaceSymbol!(expr, :A,         system.A)
+    ReplaceSymbol!(expr, :V,         system.V)
+    ReplaceSymbol!(expr, :Lambda,    system.Lambda)
 end
 
-function ReplaceSpeciesSymbolS!(expr::Expr)
-    # Species parameters
 
+function ReplaceDensSymbols!(expr::Expr)
+    ReplaceSymbol!(expr, :n_O2,     :(dens[sID.O2]))
+end
+
+
+function ReplaceSpeciesSymbols!(expr::Expr)
+
+    # Species parameters
     ReplaceSymbol!(expr, :uB_0,        :(species_list[sID.O].v_Bohm) )
     ReplaceSymbol!(expr, :vth_O,       :(species_list[sID.O].v_thermal) )
     ReplaceSymbol!(expr, :h_R_O,       :(species_list[sID.O].h_R) )
@@ -45,7 +112,7 @@ function ReplaceSpeciesSymbolS!(expr::Expr)
 end
 
 
-function ReplaceSystemSymbolS!(expr::Expr)
+function ReplaceSystemSymbols!(expr::Expr)
     # System parameters
     ReplaceSymbol!(expr, :R,         :(system.radius) )
     ReplaceSymbol!(expr, :L,         :(system.l) )
@@ -55,7 +122,7 @@ function ReplaceSystemSymbolS!(expr::Expr)
 end
 
 
-function ReplaceConstantSymbolS!(expr::Expr)
+function ReplaceConstantValues!(expr::Expr)
     ReplaceSymbol!(expr, :m_Ar,        Expr(:call,:*,amu, 40 ))
     ReplaceSymbol!(expr, :m_O,         Expr(:call,:*,amu, 16 ))
     ReplaceSymbol!(expr, :m_O2,        Expr(:call,:*,amu, 32 ))
