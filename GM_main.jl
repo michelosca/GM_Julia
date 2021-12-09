@@ -42,9 +42,13 @@ function run_GM(input)
     if (errcode == c_io_error) return errcode end
 
     for output in output_list
-        T_filename = string("T_vs_",output.parameter,".csv")
-        n_filename = string("n_vs_",output.parameter,".csv")
-        K_filename = string("K_vs_",output.parameter,".csv")
+        label = ""
+        for i in 1:output.n_parameters
+            label = string(label,"_vs_",output.name[i])
+        end
+        T_filename = string("T",label,".csv")
+        n_filename = string("n",label,".csv")
+        K_filename = string("K",label,".csv")
         CSV.write(T_filename, output.T_data_frame )
         CSV.write(n_filename, output.n_data_frame )
         CSV.write(K_filename, output.K_data_frame )

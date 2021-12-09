@@ -133,15 +133,16 @@ end
 
 mutable struct OutputBlock
 
-    case::Int64
-    species_id::Int64
-    scale::Int64
+    case::Vector{Int64}
+    species_id::Vector{Int64}
+    scale::Vector{Int64}
+    n_parameters::Int64
     
-    parameter::String
-    x::Float64
-    x_min::Float64
-    x_max::Float64
-    x_steps::Int64
+    name::Vector{String}
+    x::Vector{Float64}
+    x_min::Vector{Float64}
+    x_max::Vector{Float64}
+    x_steps::Vector{Int64}
 
     n_data_frame::DataFrame
     T_data_frame::DataFrame

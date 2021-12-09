@@ -25,15 +25,16 @@ function EndFile_Output!(read_step::Int64, output_list::Vector{OutputBlock},
             # GM time dependent results
             output = OutputBlock()
             InitializeOutputBlock!(output)
-            output.case = o_single_run
+            SetUpEmptyParameter!(output)
+            output.case[1] = o_single_run
     
-            errcode = InitializeOutputBlockVectors!(output, species_list, reaction_list)
+            errcode = SetupOutputBlock!(output, species_list, reaction_list)
 
             # Add output block to output_list
             push!(output_list, output)
         else
             for output in output_list
-                errcode = InitializeOutputBlockVectors!(output, species_list, reaction_list)
+                errcode = SetupOutputBlock!(output, species_list, reaction_list)
             end
         end
     end
@@ -58,39 +59,50 @@ function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
     errcode = 0
 
     if (read_step == 2)
-        current_output = output_list[end]
+        output = output_list[end]
+        n_dims = output.n_parameters
 
-        if current_output.case != o_single_run
-            if current_output.x_max <= current_output.x_min
-                print("***ERROR*** Output block must fulfil that x_max > x_max\n")
+        for i in 1:n_dims
+            if output.case[i] == 0
+                print("***ERROR*** Output block: Parameter id(case) has not been defined\n")
                 errcode = c_io_error
             end
 
-            if current_output.x_steps <= 0
-                print("***ERROR*** Output block parameter steps <= 0\n")
+            if output.case[i] == o_single_run && n_dums > 1
+                print("***ERROR*** Output block: Single run output does not make sense with several parameter declarations\n")
                 errcode = c_io_error
             end
 
-        end
+            if output.case[i] != o_single_run
+                if output.x_max[i] <= output.x_min[i]
+                    print("***ERROR*** Output block must fulfil that x_max > x_max\n")
+                    errcode = c_io_error
+                end
 
-        if (current_output.case == o_pL)
-            if current_output.species_id == 0
-                print("***ERROR*** Must specify the 'species' entry for pL outputs\n")
+                if output.x_steps[i] <= 0
+                    print("***ERROR*** Output block parameter steps <= 0\n")
+                    errcode = c_io_error
+                end
             end
-        elseif (current_output.case == o_dens)
-            if current_output.species_id == 0
-                print("***ERROR*** Must specify the 'species' entry for dens outputs\n")
-            end
-        elseif (current_output.case == o_pressure)
-            if current_output.species_id == 0
-                print("***ERROR*** Must specify the 'species' entry for pressure outputs\n")
-            end
-        elseif (current_output.case == o_temp)
-            if current_output.species_id == 0
-                print("***ERROR*** Must specify the 'species' entry for temp outputs\n")
+
+            if (output.case[i] == o_pL)
+                if output.species_id[i] == 0
+                    print("***ERROR*** Must specify the 'species' entry for pL outputs\n")
+                end
+            elseif (output.case[i] == o_dens)
+                if output.species_id[i] == 0
+                    print("***ERROR*** Must specify the 'species' entry for dens outputs\n")
+                end
+            elseif (output.case[i] == o_pressure)
+                if output.species_id[i] == 0
+                    print("***ERROR*** Must specify the 'species' entry for pressure outputs\n")
+                end
+            elseif (output.case[i] == o_temp)
+                if output.species_id[i] == 0
+                    print("***ERROR*** Must specify the 'species' entry for temp outputs\n")
+                end
             end
         end
-
     end
 
     return errcode
@@ -107,45 +119,77 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
     end
 
     units, name = GetUnits!(name)
+    output = output_list[end]
 
     if (name == "parameter" || name == "x")
+        SetUpEmptyParameter!(output)
+        i = output.n_parameters
         if (var=="pL")
-            output_list[end].case = o_pL
+            output.case[i] = o_pL
         elseif (var=="dens" || var=="density")
-            output_list[end].case = o_dens
+            output.case = o_dens
         elseif (var=="temp" || var=="temperature")
-            output_list[end].case = o_temp
+            output.case[i] = o_temp
         elseif (var=="pressure")
-            output_list[end].case = o_pressure
+            output.case[i] = o_pressure
         elseif (var=="input_power" || var=="power")
-            output_list[end].case = o_power
+            output.case[i] = o_power
+        elseif (var=="time" || var=="t")
+            output.case[i] = o_single_run
         end
     end
 
+
+    i = output.n_parameters
+    if (i == 0)
+        print("***ERROR*** The first declaration in output block must be 'parameter' or 'x'\n")
+        return c_io_error
+    end
+
     if (name == "species")
+        if (i < length(output.species_id))
+            print("***ERROR*** Output block: species has been declared before 'parameter'/'x'\n")
+            return c_io_error
+        end
         for s in species_list
             if var == s.name
-                output_list[end].species_id = s.id
+                output.species_id[i] = s.id
                 break
             end
         end
     end
     
     if (name == "x_min")
-        output_list[end].x_min = parse(Float64, var) * units
+        if (i < length(output.x_min))
+            print("***ERROR*** Output block: x_min has been declared before 'parameter'/'x'\n")
+            return c_io_error
+        end
+        output.x_min[i] = parse(Float64, var) * units
     end
 
     if (name == "x_max")
-        output_list[end].x_max = parse(Float64, var) * units
+        if (i < length(output.x_max))
+            print("***ERROR*** Output block: x_max has been declared before 'parameter'/'x'\n")
+            return c_io_error
+        end
+        output.x_max[i] = parse(Float64, var) * units
     end
 
     if (name == "steps")
-        output_list[end].x_steps = parse(Int64, var)
+        if (i < length(output.x_steps))
+            print("***ERROR*** Output block: x_steps has been declared before 'parameter'/'x'\n")
+            return c_io_error
+        end
+        output.x_steps[i] = parse(Int64, var)
     end
 
     if (name == "scale")
+        if (i < length(output.scale))
+            print("***ERROR*** Output block: scale has been declared before 'parameter'/'x'\n")
+            return c_io_error
+        end
         if (var == "log" || var == "logarithmic")
-            output_list[end].scale = o_scale_log
+            output.scale[i] = o_scale_log
         end
     end
 
@@ -153,63 +197,90 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
 end
 
 
-function InitializeOutputBlock!(outputblock::OutputBlock)
-    outputblock.case = 0
-    outputblock.species_id = 0
-    outputblock.scale = o_scale_lin
-    outputblock.x = 0.0 
-    outputblock.x_min = 0.0
-    outputblock.x_max = 0.0
-    outputblock.x_steps = 0
-    outputblock.n_data_frame = DataFrame()
-    outputblock.T_data_frame = DataFrame()
-    outputblock.K_data_frame = DataFrame()
+function InitializeOutputBlock!(output::OutputBlock)
+    output.n_parameters = 0
+    output.case = Int64[]
+    output.species_id = Int64[]
+    output.scale = Int64[]
+    output.x = Float64[]
+    output.x_min = Float64[]
+    output.x_max = Float64[]
+    output.x_steps = Int64[] 
+    output.n_data_frame = DataFrame()
+    output.T_data_frame = DataFrame()
+    output.K_data_frame = DataFrame()
+    output.name = String[]
 end
 
 
-function InitializeOutputBlockVectors!(output::OutputBlock,
+function SetUpEmptyParameter!(output::OutputBlock)
+
+    output.n_parameters += 1
+    push!(output.case, 0)
+    push!(output.species_id, 0)
+    push!(output.scale, o_scale_lin)
+    push!(output.x, 0.0)
+    push!(output.x_min, 0.0)
+    push!(output.x_max, 0.0)
+    push!(output.x_steps, 0)
+    push!(output.name, "empty")
+
+end
+
+
+function SetupOutputBlock!(output::OutputBlock,
     species_list::Vector{Species}, reaction_list::Vector{Reaction})
 
     errcode = 0
 
-    if output.case == o_pL
-        output.parameter = "pL"
-    elseif output.case == o_power
-        output.parameter = "P"
-    elseif output.case == o_dens
-        output.parameter = "n"
-    elseif output.case == o_temp
-        output.parameter = "T"
-    elseif output.case == o_pressure
-        output.parameter = "P"
-    elseif output.case == o_single_run
-        output.parameter = "time"
-    else
-        errcode = c_io_error
-        print("***ERROR*** Output parameter not recognized\n")
-    end
+    for i in 1:output.n_parameters
+        if output.case[i] == o_pL
+            sname = species_list[output.species_id[i]].name
+            output.name[i] = string("pL_",sname)
+        elseif output.case[i] == o_power
+            output.name[i] = "power"
+        elseif output.case[i] == o_dens
+            sname = species_list[output.species_id[i]].name
+            output.name[i] = string("n_",sname)
+        elseif output.case[i] == o_temp
+            sname = species_list[output.species_id[i]].name
+            output.name[i] = string("T_",sname)
+        elseif output.case[i] == o_pressure
+            sname = species_list[output.species_id[i]].name
+            output.name[i] = string("P_",sname)
+        elseif output.case[i] == o_single_run
+            output.name[i] = "time"
+        else
+            errcode = c_io_error
+            print("***ERROR*** Output parameter not recognized\n")
+        end
 
-    if output.case != o_single_run
-        output.n_data_frame[!, output.parameter] = Float64[]
-        output.T_data_frame[!, output.parameter] = Float64[]
-        for s in species_list
-            if s.has_dens_eq
-                output.n_data_frame[!, s.name] = Float64[]
-            end
-            if s.has_temp_eq
-                output.T_data_frame[!, s.name] = Float64[]
+        if output.case[i] != o_single_run
+            output.n_data_frame[!, output.name[i]] = Float64[]
+            output.T_data_frame[!, output.name[i]] = Float64[]
+            if i == output.n_parameters 
+                for s in species_list
+                    if s.has_dens_eq
+                        output.n_data_frame[!, s.name] = Float64[]
+                    end
+                    if s.has_temp_eq
+                        output.T_data_frame[!, s.name] = Float64[]
+                    end
+                end
             end
         end
-    end
 
-    # Initialize rate coefficient K_data_frame
-    output.K_data_frame[!, output.parameter] = Float64[]
-    for r in reaction_list
-        if r.case == r_wall_loss
-            continue
+        # Initialize rate coefficient K_data_frame
+        output.K_data_frame[!, output.name[i]] = Float64[]
+        if i == output.n_parameters
+            for r in reaction_list
+                if r.case == r_wall_loss
+                    continue
+                end
+                col_label = string("r",r.id,": ",r.name)
+                output.K_data_frame[!, col_label] = Float64[]
+            end
         end
-        description = string("r",r.id,": ",r.name)
-        output.K_data_frame[!,description] = Float64[]
     end
 
     return errcode
