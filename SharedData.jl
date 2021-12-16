@@ -168,11 +168,24 @@ mutable struct SpeciesID
     O_negIon::Int64
     O_Ion::Int64
     O_1d::Int64
+    O_1s::Int64
 
 
     O2::Int64
+    O2_v::Int64
     O2_Ion::Int64
+    O2_negIon::Int64
     O2_a1Ag::Int64
+    O2_b1Su::Int64
+    O2_a1Ag_v::Int64
+    O2_b1Su_v::Int64
+
+    O3::Int64
+    O3_v::Int64
+    O3_Ion::Int64
+    O3_negIon::Int64
+    O4_Ion::Int64
+    O4_negIon::Int64
 
     SpeciesID() = new()
 end 

@@ -229,15 +229,9 @@ end
 function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
 
     id = 0
-    # Neutral species
+    # ARGON 
     if (s == "Ar")
         id = speciesID.Ar 
-    elseif (s == "O")
-        id = speciesID.O 
-    elseif (s == "O2")
-        id = speciesID.O2
-
-    # Charged and excited species
     elseif (s == "Ar+")
         id = speciesID.Ar_Ion 
     elseif (s == "Ar_m")
@@ -246,18 +240,54 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.Ar_r 
     elseif (s == "Ar_4p")
         id = speciesID.Ar_4p 
-    elseif (s == "e")
-        id = speciesID.electron 
+
+    # ATOMIC OXYGEN 
+    elseif (s == "O")
+        id = speciesID.O 
     elseif (s == "O+")
         id = speciesID.O_Ion 
     elseif (s == "O-")
         id = speciesID.O_negIon 
+    elseif (s == "O_1s")
+        id = speciesID.O_1s
+    elseif (s == "O_1d")
+        id = speciesID.O_1d
+
+    # MOLECULAR OXYGEN
+    elseif (s == "O2")
+        id = speciesID.O2
+    elseif (s == "O2_v")
+        id = speciesID.O2_v
     elseif (s == "O2+")
         id = speciesID.O2_Ion 
-    elseif (s == "O_1d")
-        id = speciesID.O_1d 
+    elseif (s == "O2-")
+        id = speciesID.O2_negIon 
     elseif (s == "O2_a1Ag")
         id = speciesID.O2_a1Ag 
+    elseif (s == "O2_a1Ag_v")
+        id = speciesID.O2_a1Ag_v 
+    elseif (s == "O2_b1Su")
+        id = speciesID.O2_b1Su 
+    elseif (s == "O2_b1Su_v")
+        id = speciesID.O2_b1Su_v 
+
+    # OZONE and O4 
+    elseif (s == "O3")
+        id = speciesID.O3
+    elseif (s == "O3_v")
+        id = speciesID.O3_v
+    elseif (s == "O3+")
+        id = speciesID.O3_Ion
+    elseif (s == "O3-")
+        id = speciesID.O3_negIon
+    elseif (s == "O4+")
+        id = speciesID.O4_Ion
+    elseif (s == "O4-")
+        id = speciesID.O4_negIon
+
+    # ELECTRON
+    elseif (s == "e")
+        id = speciesID.electron 
     end
     return id 
 end

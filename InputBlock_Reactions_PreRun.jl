@@ -2,10 +2,13 @@ module InputBlock_Reactions_PreRun
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
+using SharedData: r_energy_sink, r_elastic, r_wall_loss
+
 using EvaluateExpressions: ReplaceConstantSymbolS!, ReplaceSystemSymbolS!
 using EvaluateExpressions: ReplaceSpeciesSymbolS!, ReplaceTempSymbolS!
 using EvaluateExpressions: ReplaceDensSymbolS!
-using SharedData: r_energy_sink, r_elastic, r_wall_loss
+
+using InputBlock_Reactions: SelectSpeciesID
 
 ###############################################################################
 ################################  VARIABLES  ##################################
@@ -189,55 +192,6 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
         end
     end
     return s_list
-end
-
-
-function SelectSpeciesID!(s::SubString{String}, speciesID::SpeciesID)
-
-    id = 0
-    # Neutral species
-    if (s == "Ar")
-        id = speciesID.Ar 
-    elseif (s == "O")
-        id = speciesID.O 
-    elseif (s == "O2")
-        id = speciesID.O2
-
-    # Charged and excited species
-    elseif (s == "Ar+")
-        id = speciesID.Ar_Ion 
-    elseif (s == "Ar_m")
-        id = speciesID.Ar_m 
-    elseif (s == "Ar_r")
-        id = speciesID.Ar_r 
-    elseif (s == "Ar_4p")
-        id = speciesID.Ar_4p 
-
-    elseif (s == "e")
-        id = speciesID.electron 
-    elseif (s == "O+")
-        id = speciesID.O_Ion 
-    elseif (s == "O-")
-        id = speciesID.O_negIon 
-    elseif (s == "O2+")
-        id = speciesID.O2_Ion 
-    elseif (s == "O(3p)")
-        id = speciesID.O_3p
-        if id == 0
-            id = speciesID.O
-        end
-    elseif (s == "O_1d")
-        id = speciesID.O_1d 
-        if id == 0
-            id = speciesID.O
-        end
-    elseif (s == "O2_a1Ag")
-        id = speciesID.O2_a1Ag 
-        if id == 0
-            id = speciesID.O2
-        end
-    end
-    return id 
 end
 
 

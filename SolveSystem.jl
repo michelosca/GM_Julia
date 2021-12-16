@@ -24,7 +24,7 @@ function ExecuteProblem(species_list::Vector{Species},
 
     print("Solving single problem ...\n")
     #sol = solve(prob, Tsit5(), maxiters=1.e7, dt = 1.e-12) #, reltol=1e-8, abstol=1e-8)
-    sol = solve(prob, Rosenbrock23(autodiff=false), dt = 1.e-10) 
+    sol = solve(prob, Rosenbrock23(autodiff=false), dt = 1.e-11) 
 
     return sol
 end

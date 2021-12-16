@@ -160,32 +160,66 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
     errcode = 0
     id = speciesID.current_id
 
+    # ELECTRONS
     if ("e" == species_name || "electrons" == species_name)
         speciesID.electron = id
+
+    # ARGON
     elseif ("Ar" == species_name)
         speciesID.Ar = id
-    elseif ("O" == species_name)
-        speciesID.O = id
-    elseif ("O2" == species_name)
-        speciesID.O2 = id
     elseif ("Ar+" == species_name)
         speciesID.Ar_Ion = id
-    elseif ("O+" == species_name)
-        speciesID.O_Ion = id
-    elseif ("O-" == species_name)
-        speciesID.O_negIon = id
-    elseif ("O2+" == species_name)
-        speciesID.O2_Ion = id
     elseif ("Ar_m" == species_name)
         speciesID.Ar_m = id
     elseif ("Ar_r" == species_name)
         speciesID.Ar_r = id
     elseif ("Ar_4p" == species_name)
         speciesID.Ar_4p = id
+
+    # ATOMIC OXYGEN
+    elseif ("O" == species_name)
+        speciesID.O = id
+    elseif ("O+" == species_name)
+        speciesID.O_Ion = id
+    elseif ("O-" == species_name)
+        speciesID.O_negIon = id
     elseif ("O_1d" == species_name)
         speciesID.O_1d = id
+    elseif ("O_1s" == species_name)
+        speciesID.O_1s = id
+
+    # MOLECULAR OXYGEN
+    elseif ("O2" == species_name)
+        speciesID.O2 = id
+    elseif ("O2_v" == species_name)
+        speciesID.O2_v = id
+    elseif ("O2+" == species_name)
+        speciesID.O2_Ion = id
+    elseif ("O2-" == species_name)
+        speciesID.O2_negIon = id
     elseif ("O2_a1Ag" == species_name)
         speciesID.O2_a1Ag = id
+    elseif ("O2_b1Su" == species_name)
+        speciesID.O2_b1Su = id
+    elseif ("O2_a1Ag_v" == species_name)
+        speciesID.O2_a1Ag_v = id
+    elseif ("O2_b1Su_v" == species_name)
+        speciesID.O2_b1Su_v = id
+
+    # OZONE and O4
+    elseif ("O3" == species_name)
+        speciesID.O3 = id
+    elseif ("O3_v" == species_name)
+        speciesID.O3_v = id
+    elseif ("O3+" == species_name)
+        speciesID.O3_Ion = id
+    elseif ("O3-" == species_name)
+        speciesID.O3_negIon = id
+    elseif ("O4+" == species_name)
+        speciesID.O4_Ion = id
+    elseif ("O4-" == species_name)
+        speciesID.O4_negIon = id
+
     else
         errcode = 1
     end
@@ -262,7 +296,18 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
 
     speciesID.O2 = 0
     speciesID.O2_Ion = 0
+    speciesID.O2_negIon = 0
     speciesID.O2_a1Ag = 0
+    speciesID.O2_a1Ag_v = 0
+    speciesID.O2_b1Su = 0
+    speciesID.O2_b1Su_v = 0
+
+    speciesID.O3 = 0
+    speciesID.O3_v = 0
+    speciesID.O3_Ion = 0
+    speciesID.O3_negIon = 0
+    speciesID.O4_Ion = 0
+    speciesID.O4_negIon = 0
 end
 
 
