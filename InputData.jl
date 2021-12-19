@@ -1,3 +1,20 @@
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 module InputData
 
 using SharedData: c_io_error
@@ -223,23 +240,27 @@ function EndFile!(read_step::Int64, species_list::Vector{Species},
     errcode = EndFile_Species!(read_step, species_list, reaction_list, system,
         sID)
     if (errcode == c_io_error)
-        print("***ERROR*** While initializing the input species block")
+        print("***ERROR*** While initializing the input species block\n")
+        return errcode
     end
 
-    errcode = EndFile_Reactions!(read_step, reaction_list, species_list)
+    errcode = EndFile_Reactions!(read_step, reaction_list, species_list, sID)
     if (errcode == c_io_error)
-        print("***ERROR*** While initializing the input reaction block")
+        print("***ERROR*** While initializing the input reaction block\n")
+        return errcode
     end
     
     errcode = EndFile_System!(read_step, system) 
     if (errcode == c_io_error)
-        print("***ERROR*** While initializing the input system block")
+        print("***ERROR*** While initializing the input system block\n")
+        return errcode
     end
     
     errcode = EndFile_Output!(read_step, output_list, species_list,
         reaction_list) 
     if (errcode == c_io_error)
-        print("***ERROR*** While initializing the input output block")
+        print("***ERROR*** While initializing the input output block\n")
+        return errcode
     end
     
     return errcode

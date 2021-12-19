@@ -1,3 +1,20 @@
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 module InputBlock_System
 
 using SharedData: c_io_error
@@ -65,9 +82,6 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         if (name=="A" || lname=="area")
             system.A = parse(Float64,var)
             errcode = 0
-        elseif (lname=="electrode_area")
-            system.electrode_area = parse(Float64,var)
-            errcode = 0
         elseif (lname=="v" || lname=="volume" || lname=="vol")
             system.V = parse(Float64, var)
             errcode = 0
@@ -85,9 +99,6 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
             lname=="power")
             system.drivP = parse(Float64, var) * units_fact
             errcode = 0
-        elseif (lname=="voltage")
-            system.drivV = parse(Float64, var)
-            errcode = 0
         elseif (lname=="power_method" || lname=="input_power_method" ||
                 lname=="power_input_method")
             lvar = lowercase(var)
@@ -102,10 +113,6 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
                 errcode = c_io_error 
             end
             system.power_input_method = p_id
-        elseif (name == "I" || lname == "current" ||
-            lname == "driving_current")
-            system.drivI = parse(Float64,var)
-            errcode = 0
         elseif (lname=="t_end")
             system.t_end = parse(Float64, var) * units_fact
             errcode = 0
@@ -177,12 +184,7 @@ function EndSystemBlock!(read_step::Int64, system::System)
             return c_io_error 
         end
         if (system.drivP == 0)
-            if (system.drivV == 0 && system.drivI == 0)
-                print("***ERROR*** System input power has not been defined\n")
-                return c_io_error 
-            else
-                system.drivP =  system.drivI * system.drivV
-            end
+            print("***ERROR*** System input power has not been defined\n")
         end
 
         if (system.t_end == 0)

@@ -1,12 +1,29 @@
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 module InputBlock_Reactions_PreRun
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
 using SharedData: r_energy_sink, r_elastic, r_wall_loss
 
-using EvaluateExpressions: ReplaceConstantSymbolS!, ReplaceSystemSymbolS!
-using EvaluateExpressions: ReplaceSpeciesSymbolS!, ReplaceTempSymbolS!
-using EvaluateExpressions: ReplaceDensSymbolS!
+using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
+using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
+using EvaluateExpressions: ReplaceDensSymbols!
 
 using InputBlock_Reactions: SelectSpeciesID
 
@@ -300,11 +317,11 @@ function WriteRateCoefficientsToModule(str::SubString{String},
     try
         expr = Meta.parse(str)
         if !(typeof(expr)==Float64)
-            ReplaceConstantSymbolS!(expr)
-            ReplaceSystemSymbolS!(expr)
-            ReplaceSpeciesSymbolS!(expr)
-            ReplaceTempSymbolS!(expr)
-            ReplaceDensSymbolS!(expr)
+            ReplaceConstantValues!(expr)
+            ReplaceSystemSymbols!(expr)
+            ReplaceSpeciesSymbols!(expr)
+            ReplaceTempSymbols!(expr)
+            ReplaceDensSymbols!(expr)
         end
 
         # Now that the expression is ready to be evaluated, write it down in a new file

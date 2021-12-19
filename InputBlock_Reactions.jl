@@ -1,6 +1,23 @@
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 module InputBlock_Reactions
 
-using SharedData: c_io_error, e
+using SharedData: c_io_error, e, me
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: r_energy_sink, r_elastic, r_wall_loss
 try
@@ -123,7 +140,7 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
         end
         
         if system.prerun
-        current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
+            current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
         else
             errcode = GetRateCoefficientExpr(rate_coeff_str, current_reaction)
             if (errcode == c_io_error) return errcode end
@@ -221,6 +238,15 @@ function GetSpeciesFactor!(str::SubString{String})
     if str[1:1] == "2"
         fact = 2
         str = str[2:end]
+    elseif str[1:1] == "3"
+        fact = 3
+        str = str[2:end]
+    elseif str[1:1] == "4"
+        fact = 4
+        str = str[2:end]
+    elseif str[1:1] == "5"
+        fact = 5
+        str = str[2:end]
     end
     return fact, str
 end
@@ -250,8 +276,16 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.O_negIon 
     elseif (s == "O_1s")
         id = speciesID.O_1s
+    elseif (s == "O_3s")
+        id = speciesID.O_3s
+    elseif (s == "O_5s")
+        id = speciesID.O_5s
     elseif (s == "O_1d")
         id = speciesID.O_1d
+    elseif (s == "O_3p")
+        id = speciesID.O_3p
+    elseif (s == "O_5p")
+        id = speciesID.O_5p
 
     # MOLECULAR OXYGEN
     elseif (s == "O2")
@@ -475,10 +509,11 @@ end
 
 
 function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
-    species_list::Vector{Species})
+    species_list::Vector{Species}, sID::SpeciesID)
 
     errcode = 0
     if read_step == 2
+        print("Test reactions...\n")
         for r in reaction_list
             # Test reaction charge balance
             if !(r.case == r_wall_loss)
@@ -490,7 +525,7 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                     i += 1
                 end
                 if !(charge_balance == 0)
-                    print("***ERROR*** Reaction ",r.id," is unbalanced\n")
+                    print("***ERROR*** Reaction ",r.id,": ",r.name," is charged unbalanced\n")
                     return c_io_error
                 end
             end
@@ -502,6 +537,23 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                         " can only have one neutral reacting species\n")
                     return c_io_error
                 end
+            end
+
+            # Test reaction mass balance
+            mass_balance = 0.0
+            i = 1
+            for id in r.involved_species 
+                if id == sID.electron
+                    i += 1
+                    continue
+                end
+                fact = r.species_balance[i]
+                mass_balance += species_list[id].mass * fact
+                i += 1
+            end
+            if !(mass_balance <= me)
+                print("***ERROR*** Reaction ",r.id,": ",r.name," is mass unbalanced\n")
+                return c_io_error
             end
         end
     end

@@ -1,3 +1,20 @@
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 module GM_main
 
 using SharedData: c_io_error, Species, Reaction, System, SpeciesID, OutputBlock
@@ -17,7 +34,9 @@ function run_GM(input)
         speciesID = SpeciesID()
         errcode = SetupInputData!(input, species_list,
             reaction_list, system, output_list, speciesID)
-        if (errcode == c_io_error) return errcode end
+        if (errcode == c_io_error)
+            return species_list, reaction_list, system, speciesID, output_list 
+        end
 
     elseif typeof(input) == Tuple{Vector{Species}, Vector{Reaction}, System,
         Vector{OutputBlock}, SpeciesID} 
@@ -29,7 +48,9 @@ function run_GM(input)
         speciesID = input[5]
     else
         print("***ERROR*** Input is not recognized\n")
-        return 
+        if (errcode == c_io_error)
+            return nothing, nothing, nothing, nothing, nothing
+        end
     end
 
     # Print system, species and reaction lists to terminal
@@ -39,7 +60,9 @@ function run_GM(input)
 
     errcode = @time GenerateOutputs!(species_list, reaction_list, system,
         output_list, speciesID)
-    if (errcode == c_io_error) return errcode end
+    if (errcode == c_io_error)
+        return species_list, reaction_list, system, speciesID, output_list 
+    end
 
     for output in output_list
         label = ""

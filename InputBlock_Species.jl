@@ -1,3 +1,20 @@
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu, kb 
@@ -126,29 +143,6 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
         if (name=="gamma" || name=="sticking_coefficient")
             current_species.gamma = parse(Float64, var)
         end
-
-    elseif (read_step == 2)
-
-        current_species = species_list[sID.current_id]
-
-        if (name=="name")
-            if (var=="e" || var=="electrons" || var=="electron")
-                current_species.species_id = sID.electron 
-                errcode = 0
-            elseif (occursin("Ar",var))
-                current_species.species_id = sID.Ar
-                errcode = 0
-            elseif (occursin("O2",var))
-                current_species.species_id = sID.O2
-                errcode = 0
-            elseif (occursin("O",var))
-                current_species.species_id = sID.O
-                errcode = 0
-            else
-                print("***ERROR*** Neutral species id has not been found\n")
-                errcode = c_io_error 
-            end
-        end
     end
 
     return errcode 
@@ -187,6 +181,14 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
         speciesID.O_1d = id
     elseif ("O_1s" == species_name)
         speciesID.O_1s = id
+    elseif ("O_3s" == species_name)
+        speciesID.O_3s = id
+    elseif ("O_5s" == species_name)
+        speciesID.O_5s = id
+    elseif ("O_3p" == species_name)
+        speciesID.O_3p = id
+    elseif ("O_5p" == species_name)
+        speciesID.O_5p = id
 
     # MOLECULAR OXYGEN
     elseif ("O2" == species_name)
@@ -215,6 +217,8 @@ function SetSpeciesID!(species_name::SubString{String}, speciesID::SpeciesID)
         speciesID.O3_Ion = id
     elseif ("O3-" == species_name)
         speciesID.O3_negIon = id
+    elseif ("O4" == species_name)
+        speciesID.O4 = id
     elseif ("O4+" == species_name)
         speciesID.O4_Ion = id
     elseif ("O4-" == species_name)
@@ -293,6 +297,11 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     speciesID.O_negIon = 0
     speciesID.O_Ion = 0
     speciesID.O_1d = 0
+    speciesID.O_1s = 0
+    speciesID.O_3s = 0
+    speciesID.O_5s = 0
+    speciesID.O_3p = 0
+    speciesID.O_5p = 0
 
     speciesID.O2 = 0
     speciesID.O2_Ion = 0
@@ -306,6 +315,7 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     speciesID.O3_v = 0
     speciesID.O3_Ion = 0
     speciesID.O3_negIon = 0
+    speciesID.O4 = 0
     speciesID.O4_Ion = 0
     speciesID.O4_negIon = 0
 end
@@ -322,6 +332,26 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
 
         for s in species_list
             s_id = s.id
+
+            # Set the neutral species
+            var = s.name
+            if (var=="e" || var=="electrons" || var=="electron")
+                s.species_id = sID.electron 
+            elseif (occursin("Ar",var))
+                s.species_id = sID.Ar
+            elseif (occursin("O4",var))
+                s.species_id = sID.O4
+            elseif (occursin("O3",var))
+                s.species_id = sID.O3
+            elseif (occursin("O2",var))
+                s.species_id = sID.O2
+            elseif (occursin("O",var))
+                s.species_id = sID.O
+            end
+            if s.species_id == 0 
+                print("***ERROR*** Neutral species id has not been found\n")
+                errcode = c_io_error 
+            end
 
             # Create reaction list associated to species s
             # This is ONLY used in calculating the MFG, therefore

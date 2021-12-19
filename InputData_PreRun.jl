@@ -1,4 +1,21 @@
 module InputData_PreRun
+# Copyright (C) 2021 Michel Osca Engelbrecht
+#
+# This file is part of GM Julia.
+#
+# GM Julia is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# GM Julia is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
+
 
 using SharedData: c_io_error
 using SharedData: p_icp_id, p_ccp_id 
@@ -13,8 +30,6 @@ using InputBlock_Reactions_PreRun: r_elastic, r_wall_loss
 
 using InputBlock_System: StartFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
-
-using EvaluateExpressions: ReplaceSystemSymbolS!
 
 ###############################################################################
 ################################  VARIABLES  ##################################
