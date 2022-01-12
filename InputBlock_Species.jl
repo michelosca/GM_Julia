@@ -90,7 +90,7 @@ end
 
 
 function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read_step::Int64,
-    species_list::Vector{Species}, sID::SpeciesID)
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
 
     errcode = 0 
 
@@ -132,7 +132,17 @@ function ReadSpeciesEntry!(name::SubString{String}, var::SubString{String}, read
         end
 
         if (name=="pressure" || name=="p")
-            current_species.pressure = parse(Float64, var) * units
+            if system.total_pressure > 0
+                pres_var = parse(Float64, var)
+                if pres_var >= 0 && pres_var <= 1.0
+                    current_species.pressure = pres_var * system.total_pressure
+                else
+                    print("***ERROR*** Partial pressure is out of range\n")
+                    errcode = c_io_error
+                end
+            else
+                current_species.pressure = parse(Float64, var) * units
+            end
         end
 
         if (name=="flow_rate")
@@ -330,6 +340,10 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
 
         id_electrons = sID.electron
 
+        if system.total_pressure > 0
+            pressure_check = 0
+        end
+
         for s in species_list
             s_id = s.id
 
@@ -383,6 +397,14 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                     end
                 end
             end
+
+            if system.total_pressure > 0 && s.charge == 0
+                pressure_check += s.pressure
+            end
+        end
+        if pressure_check != system.total_pressure
+            print("***ERROR*** Sum of species pressures is not equal to system-defined total pressure\n")
+            errcode = c_io_error
         end
 
     end

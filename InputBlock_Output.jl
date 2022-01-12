@@ -18,9 +18,11 @@
 module InputBlock_Output
 
 using SharedData: OutputBlock, Species, Reaction
+using SharedData: c_io_error
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: r_wall_loss
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
+using SharedData: o_pressure_percent, neutral_species_id
 using InputBlock_System: GetUnits!
 using DataFrames: DataFrame
 
@@ -91,8 +93,8 @@ function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
             end
 
             if output.case[i] != o_single_run
-                if output.x_max[i] <= output.x_min[i]
-                    print("***ERROR*** Output block must fulfil that x_max > x_max\n")
+                if output.x_max[i] <= output.x_min[i] && output.x_steps[i] > 1
+                    print("***ERROR*** Output block must fulfil that x_max > x_mix\n")
                     errcode = c_io_error
                 end
 
@@ -110,9 +112,14 @@ function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for dens outputs\n")
                 end
-            elseif (output.case[i] == o_pressure)
+            elseif (output.case[i] == o_pressure || output.case[i] == o_pressure_percent)
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for pressure outputs\n")
+                end
+
+            elseif output.case[i] == pressure_percent
+                if (system.total_pressure <= 0)
+                    print("***ERROR*** Partial pressure output requires an in advance 'total_pressure' declaration in SYSTEM block\n")
                 end
             elseif (output.case[i] == o_temp)
                 if output.species_id[i] == 0
@@ -149,6 +156,8 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
             output.case[i] = o_temp
         elseif (var=="pressure")
             output.case[i] = o_pressure
+        elseif (var=="pressure_%" || var=="pressure_percent" || var=="partial_pressure")
+            output.case[i] = o_pressure_percent
         elseif (var=="input_power" || var=="power")
             output.case[i] = o_power
         elseif (var=="time" || var=="t")
@@ -173,6 +182,9 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
                 output.species_id[i] = s.id
                 break
             end
+        end
+        if var == "neutral_species" || var == "neutral_gas"
+            output.species_id[i] = neutral_species_id
         end
     end
     
@@ -260,11 +272,19 @@ function SetupOutputBlock!(output::OutputBlock,
             sname = species_list[output.species_id[i]].name
             output.name[i] = string("n_",sname)
         elseif output.case[i] == o_temp
-            sname = species_list[output.species_id[i]].name
+            s_id = output.species_id[i]
+            if s_id == neutral_species_id
+                sname = "neutrals"
+            else
+                sname = species_list[s_id].name
+            end
             output.name[i] = string("T_",sname)
         elseif output.case[i] == o_pressure
             sname = species_list[output.species_id[i]].name
             output.name[i] = string("P_",sname)
+        elseif output.case[i] == o_pressure_percent
+            sname = species_list[output.species_id[i]].name
+            output.name[i] = string("P%_",sname)
         elseif output.case[i] == o_single_run
             output.name[i] = "time"
         else

@@ -23,7 +23,7 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Tsit5, Rosenbrock23 
+using DifferentialEquations: ODEProblem, solve, Rosenbrock23, Rodas5, QNDF
 using Printf
 
 function ExecuteProblem(species_list::Vector{Species},
@@ -40,8 +40,8 @@ function ExecuteProblem(species_list::Vector{Species},
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
 
     print("Solving single problem ...\n")
-    #sol = solve(prob, Tsit5(), maxiters=1.e7, dt = 1.e-12) #, reltol=1e-8, abstol=1e-8)
-    sol = solve(prob, Rosenbrock23(autodiff=false), dt = 1.e-11) 
+    sol = solve(prob, QNDF(autodiff=false)) 
+
 
     return sol
 end

@@ -69,9 +69,9 @@ function run_GM(input)
         for i in 1:output.n_parameters
             label = string(label,"_vs_",output.name[i])
         end
-        T_filename = string("T",label,".csv")
-        n_filename = string("n",label,".csv")
-        K_filename = string("K",label,".csv")
+        T_filename = string(system.folder,"T",label,".csv")
+        n_filename = string(system.folder,"n",label,".csv")
+        K_filename = string(system.folder,"K",label,".csv")
         CSV.write(T_filename, output.T_data_frame )
         CSV.write(n_filename, output.n_data_frame )
         CSV.write(K_filename, output.K_data_frame )

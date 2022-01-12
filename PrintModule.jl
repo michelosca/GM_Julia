@@ -34,9 +34,9 @@ using Printf
 function PrintSpeciesList(species_list::Vector{Species}, sID::SpeciesID)
 
     @printf("Loaded species\n")
-    @printf("%15s %15s %15s %15s %10s %10s %10s %10s %15s %15s\n","Name",
+    @printf("%15s %15s %15s %15s %10s %10s %10s %10s %15s %15s %15s\n","Name",
         "Species", "Mass [kg]", "Charge [C]","n-eq.",
-        "T-eq.", "WL", "P-input","Dens0 [m^-3]","Temp0 [eV]")
+        "T-eq.", "WL", "P-input","Dens0 [m^-3]","Temp0 [eV]","Press [Pa]")
     for s in species_list
 
         # s.neutral_id -> species name
@@ -70,10 +70,10 @@ function PrintSpeciesList(species_list::Vector{Species}, sID::SpeciesID)
             has_heating = "No"
         end
 
-        @printf("%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g\n",
+        @printf("%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g %15g\n",
             s.name, sn_name, s.mass, s.charge, 
             has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
-            s.dens, s.temp*K_to_eV)
+            s.dens, s.temp*K_to_eV, s.pressure)
     end
     print("\n")
 end
@@ -200,6 +200,7 @@ function PrintSystemList(s::System)
     @printf(" - Area:               %15g m^2\n", s.A)
     @printf(" - Volume:             %15g m^3\n", s.V)
     @printf(" - Length:             %15g m\n", s.l)
+    @printf(" - Radius:             %15g m\n", s.radius)
     if (s.power_input_method == p_icp_id)
         power_str = "ICP"
     elseif (s.power_input_method == p_ccp_id)
@@ -208,10 +209,12 @@ function PrintSystemList(s::System)
         power_str = "Not defined"
     end
     print(" - Input power method: ",power_str,"\n")
-    @printf(" - Driving frequency:  %15.2f MHz\n", s.drivf)
-    @printf("                       %15.f rad/s\n", s.drivOmega)
-    @printf(" - Driving power:     %15.2f W\n", s.drivP)
-    @printf(" - Simulation time:   %15g s\n", s.t_end)
+    @printf(" - Driving frequency:      %15g MHz\n", s.drivf/1.e6)
+    @printf("                           %15.f rad/s\n", s.drivOmega)
+    @printf(" - Driving power:          %15.2f W\n", s.drivP)
+    @printf(" - Total neutral pressure: %15g Pa\n", s.total_pressure)
+    @printf(" - Simulation time:        %15g s\n", s.t_end)
+    @printf(" - Simulation folder:      %s\n", s.folder)
     print("\n")
 end
 

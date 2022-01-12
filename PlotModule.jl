@@ -18,9 +18,85 @@
 module PlotModule
 
 using Plots
+using Plots.PlotMeasures
 #using LaTeXStrings
 using SharedData: Species, OutputBlock, Reaction
 using SharedData: K_to_eV
+using DataFrames
+
+function Get2DMap(df::DataFrame, name::String)
+
+    # First set M_col and M_row for matrix M
+    dat = df[1,2]
+    row_flag = true
+    M_col = 0
+    M_row = 0
+    for row in 1:nrow(df)
+        if dat != df[row,2]
+            if row_flag
+                row_flag = false
+                M_row = row - 1
+            end
+            M_col += 1
+            dat = df[row,2]
+        end
+    end
+    M_col += 1
+
+    # Fill matrix M and col/row vectors
+    M = zeros(M_row, M_col)
+    row_vec = zeros(M_row)
+    col_vec = zeros(M_col)
+    dat = df[1,2]
+    col = 1
+    col_vec[col] = dat
+    row_flag = true
+    for row in 1:nrow(df)
+        # Fill coll vector
+        if dat != df[row,2]
+            row_flag = false
+            col += 1
+            dat = df[row,2]
+            col_vec[col] = dat
+        end
+        
+        # Fill row vector
+        if row_flag
+            row_vec[row] = df[row, 1]
+        end
+
+        # Fill matrix
+        current_row = row - M_row*(col-1)
+        current_col = col
+        M[current_row, current_col] = df[row,name]
+    end
+
+    return row_vec, col_vec, M
+end
+
+function PlotHeatmap(row, col, matrix, title_str)
+
+    h = heatmap(row,
+    col, matrix,
+    size=(1400, 800),
+    ylabel="O2 fraction",
+    xlabel = "Power [W]",
+    title = title_str,
+    #colorbar_title="m^3/s",
+    xtickfont=20,
+    ytickfont=20,
+    titlefont=30,
+    yguidefontsize=20,
+    xguidefontsize=20,
+    left_margin=10mm,
+    right_margin=40mm,
+    bottom_margin=10mm,
+    top_margin=10mm,
+    colorbar_titlefontsize=20)#colorbar_title_locations=20mm)
+
+    return h
+end
+
 
 function PlotDensities_Charged(output::OutputBlock,
     species_list::Vector{Species})

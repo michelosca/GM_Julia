@@ -61,6 +61,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivOmega = 0.0
         system.drivP = 0.0
         system.t_end = 0.0
+        system.total_pressure = 0.0
         system.Lambda = 0.0
         system.prerun = true
     end
@@ -115,6 +116,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
             system.power_input_method = p_id
         elseif (lname=="t_end")
             system.t_end = parse(Float64, var) * units_fact
+            errcode = 0
+        elseif (lname=="p_total" || lname=="total_pressure")
+            system.total_pressure = parse(Float64, var) * units_fact
             errcode = 0
         elseif (lname=="vsheath_solve_method")
             lvar = lowercase(var)
@@ -190,6 +194,14 @@ function EndSystemBlock!(read_step::Int64, system::System)
         if (system.t_end == 0)
             print("***ERROR*** Simulation time must be > 0 \n")
             return c_io_error 
+        end
+
+        if (system.total_pressure > 0)
+            print("***NOTE*** TOTAL PRESSURE has been declared in SYSTEM block\n")
+            print("  - Species block must be declared AFTER the system block\n")
+            print("  - Species blocks with pressure parameters must be declared AFTER the system block\n")
+            print("  - Species pressures declarations (if declared) must be between 0 and 1\n")
+            print("  - Output blocks with partial pressure parameters must be declared AFTER the system block\n")
         end
 
         system.Lambda = GetLambda(system)

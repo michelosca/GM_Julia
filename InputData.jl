@@ -104,6 +104,7 @@ function ReadInputData!(filename::String,
         if (errcode == c_io_error) return errcode end
         print("End of input deck reading\n\n")
     end
+    GetInputFolder!(system, filename)
 
     return errcode
 end
@@ -326,7 +327,7 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
         errcode = ReadSystemEntry!(name, var, read_step, system)
     elseif (block_id == b_species)
         errcode = ReadSpeciesEntry!(name, var, read_step, species_list,
-            speciesID)
+            system, speciesID)
     elseif (block_id == b_reactions)
         errcode = ReadReactionsEntry!(name, var, read_step, reaction_list,
             system, speciesID)
@@ -352,6 +353,17 @@ function CheckConstantValues!(var::SubString{String}, constants::Vector{Tuple{Su
     end
 
     return var
+end
+
+function GetInputFolder!(system::System, filename::String)
+
+    index = findlast("/", filename)
+    if index === nothing
+        system.folder = "./"
+    else
+        system.folder = filename[1:index[1]]
+    end
+    #print("System folder ", system.folder,"\n")
 end
 
 end

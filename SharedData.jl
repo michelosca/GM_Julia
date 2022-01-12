@@ -54,6 +54,9 @@ const o_dens= 3
 const o_temp = 4
 const o_power = 5
 const o_pressure = 6
+const o_pressure_percent = 7
+
+const neutral_species_id = -1
 
 # Reaction structure
 mutable struct Reaction
@@ -74,7 +77,6 @@ mutable struct Reaction
     # Energy threshold
     E_threshold::Float64
 
-
     Reaction() = new()
 end
 
@@ -90,15 +92,12 @@ mutable struct Species
     mass::Float64
     charge::Float64
 
-    # Dens and temp ODE flags
+    # Flags
     has_dens_eq::Bool
     has_temp_eq::Bool
-    
-    # Wall flux functions
     has_wall_loss::Bool
-
-    # Input power mechanism
     has_heating_mechanism::Bool
+    has_flow_rate::Bool
 
     # Density and temperature of the species
     dens::Float64
@@ -117,7 +116,6 @@ mutable struct Species
     n_sheath::Float64
     flux::Float64
     flow_rate::Float64
-    has_flow_rate::Bool
 
     # Output features
     name::String
@@ -137,12 +135,15 @@ mutable struct System
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
 
+    total_pressure::Float64
+
     t_end::Float64                          # simulation time, seconds
 
     alpha::Float64
     Lambda::Float64
 
     prerun::Bool
+    folder::String
 
     System() = new()
 end
