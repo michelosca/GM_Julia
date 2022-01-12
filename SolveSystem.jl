@@ -41,6 +41,7 @@ function ExecuteProblem(species_list::Vector{Species},
 
     print("Solving single problem ...\n")
     sol = solve(prob, QNDF(autodiff=false)) 
+    #sol = solve(prob, Rodas5(autodiff=false)) 
 
 
     return sol
