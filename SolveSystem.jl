@@ -23,7 +23,7 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Rosenbrock23, Rodas5, QNDF
+using DifferentialEquations: ODEProblem, solve, Trapezoid
 using Printf
 
 function ExecuteProblem(species_list::Vector{Species},
@@ -40,9 +40,7 @@ function ExecuteProblem(species_list::Vector{Species},
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
 
     print("Solving single problem ...\n")
-    sol = solve(prob, QNDF(autodiff=false)) 
-    #sol = solve(prob, Rodas5(autodiff=false)) 
-
+    sol = solve(prob, Trapezoid(autodiff=false), dt=1.e-10)
 
     return sol
 end
@@ -81,7 +79,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
 
         # Temperature equation
         dy[i] = GetTempRateFunction(temp, dens, species, species_list,
-            reaction_list, system, V_sheath, sID)
+            reaction_list, system, V_sheath, sID, t)
         # Density equation
         dy[i+n_species] = GetDensRateFunction(temp, dens, species,
             species_list, reaction_list, system, sID)

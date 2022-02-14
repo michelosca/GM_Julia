@@ -268,7 +268,7 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
         errcode = ReadSystemEntry!(name, var, read_step, system)
     elseif (block_id == b_species)
         errcode = ReadSpeciesEntry!(name, var, read_step, species_list,
-            speciesID)
+            system, speciesID)
     elseif (block_id == b_reactions)
         errcode = ReadReactionsEntry!(name, var, reaction_list,
             speciesID)

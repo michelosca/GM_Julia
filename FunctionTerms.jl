@@ -100,7 +100,7 @@ end
 
 function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
     s::Species, species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, V_sheath::Float64, sID::SpeciesID)
+    system::System, V_sheath::Float64, sID::SpeciesID, t_sim::Float64)
 
     temp_funct = 0.0 
     if (s.has_temp_eq)
@@ -192,7 +192,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
         end
 
         if (s.has_heating_mechanism)
-            value = PowerInputFunction(s, system, sID) / Q0
+            value = PowerInputFunction(s, system, sID, t_sim) / Q0
             temp_funct += value
             #print("   - Heating :  ", value, "\n")
         end

@@ -134,6 +134,8 @@ mutable struct System
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
+    P_shape::String
+    P_duty_ratio::Float64
 
     total_pressure::Float64
 

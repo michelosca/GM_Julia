@@ -17,7 +17,7 @@
 
 module InputBlock_Output
 
-using SharedData: OutputBlock, Species, Reaction
+using SharedData: OutputBlock, Species, Reaction, System
 using SharedData: c_io_error
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: r_wall_loss
@@ -73,14 +73,14 @@ function StartOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
     return errcode
 end
 
-function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
+function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock},
+    system::System)
     
     errcode = 0
 
     if (read_step == 2)
         output = output_list[end]
         n_dims = output.n_parameters
-
         for i in 1:n_dims
             if output.case[i] == 0
                 print("***ERROR*** Output block: Parameter id(case) has not been defined\n")
@@ -107,23 +107,32 @@ function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock})
             if (output.case[i] == o_pL)
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for pL outputs\n")
+                    errcode = c_io_error
                 end
-            elseif (output.case[i] == o_dens)
+            end
+            if (output.case[i] == o_dens)
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for dens outputs\n")
+                    errcode = c_io_error
                 end
-            elseif (output.case[i] == o_pressure || output.case[i] == o_pressure_percent)
+            end
+            if (output.case[i] == o_pressure || output.case[i] == o_pressure_percent)
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for pressure outputs\n")
+                    errcode = c_io_error
                 end
+            end
 
-            elseif output.case[i] == pressure_percent
+            if output.case[i] == o_pressure_percent
                 if (system.total_pressure <= 0)
                     print("***ERROR*** Partial pressure output requires an in advance 'total_pressure' declaration in SYSTEM block\n")
+                    errcode = c_io_error
                 end
-            elseif (output.case[i] == o_temp)
+            end
+            if (output.case[i] == o_temp)
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for temp outputs\n")
+                    errcode = c_io_error
                 end
             end
         end

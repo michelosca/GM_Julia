@@ -26,7 +26,7 @@ using SharedData: o_pressure_percent, neutral_species_id
 using EvaluateExpressions: ReplaceExpressionValues
 using SolveSystem: ExecuteProblem
 using Printf
-
+using PrintModule: PrintSpeciesList
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
@@ -91,6 +91,7 @@ function GenerateOutputs!(
                 for i in 1:n_dims
                     @printf("%4s = %10f - ", output.name[i], param[i])
                 end
+                PrintSpeciesList(species_list_run, sID)
 
                 # Run problem
                 sol = @time ExecuteProblem(species_list_run, reaction_list_run, system_run, sID)
@@ -129,35 +130,32 @@ function UpdateOutputParameters!(species_list::Vector{Species},
         if (output.case[i] == o_pL)
             # L is kept constant but p is being changed
             # Ideal gas law, p = n kb T, temperature is kept constant
-            p = param[i] / system.l 
             s_id = output.species_id[i]
-            T = species_list[s_id].temp
-            species_list[s_id].dens = p / kb / T
+            species_list[s_id].pressure = param[i]/system.l
         elseif (output.case[i] == o_dens)
             s_id = output.species_id[i]
-            species_list[s_id].dens = param[i]
+            species_list[s_id].pressure = param[i] * kb * species_list[s_id].temp
+            # Density is set at the end of this function
         elseif (output.case[i] == o_pressure)
             s_id = output.species_id[i]
-            T = species_list[s_id].temp
-            species_list[s_id].dens = param[i] / kb / T
+            species_list[s_id].pressure = param[i]
         elseif (output.case[i] == o_pressure_percent)
             s_id = output.species_id[i]
-
             part_press_old += species_list[s_id].pressure / system.total_pressure
-
             p_partial = param[i] * system.total_pressure 
             species_list[s_id].pressure = p_partial
-            T = species_list[s_id].temp
-            species_list[s_id].dens = p_partial / kb / T
 
+            # Because partial pressure of this species has changed, the partial
+            # pressure of the remaining species need to be readjusted
             part_press_new += param[i]
             push!(part_press_species, s_id)
         elseif (output.case[i] == o_temp)
             s_id = output.species_id[i]
             if s_id == neutral_species_id
                 for s in species_list
-                    if s.charge==0
+                    if s.id != sID.electron
                         s.temp = param[i]
+                        s.pressure = s.dens * kb * s.temp
                     end
                 end
             else
@@ -191,6 +189,11 @@ function UpdateOutputParameters!(species_list::Vector{Species},
                 s.pressure *= ratio
             end
         end
+    end
+
+    # Update density value on all species
+    for s in species_list
+        s.dens = s.pressure / (kb * s.temp)
     end
 
     return errcode
@@ -340,6 +343,8 @@ function copy_system(system::System)
     s.drivf = system.drivf
     s.drivOmega = system.drivOmega
     s.drivP = system.drivP
+    s.P_shape = system.P_shape
+    s.P_duty_ratio = system.P_duty_ratio
 
     s.t_end = system.t_end
     s.alpha = system.alpha

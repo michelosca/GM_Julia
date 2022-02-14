@@ -305,7 +305,7 @@ function EndBlock!(name::SubString{String}, read_step::Int64,
     elseif (occursin("reactions",name))
         errcode = EndReactionsBlock!(read_step, reaction_list, species_list)
     elseif (occursin("output",name))
-        errcode = EndOutputBlock!(read_step, output_list)
+        errcode = EndOutputBlock!(read_step, output_list, system)
     elseif (occursin("constants",name))
         errcode = 0
     end

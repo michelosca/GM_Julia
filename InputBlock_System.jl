@@ -60,6 +60,8 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivf = 0.0
         system.drivOmega = 0.0
         system.drivP = 0.0
+        system.P_shape = "sinusoidal"
+        system.P_duty_ratio = 1.0
         system.t_end = 0.0
         system.total_pressure = 0.0
         system.Lambda = 0.0
@@ -99,6 +101,12 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         elseif (name=="P" || lname=="power_input" ||
             lname=="power")
             system.drivP = parse(Float64, var) * units_fact
+            errcode = 0
+        elseif (name=="P_shape" || lname=="power_shape")
+            system.P_shape = var
+            errcode = 0
+        elseif (name=="P_duty_ratio" || lname=="power_duty_ratio")
+            system.P_duty_ratio = parse(Float64, var)
             errcode = 0
         elseif (lname=="power_method" || lname=="input_power_method" ||
                 lname=="power_input_method")
@@ -189,6 +197,16 @@ function EndSystemBlock!(read_step::Int64, system::System)
         end
         if (system.drivP == 0)
             print("***ERROR*** System input power has not been defined\n")
+        end
+
+        if (system.P_duty_ratio < 0.0 || system.P_duty_ratio > 1.0)
+            print("***ERROR*** Power duty ratio is out of range\n")
+            return c_io_error 
+        end
+
+        if (system.P_shape != "sinusoidal" && system.P_shape != "square")
+            print("***ERROR*** Input power shape not recognized\n")
+            return c_io_error 
         end
 
         if (system.t_end == 0)
