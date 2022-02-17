@@ -157,6 +157,7 @@ mutable struct OutputBlock
     species_id::Vector{Int64}
     scale::Vector{Int64}
     n_parameters::Int64
+    label::String
     
     name::Vector{String}
     x::Vector{Float64}

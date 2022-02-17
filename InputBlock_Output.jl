@@ -56,6 +56,13 @@ function EndFile_Output!(read_step::Int64, output_list::Vector{OutputBlock},
                 errcode = SetupOutputBlock!(output, species_list, reaction_list)
             end
         end
+
+        # Setup output labels
+        for output in output_list
+            for i in 1:output.n_parameters
+                output.label = string(output.label,"_vs_",output.name[i])
+            end
+        end
     end
     return errcode
 end
@@ -248,6 +255,7 @@ function InitializeOutputBlock!(output::OutputBlock)
     output.T_data_frame = DataFrame()
     output.K_data_frame = DataFrame()
     output.name = String[]
+    output.label = ""
 end
 
 
