@@ -19,15 +19,17 @@ module SolveSystem
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
+using SharedData: o_single_run
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Trapezoid
+using DifferentialEquations: ODEProblem, solve, Trapezoid, Rodas5
 using Printf
 
 function ExecuteProblem(species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID,
+    o_case::Int64=0)
 
     # Initial conditions
     dens, temp = GetInitialConditions(species_list)
@@ -39,10 +41,28 @@ function ExecuteProblem(species_list::Vector{Species},
 
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
 
-    print("Solving single problem ...\n")
-    sol = solve(prob, Trapezoid(autodiff=false), dt=1.e-10)
+    if (o_case == o_single_run)
+        save_flag = true
+    else
+        save_flag = false
+    end
 
-    return sol
+    try
+        print("Solving single problem ...\n")
+        sol = solve(prob,
+            Trapezoid(autodiff=false),
+            dt=1.e-12,
+            #abstol=1.e-8,
+            #reltol=1.e-3,
+            save_everystep=save_flag)
+        return sol
+    catch
+        print("***WARNING*** Trapezoid solver failed. Rerunning with Rodas5\n")
+        sol = solve(prob, Rodas5(autodiff=false), dt=1.e-12, abstol=1.e-8,
+            reltol=1.e-3, save_everystep=save_flag)
+        return sol
+    end
+
 end
 
 function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)

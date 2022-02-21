@@ -17,7 +17,7 @@
 
 module InputBlock_Reactions
 
-using SharedData: c_io_error, e, me
+using SharedData: c_io_error, e, me, K_to_eV
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: r_energy_sink, r_elastic, r_wall_loss
 try
@@ -28,6 +28,7 @@ end
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
 using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
 using EvaluateExpressions: ReplaceDensSymbols!
+using Printf
 
 
 
@@ -509,11 +510,24 @@ end
 
 
 function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
-    species_list::Vector{Species}, sID::SpeciesID)
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
 
     errcode = 0
     if read_step == 2
         print("Test reactions...\n")
+        print("  - Charge balance\n")
+        print("  - Mass balance\n")
+        print("  - Elastic scattering reactions\n")
+        T_min = 1.5 / K_to_eV
+        T_max = 4.0 / K_to_eV
+        @printf("  - Rate coefficients values between %.2f <= T_e <= %.2f [eV]\n",
+            T_min*K_to_eV, T_max*K_to_eV)
+        # Setup temp array, used later when testing rate coefficients
+        temp = Float64[]
+        for s in species_list
+            push!(temp, s.temp)
+        end
+
         for r in reaction_list
             # Test reaction charge balance
             if !(r.case == r_wall_loss)
@@ -554,6 +568,20 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             if !(mass_balance <= me)
                 print("***ERROR*** Reaction ",r.id,": ",r.name," is mass unbalanced\n")
                 return c_io_error
+            end
+
+            # Test rate coefficient
+            for T_e in range(T_min, T_max, length=100)
+                temp[sID.electron] = T_e 
+                if r.case == r_wall_loss
+                    K = r.rate_coefficient(temp, species_list, system, sID) 
+                else
+                    K = r.rate_coefficient(temp, sID) 
+                end
+                if K < 0.0
+                    @printf("***ERROR*** Reaction %i: %s has negative rate coefficient value at %.2f eV\n",r.id, r.name, T_e * K_to_eV)
+                    return c_io_error
+                end
             end
         end
     end

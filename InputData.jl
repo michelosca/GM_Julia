@@ -245,7 +245,8 @@ function EndFile!(read_step::Int64, species_list::Vector{Species},
         return errcode
     end
 
-    errcode = EndFile_Reactions!(read_step, reaction_list, species_list, sID)
+    errcode = EndFile_Reactions!(read_step, reaction_list, species_list, system,
+        sID)
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input reaction block\n")
         return errcode

@@ -210,7 +210,7 @@ function PrintSystemList(s::System)
     end
     print(" - Input power method: ",power_str,"\n")
     @printf(" - Driving frequency:      %15g MHz\n", s.drivf/1.e6)
-    @printf("                           %15.f rad/s\n", s.drivOmega)
+    @printf("                           %15g rad/s\n", s.drivOmega)
     @printf(" - Driving power:          %15.2f W\n", s.drivP)
     @printf(" - Power shape:            %s \n", s.P_shape)
     @printf(" - Power duty ratio:       %15g \n", s.P_duty_ratio)

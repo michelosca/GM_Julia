@@ -26,7 +26,9 @@ using SharedData: o_pressure_percent, neutral_species_id
 using EvaluateExpressions: ReplaceExpressionValues
 using SolveSystem: ExecuteProblem
 using Printf
-using PrintModule: PrintSpeciesList
+using PrintModule: PrintSpeciesList, PrintSystemList
+using CSV
+using DataFrames: DataFrame
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
@@ -38,6 +40,7 @@ using PrintModule: PrintSpeciesList
 #   - SetupInitialConditions
 #   - Output_PL
 
+
 function GenerateOutputs!(
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, output_list::Vector{OutputBlock}, sID::SpeciesID)
@@ -45,11 +48,16 @@ function GenerateOutputs!(
     errcode = 0
 
     for output in output_list
+        
+        # This flag is used to determine whether headers must be written on
+        # new or existing CSV files
+        first_dump = true
 
         if output.case[1] == o_single_run
-            sol = @time ExecuteProblem(species_list, reaction_list, system, sID)
-            errcode = @time LoadOutputBlock!(output, sol, species_list,
-                reaction_list, system, sID)
+            sol = @time ExecuteProblem(species_list, reaction_list, system,
+                sID, output.case[1])
+            errcode, first_dump = @time LoadOutputBlock!(output, sol,
+                species_list, reaction_list, system, sID, first_dump)
             if (errcode == c_io_error) return errcode end
         else # Parameter sweep
 
@@ -83,20 +91,23 @@ function GenerateOutputs!(
                 reaction_list_run = copy_reaction_list(reaction_list)
                 system_run = copy_system(system)
 
-                errcode = UpdateOutputParameters!(species_list_run, reaction_list_run,
-                    system_run, sID, output, param)
+                errcode = UpdateOutputParameters!(species_list_run,
+                    reaction_list_run, system_run, sID, output, param)
                 if (errcode == c_io_error) return errcode end
 
                 # Print parameter state
                 for i in 1:n_dims
                     @printf("%4s = %10f - ", output.name[i], param[i])
                 end
-                PrintSpeciesList(species_list_run, sID)
+                #PrintSpeciesList(species_list_run, sID)
+                #PrintSystemList(system_run)
 
                 # Run problem
-                sol = @time ExecuteProblem(species_list_run, reaction_list_run, system_run, sID)
-                errcode = LoadOutputBlock!(output, sol, species_list_run,
-                    reaction_list_run, system_run, sID, param)
+                sol = @time ExecuteProblem(species_list_run,
+                    reaction_list_run, system_run, sID)
+                errcode, first_dump = LoadOutputBlock!(output, sol,
+                    species_list_run, reaction_list_run, system_run, sID,
+                    first_dump, param)
                 if (errcode == c_io_error) return errcode end
 
                 # Update step
@@ -123,43 +134,50 @@ function UpdateOutputParameters!(species_list::Vector{Species},
     param::Vector{Float64})
     errcode = 0
 
-    part_press_old = 0.0
-    part_press_new = 0.0
-    part_press_species = Int64[]
+    curr_total_pressure = copy(system.total_pressure)
+    press_fract_old = 0.0
+    press_fract_new = 0.0
+    part_fract_species = Int64[]
     for i in 1:output.n_parameters
         if (output.case[i] == o_pL)
             # L is kept constant but p is being changed
             # Ideal gas law, p = n kb T, temperature is kept constant
             s_id = output.species_id[i]
-            species_list[s_id].pressure = param[i]/system.l
+            s_pressure = param[i]/system.l
+            UpdatePressure!(species_list[s_id], s_pressure, system)
         elseif (output.case[i] == o_dens)
             s_id = output.species_id[i]
-            species_list[s_id].pressure = param[i] * kb * species_list[s_id].temp
-            # Density is set at the end of this function
+            species_list[s_id].dens = param[i]
+            s_pressure = param[i] * kb * species_list[s_id].temp
+            UpdatePressure!(species_list[s_id], s_pressure, system)
         elseif (output.case[i] == o_pressure)
             s_id = output.species_id[i]
-            species_list[s_id].pressure = param[i]
+            s_pressure = param[i]
+            UpdatePressure!(species_list[s_id], s_pressure, system)
+
         elseif (output.case[i] == o_pressure_percent)
             s_id = output.species_id[i]
-            part_press_old += species_list[s_id].pressure / system.total_pressure
-            p_partial = param[i] * system.total_pressure 
+            press_fract_old += species_list[s_id].pressure / curr_total_pressure 
+            p_partial = param[i] * curr_total_pressure 
             species_list[s_id].pressure = p_partial
-
             # Because partial pressure of this species has changed, the partial
             # pressure of the remaining species need to be readjusted
-            part_press_new += param[i]
-            push!(part_press_species, s_id)
+            press_fract_new += param[i]
+            push!(part_fract_species, s_id)
         elseif (output.case[i] == o_temp)
             s_id = output.species_id[i]
             if s_id == neutral_species_id
                 for s in species_list
                     if s.id != sID.electron
                         s.temp = param[i]
-                        s.pressure = s.dens * kb * s.temp
+                        #s_pressure = s.dens * kb * s.temp
+                        #UpdatePressure!(s, s_pressure, system)
                     end
                 end
             else
                 species_list[s_id].temp = param[i]
+                #s_pressure = species_list[s_id].dens * kb * species_list[s_id].temp
+                #UpdatePressure!(species_list[s_id], s_pressure, system)
             end
         elseif (output.case[i] == o_power)
             system.drivP = param[i]
@@ -167,45 +185,87 @@ function UpdateOutputParameters!(species_list::Vector{Species},
     end
 
     # Re-equilibrate pressures
-    if (part_press_old != part_press_new)
-        part_press_remain_old = 1.0 - part_press_old
-        part_press_remain_new = 1.0 - part_press_new
-        ratio = part_press_remain_new / part_press_remain_old
+    if (press_fract_old != press_fract_new)
+        press_fract_remain_old = 1.0 - press_fract_old
+        press_fract_remain_new = 1.0 - press_fract_new
+        ratio = press_fract_remain_new / press_fract_remain_old
         for s in species_list
-            account_pressure = true
-            # Exclude species whose pressure has been just changed
-            for p_id in part_press_species
+            press_check = true
+            # Exclude species whose pressure fraction has changed
+            for p_id in part_fract_species
                 if s.id == p_id
-                    account_pressure = false
+                    s.pressure *= system.total_pressure / curr_total_pressure 
+                    press_check = false 
                 end
             end
 
             # Exclude plasma particles
             if s.charge != 0
-                account_pressure = false
+                press_check = false 
             end
 
-            if account_pressure
+            # Species whose pressure is affected because other species
+            # fraction has been adjusted
+            if press_check
                 s.pressure *= ratio
             end
         end
     end
 
     # Update density value on all species
+    # - check total pressure
+    press_buffer = 0
     for s in species_list
         s.dens = s.pressure / (kb * s.temp)
+         if s.charge != 0
+            press_buffer += s.pressure
+         end
+    end
+
+    if press_buffer - system.total_pressure > 1.e-50
+        print("***ERROR*** Sum of species pressure does not match system total pressure\n")
+        errcode = c_io_error
     end
 
     return errcode
 end
 
 
+function UpdatePressure!(s::Species, s_pressure::Float64, system::System)
+
+    # Updates species pressure and, if not an ion, total_pressure
+    if (s.charge == 0)
+        system.total_pressure -= s.pressure 
+    end
+    s.pressure = s_pressure
+    if (s.charge == 0)
+        system.total_pressure += s.pressure
+    end
+
+end
+
+
 function LoadOutputBlock!(output::OutputBlock, sol,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, sID::SpeciesID, param::Vector{Float64}=Float64[])
+    system::System, sID::SpeciesID, first_output_dump::Bool, 
+    param::Vector{Float64}=Float64[])
 
     errcode = 0
     print("Load output data...\n")
+    T_filename = string(system.folder,"T",output.label,".csv")
+    n_filename = string(system.folder,"n",output.label,".csv")
+    K_filename = string(system.folder,"K",output.label,".csv")
+    if isfile(T_filename)
+        if first_output_dump
+            write_header = true
+            first_output_dump = false
+        else
+            write_header = false
+        end
+    else
+        write_header = true
+        first_output_dump = false
+    end
 
     n_species = length(species_list)
     if output.case[1] == o_single_run
@@ -257,11 +317,8 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                     # such as h_R, h_L, D, gamma, etc.
                 else
                     if system.prerun
-                        #push!(K_list, r.rate_coefficient(temp, sID))
                         K = r.rate_coefficient(temp, sID)
                     else
-                        #push!(K_list, ReplaceExpressionValues(r.rate_coefficient, temp,
-                        #    species_list, system, sID))
                         K = ReplaceExpressionValues(r.rate_coefficient, temp,
                             species_list, system, sID)
                     end
@@ -272,6 +329,9 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             # Push data into rate coefficient data_frame
             push!(output.K_data_frame, K_list)
         end
+        CSV.write(T_filename, output.T_data_frame)
+        CSV.write(n_filename, output.n_data_frame)
+        CSV.write(K_filename, output.K_data_frame)
     else
 
         # Initialize buffer lists
@@ -295,6 +355,10 @@ function LoadOutputBlock!(output::OutputBlock, sol,
         # Push dens/temp buffer lists into data_frames
         push!(output.T_data_frame, temp_list)
         push!(output.n_data_frame, dens_list)
+        CSV.write(T_filename, DataFrame(output.T_data_frame[end,:]),
+            append=true, writeheader=write_header)
+        CSV.write(n_filename, DataFrame(output.n_data_frame[end,:]),
+            append=true, writeheader=write_header)
 
         # Dump K values into buffer 
         for r in reaction_list
@@ -305,11 +369,8 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                 # such as h_R, h_L, D, gamma, etc.
             else
                 if system.prerun
-                    #push!(K_list, r.rate_coefficient(temp, sID))
                     K = r.rate_coefficient(temp, sID)
                 else
-                    #push!(K_list, ReplaceExpressionValues(r.rate_coefficient, temp,
-                    #    species_list, system, sID))
                     K = ReplaceExpressionValues(r.rate_coefficient, temp,
                         species_list, system, sID)
                 end
@@ -318,9 +379,11 @@ function LoadOutputBlock!(output::OutputBlock, sol,
         end
         # Push K buffer list into rate coefficient data_frame
         push!(output.K_data_frame, K_list)
+        CSV.write(K_filename, DataFrame(output.K_data_frame[end,:]),
+            append=true , writeheader=write_header)
     end
 
-    return errcode
+    return errcode, first_output_dump
 end
 
 
@@ -333,26 +396,28 @@ function copy_system(system::System)
 
     s = System()
 
-    s.A = system.A
-    s.V = system.V
-    s.l = system.l
-    s.radius = system.radius
+    s.A = copy(system.A)
+    s.V = copy(system.V)
+    s.l = copy(system.l)
+    s.radius = copy(system.radius)
 
-    s.power_input_method = system.power_input_method
-    s.Vsheath_solving_method = system.Vsheath_solving_method
-    s.drivf = system.drivf
-    s.drivOmega = system.drivOmega
-    s.drivP = system.drivP
+    s.power_input_method = copy(system.power_input_method)
+    s.Vsheath_solving_method = copy(system.Vsheath_solving_method)
+    s.drivf = copy(system.drivf)
+    s.drivOmega = copy(system.drivOmega)
+    s.drivP = copy(system.drivP)
     s.P_shape = system.P_shape
-    s.P_duty_ratio = system.P_duty_ratio
+    s.P_duty_ratio = copy(system.P_duty_ratio)
 
-    s.t_end = system.t_end
-    s.alpha = system.alpha
-    s.Lambda = system.Lambda
+    s.total_pressure = copy(system.total_pressure)
 
-    s.prerun = system.prerun
+    s.t_end = copy(system.t_end)
+
+    s.alpha = copy(system.alpha)
+    s.Lambda = copy(system.Lambda)
+
+    s.prerun = copy(system.prerun)
     s.folder = system.folder
-    s.total_pressure = system.total_pressure
 
     return s
 end
@@ -362,33 +427,33 @@ function copy_species(s::Species)
 
     new_s = Species()
 
-    new_s.id = s.id
-    new_s.species_id = s.species_id
+    new_s.id = copy(s.id)
+    new_s.species_id = copy(s.species_id)
 
-    new_s.mass = s.mass
-    new_s.charge = s.charge
+    new_s.mass = copy(s.mass)
+    new_s.charge = copy(s.charge)
 
-    new_s.has_dens_eq = s.has_dens_eq
-    new_s.has_temp_eq = s.has_temp_eq
-    new_s.has_wall_loss = s.has_wall_loss
-    new_s.has_heating_mechanism = s.has_heating_mechanism
-    new_s.has_flow_rate = s.has_flow_rate
+    new_s.has_dens_eq = copy(s.has_dens_eq)
+    new_s.has_temp_eq = copy(s.has_temp_eq)
+    new_s.has_wall_loss = copy(s.has_wall_loss)
+    new_s.has_heating_mechanism = copy(s.has_heating_mechanism)
+    new_s.has_flow_rate = copy(s.has_flow_rate)
 
-    new_s.dens = s.dens
-    new_s.temp = s.temp
-    new_s.pressure = s.pressure
+    new_s.dens = copy(s.dens)
+    new_s.temp = copy(s.temp)
+    new_s.pressure = copy(s.pressure)
 
-    new_s.reaction_list = s.reaction_list
-    new_s.mfp = s.mfp
-    new_s.v_thermal = s.v_thermal
-    new_s.v_Bohm = s.v_Bohm
-    new_s.D = s.D
-    new_s.h_L = s.h_L
-    new_s.h_R = s.h_R
-    new_s.gamma = s.gamma
-    new_s.n_sheath = s.n_sheath
-    new_s.flux = s.flux
-    new_s.flow_rate = s.flow_rate
+    new_s.reaction_list = copy_reaction_list(s.reaction_list)
+    new_s.mfp = copy(s.mfp)
+    new_s.v_thermal = copy(s.v_thermal)
+    new_s.v_Bohm = copy(s.v_Bohm)
+    new_s.D = copy(s.D)
+    new_s.h_L = copy(s.h_L)
+    new_s.h_R = copy(s.h_R)
+    new_s.gamma = copy(s.gamma)
+    new_s.n_sheath = copy(s.n_sheath)
+    new_s.flux = copy(s.flux)
+    new_s.flow_rate = copy(s.flow_rate)
 
     new_s.name = s.name
 
@@ -401,17 +466,17 @@ function copy_reaction(r::Reaction)
     new_r = Reaction()
 
     new_r.name = r.name
-    new_r.id = r.id
-    new_r.case = r.case
-    new_r.neutral_species_id = r.neutral_species_id
+    new_r.id = copy(r.id)
+    new_r.case = copy(r.case)
+    new_r.neutral_species_id = copy(r.neutral_species_id)
 
-    new_r.involved_species = r.involved_species
-    new_r.species_balance = r.species_balance
-    new_r.reactant_species = r.reactant_species
+    new_r.involved_species = copy(r.involved_species)
+    new_r.species_balance = copy(r.species_balance)
+    new_r.reactant_species = copy(r.reactant_species)
 
     new_r.rate_coefficient = r.rate_coefficient
 
-    new_r.E_threshold = r.E_threshold
+    new_r.E_threshold = copy(r.E_threshold)
 
     return new_r
 end
