@@ -109,7 +109,7 @@ mutable struct Species
     mfp::Float64
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
-    D::Float64         # Gudmundsson parameter
+    D::Float64         # Diffusion coefficient
     h_R::Float64
     h_L::Float64
     gamma::Float64     # Sticking coefficient

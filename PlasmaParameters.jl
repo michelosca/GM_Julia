@@ -186,9 +186,8 @@ function GetNeutralDiffusionCoeff(species::Species,
     species_list::Vector{Species}, sID::SpeciesID)
     # Neutral Diffusion Coefficient
 
-    T_eV = species.temp * K_to_eV
     mfp = species.mfp
-    D = e * T_eV * mfp / (species.v_thermal * species.mass)
+    D = e * species.temp * mfp / (species.v_thermal * species.mass)
     return D
 end
 
