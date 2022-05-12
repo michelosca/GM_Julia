@@ -27,9 +27,10 @@ const amu = 1.66053904020e-27  # kg
 const eps0 = 8.854187817e-12
 const K_to_eV = kb / e
 
-# Power input methods
-const p_ccp_id = 1
-const p_icp_id = 2
+# h factor ID 
+const h_classical = 1     # https://onlinelibrary.wiley.com/doi/pdf/10.1002/ppap.201600138
+const h_Gudmundsson = 2  # https://doi.org/10.1088/0022-3727/33/11/311 , https://doi.org/10.1088/0963-0252/16/2/025
+const h_Monahan = 3      # https://doi.org/10.1088/0963-0252/17/4/045003
 
 # Solving sheath potential methods
 const s_ohmic_power = 1
@@ -40,10 +41,8 @@ const s_flux_interpolation = 3
 const c_io_error = 1
 
 # REACTION IDs 
-const r_energy_sink = -1
 const r_wall_loss = -2
 const r_elastic = 1
-const r_ion_neutral = 2
 
 # OUTPUT constants
 const o_scale_lin = -1
@@ -129,7 +128,7 @@ mutable struct System
     l::Float64                              # system length, m
     radius::Float64                         # system radius, m
 
-    power_input_method::Int64               # driving power method, flag
+    h_id::Int64                             # h factor ID (determines sheath density) 
     Vsheath_solving_method::Int64
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
@@ -146,6 +145,8 @@ mutable struct System
 
     prerun::Bool
     folder::String
+
+    plasma_potential::Float64
 
     System() = new()
 end
@@ -168,6 +169,7 @@ mutable struct OutputBlock
     n_data_frame::DataFrame
     T_data_frame::DataFrame
     K_data_frame::DataFrame
+    param_data_frame::DataFrame
 
     OutputBlock() = new()
 end
