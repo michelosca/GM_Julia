@@ -18,17 +18,20 @@
 module OutputModule
 
 using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
-using SharedData: kb, K_to_eV
+using SharedData: kb, K_to_eV, e
 using SharedData: c_io_error, r_wall_loss
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, neutral_species_id
 using EvaluateExpressions: ReplaceExpressionValues
+using PlasmaParameters: UpdateSpeciesParameters!
 using SolveSystem: ExecuteProblem
 using Printf
 using PrintModule: PrintSpeciesList, PrintSystemList
 using CSV
 using DataFrames: DataFrame
+using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
+using PlasmaSheath: GetSheathVoltage
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
@@ -255,6 +258,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
     T_filename = string(system.folder,"T",output.label,".csv")
     n_filename = string(system.folder,"n",output.label,".csv")
     K_filename = string(system.folder,"K",output.label,".csv")
+    param_filename = string(system.folder,"param",output.label,".csv")
     if isfile(T_filename)
         if first_output_dump
             write_header = true
@@ -269,15 +273,17 @@ function LoadOutputBlock!(output::OutputBlock, sol,
 
     n_species = length(species_list)
     if output.case[1] == o_single_run
+        # - dens & temp data frames are filled by columns:
+        #   time and followed by dens/temp species
+        # - rate coeff. (K) and parameters data frames are filled by rows:
+        #   each time step is a new row
         output.n_data_frame.time = sol.t
         output.T_data_frame.time = sol.t
         n_steps = length(sol.t)
 
         # Dump dens/temp into output block
         for s in species_list
-            if s.has_dens_eq
-                output.n_data_frame[!,s.name] = sol[s.id+n_species, :]
-            end
+            output.n_data_frame[!,s.name] = sol[s.id+n_species, :]
             if s.has_temp_eq
                 output.T_data_frame[!,s.name] = sol[s.id, : ]
             end
@@ -297,7 +303,9 @@ function LoadOutputBlock!(output::OutputBlock, sol,
 
         # Loop over every time step
         for i in 1:n_steps
-            # Update temperature values
+            time = sol.t[i]
+
+            #### Update temperature values
             for s in species_list
                 if s.has_temp_eq
                     temp[s.id] = output.T_data_frame[i,s.name]
@@ -307,31 +315,50 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                 end
             end
 
+            #### Update plasma parameters
+            UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+
+            #### Update flux and potential values 
+            UpdatePositiveFlux!(species_list, system)
+            GetSheathVoltage(species_list, system, sID, time)
+            UpdateNegativeFlux!(species_list, system, sID)
+            
             # Get K values for the curren time step
-            K_list = Float64[sol.t[i]]
+            K_list = Float64[time]
             for r in reaction_list
-                if r.case == r_wall_loss
-                    continue
-                    #K = r.rate_coefficient(temp, species_list, system, sID) 
-                    # Wall loss reactions require to update species parameters
-                    # such as h_R, h_L, D, gamma, etc.
-                else
-                    if system.prerun
-                        K = r.rate_coefficient(temp, sID)
+                if system.prerun
+                    if r.case == r_wall_loss
+                        K = r.rate_coefficient(temp, species_list, system, sID) 
                     else
-                        K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                            species_list, system, sID)
+                        K = r.rate_coefficient(temp, sID)
                     end
-                    push!(K_list, prod(dens[r.reactant_species])*K )
+                else
+                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID)
+                end
+                push!(K_list, prod(dens[r.reactant_species])*K )
+            end
+            # Push K data into rate coefficient data_frame
+            push!(output.K_data_frame, K_list)
+
+            # Gather and push parameter data into parameter data_frame
+            param_list = Float64[time, system.plasma_potential]
+            # Push total pressure
+            push!(param_list, system.total_pressure)
+
+            for s in species_list
+                if (!(s.charge==0) && s.has_dens_eq)
+                    push!(param_list, s.flux * abs(s.charge) / e)
+                    push!(param_list, s.mfp)
                 end
             end
+            push!(output.param_data_frame, param_list)
 
-            # Push data into rate coefficient data_frame
-            push!(output.K_data_frame, K_list)
         end
         CSV.write(T_filename, output.T_data_frame)
         CSV.write(n_filename, output.n_data_frame)
         CSV.write(K_filename, output.K_data_frame)
+        CSV.write(param_filename, output.param_data_frame)
     else
 
         # Initialize buffer lists
@@ -363,7 +390,9 @@ function LoadOutputBlock!(output::OutputBlock, sol,
         # Dump K values into buffer 
         for r in reaction_list
             if r.case == r_wall_loss
-                continue
+                UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+                K = r.rate_coefficient(temp, species_list, system, sID) 
+                #continue
                 #K = r.rate_coefficient(temp, species_list, system, sID) 
                 # Wall loss reactions require to update species parameters
                 # such as h_R, h_L, D, gamma, etc.
@@ -374,8 +403,8 @@ function LoadOutputBlock!(output::OutputBlock, sol,
                     K = ReplaceExpressionValues(r.rate_coefficient, temp,
                         species_list, system, sID)
                 end
-                push!(K_list, prod(dens[r.reactant_species])*K )
             end
+            push!(K_list, prod(dens[r.reactant_species])*K )
         end
         # Push K buffer list into rate coefficient data_frame
         push!(output.K_data_frame, K_list)
@@ -401,7 +430,7 @@ function copy_system(system::System)
     s.l = copy(system.l)
     s.radius = copy(system.radius)
 
-    s.power_input_method = copy(system.power_input_method)
+    s.h_id = copy(system.h_id)
     s.Vsheath_solving_method = copy(system.Vsheath_solving_method)
     s.drivf = copy(system.drivf)
     s.drivOmega = copy(system.drivOmega)
@@ -418,6 +447,8 @@ function copy_system(system::System)
 
     s.prerun = copy(system.prerun)
     s.folder = system.folder
+
+    s.plasma_potential = copy(system.plasma_potential)
 
     return s
 end

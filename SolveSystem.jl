@@ -87,10 +87,10 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     UpdatePositiveFlux!(species_list, system)
 
     # Calculate the sheath potential
-    V_sheath = GetSheathVoltage(species_list, system, sID)
+    GetSheathVoltage(species_list, system, sID, t)
 
     # Calculate the electron flux  
-    UpdateNegativeFlux!(species_list, system, sID, V_sheath)
+    UpdateNegativeFlux!(species_list, system, sID)
 
     # Generate the dy array
     for i in 1:n_species
@@ -99,7 +99,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
 
         # Temperature equation
         dy[i] = GetTempRateFunction(temp, dens, species, species_list,
-            reaction_list, system, V_sheath, sID, t)
+            reaction_list, system, sID, t)
         # Density equation
         dy[i+n_species] = GetDensRateFunction(temp, dens, species,
             species_list, reaction_list, system, sID)

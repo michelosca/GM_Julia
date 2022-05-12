@@ -19,7 +19,7 @@ module FunctionTerms
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb 
-using SharedData: r_elastic, r_wall_loss, r_energy_sink
+using SharedData: r_elastic, r_wall_loss
 using EvaluateExpressions: ReplaceExpressionValues
 using WallFlux: DensWallFluxFunction, TempWallFluxFunction
 using PowerInput: PowerInputFunction
@@ -50,10 +50,6 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
         s_id = s.id
         # Loop over the reaction setreaction_lists species s 
         for r in reaction_list
-
-            if r.case == r_energy_sink
-                continue
-            end
 
             # Get species index in involved_species list
             s_index = findall( x -> x == s_id, r.involved_species )
@@ -100,7 +96,7 @@ end
 
 function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
     s::Species, species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, V_sheath::Float64, sID::SpeciesID, t_sim::Float64)
+    system::System, sID::SpeciesID, t_sim::Float64)
 
     temp_funct = 0.0 
     if (s.has_temp_eq)
@@ -162,31 +158,30 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
 
             # COLLISION INTRINSIC ENERGY GAIN/LOSS
             Er = r.E_threshold
-            if (Er == 0)
-                continue 
-            end
+            if !(Er == 0)
+                # Check that species is part of the reacting species
+                s_index = findall( x -> x == s_id, r.reactant_species)
+                if s_index == Int64[]
+                    continue
+                else
+                    s_index = s_index[1]
+                end
 
-            # Check that species is part of the reacting species
-            s_index = findall( x -> x == s_id, r.reactant_species)
-            if s_index == Int64[]
-                continue
-            else
-                s_index = s_index[1]
+                if system.prerun
+                    K = r.rate_coefficient(temp, sID) 
+                else
+                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID)
+                end
+                value = -Er * prod(dens[r.reactant_species]) * K / Q0
+                temp_funct += value
+                #print("   - Ethreshold: ", r.id," - ", value, "\n")
             end
-
-            if system.prerun
-                K = r.rate_coefficient(temp, sID) 
-            else
-                K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                    species_list, system, sID)
-            end
-            value = -Er * prod(dens[r.reactant_species]) * K / Q0
-            temp_funct += value
-            #print("   - Ethreshold: ", r.id," - ", value, "\n")
         end
 
         if (s.has_wall_loss)
-            value = TempWallFluxFunction(temp, s, species_list, system, V_sheath, sID) / Q0
+            value = TempWallFluxFunction(temp, s, species_list, system,
+                system.plasma_potential, sID) / Q0
             temp_funct += value
             #print("   - Flux loss: ", value, "\n")
         end

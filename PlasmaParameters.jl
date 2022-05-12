@@ -19,7 +19,7 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
-using SharedData: p_icp_id, p_ccp_id
+using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 
 ###############################################################################
@@ -33,10 +33,17 @@ using EvaluateExpressions: ReplaceExpressionValues
 function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
 
-    # Update first dens and temperature
+    # FIRST: Update dens and temperature
     for s in species_list
         s.temp = temp[s.id]
         s.dens = dens[s.id]
+        s.pressure = s.dens * kb * s.temp
+    end
+
+    # SECOND: Update parameters that depend on dens,temp and other species parameters
+    system.total_pressure = UpdateTotalPressure(species_list, sID)
+    if system.h_id == h_Gudmundsson || system.h_id == h_Monahan 
+        system.alpha = UpdateAlpha(dens, species_list, sID.electron)
     end
 
     for s in species_list
@@ -44,30 +51,25 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
         s.mfp = GetMFP(temp, dens, s, species_list, system, sID)
 
-        if system.power_input_method == p_ccp_id
-            if s.charge > 0
-                s.n_sheath = GetSheathDensity(s, system)
-            else
-                s.n_sheath = s.dens
-            end
-        elseif system.power_input_method == p_icp_id
-            UpdateAlpha!(dens, species_list, system, sID.electron)
+        s.gamma = GetStickingCoefficient(s, species_list, sID)
+        s.D = GetNeutralDiffusionCoeff(s)
 
-            s.n_sheath = s.dens
-            if (s.id == sID.electron)
-                continue
-            end
-
-            if s.charge > 0
-                s.h_L, s.h_R = Get_h_Parameters(temp, dens, s, species_list,
-                    system, sID.electron)
-            end
-
-            s.D = GetNeutralDiffusionCoeff(s, species_list, sID)
+        if s.charge > 0.0
+            s.n_sheath = GetSheathDensity(s, temp, species_list, system, sID)
         end
     end
 end
 
+function UpdateTotalPressure(species_list::Vector{Species}, sID::SpeciesID)
+    p_total = 0.0
+    for s in species_list
+        if s.id == sID.electron
+            continue
+        end
+        p_total += s.pressure 
+    end
+    return p_total
+end
 
 function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
     species_list::Vector{Species}, system::System, sID::SpeciesID)
@@ -102,6 +104,9 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
 
         # Density of colliding partners
         n = prod(dens[r_species])
+        if n < 0.0
+            n = 0.0
+        end
 
         # Add to mfp-buffer
         ilambda += n * cross_section 
@@ -116,21 +121,23 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
 end
 
 
-function UpdateAlpha!(dens::Vector{Float64}, species_list::Vector{Species},
-    system::System, electron_id::Int64)
+function UpdateAlpha(dens::Vector{Float64}, species_list::Vector{Species},
+    electron_id::Int64)
+    # Alpha parameter: is the ratio of negative ion species to electron density
 
-    # Alpha parameter
     alpha = 0.0
     for s in species_list
-        q = s.charge
         if s.id == electron_id
             continue
-        elseif q < 0
-            alpha += dens[s.id]
+        elseif s.charge < 0.0
+            n = dens[s.id]
+            if n > 0.0
+                alpha += n 
+            end
         end
     end
     alpha /= dens[electron_id]
-    system.alpha = alpha
+    return alpha
 end
 
 
@@ -150,28 +157,6 @@ function GetThermalSpeed(species::Species)
 end
 
 
-function Get_h_Parameters(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
-    species_list::Vector{Species}, system::System, electron_id::Int64)
-    # See Gudmundsson (2000) On the plasma parameters of a planar inductive oxygen discharge
-    # Only valid for positive charged species
-
-    L = system.l
-    R = system.radius
-
-    # Gamma parameter
-    Te = temp[electron_id]
-    Ti = temp[species.id]
-    gamma = Te / Ti
-    alpha = system.alpha
-
-    # Get species mean free path
-    lambda = species.mfp
-    h_L = 0.86 * (1.0 + 3.0 * alpha/gamma)/(1+gamma)/sqrt(3.0+0.5*L/lambda)
-    h_R = 0.8 * (1.0 + 3.0 * alpha/gamma)/(1+gamma)/sqrt(4.0+R/lambda)
-    return h_L, h_R
-end
-
-
 function GetLambda(system::System)
 
     L = system.l
@@ -182,8 +167,7 @@ function GetLambda(system::System)
 end
 
 
-function GetNeutralDiffusionCoeff(species::Species,
-    species_list::Vector{Species}, sID::SpeciesID)
+function GetNeutralDiffusionCoeff(species::Species)
     # Neutral Diffusion Coefficient
 
     mfp = species.mfp
@@ -191,16 +175,129 @@ function GetNeutralDiffusionCoeff(species::Species,
     return D
 end
 
-function GetSheathDensity(species::Species, system::System)
+function GetSheathDensity(species::Species, temp::Vector{Float64},
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
+    # Calculates the density at sheath edge
+    # This is only interesting for positive ions. Used later on to
+    # calculate the wall-flux = u_B * n_Sheath
 
-    ni = species.dens
-    uB = species.v_Bohm 
-    uTh = species.v_thermal 
-    mfp = species.mfp
-    l = system.l # System length
+    n_0 = species.dens
 
-    n_sheath = pi * ni * (uB / uTh) * (mfp / l) # Density at sheath edge
+    if system.h_id == h_classical
+        # Electropositive plasmas
+        L = system.l
+        mfp = species.mfp
+
+        #if system.total_pressure < 0.26664474 # ( = 2 mTorr) 
+        #    # Low pressure range
+        #    h = 0.425 
+        #elseif system.total_pressure < 20 # ( = 150 mTorr)
+        #    # Intermediate pressure range
+        #    h = 0.86 / sqrt(3.0 + L/mfp)
+        #else
+           # High pressure
+           uB = species.v_Bohm 
+           uTh = species.v_thermal 
+           h = pi * (uB / uTh) * (mfp / L)
+        #end
+    elseif system.h_id == h_Gudmundsson
+        # ICP Ar/O2
+        R = system.radius
+        L = system.l
+        Te = temp[sID.electron]
+        Ti = temp[species.id]
+        gamma = Te / Ti
+        alpha = system.alpha
+        lambda = species.mfp
+
+        h_L = 0.86 * (1.0 + 3.0 * alpha/gamma)/(1+gamma)/sqrt(3.0+0.5*L/lambda)
+        h_R = 0.8 * (1.0 + 3.0 * alpha/gamma)/(1+gamma)/sqrt(4.0+0.5*R/lambda)
+
+        h = (R^2 * h_L + R*L*h_R) / (R^2 + R*L)
+
+    elseif system.h_id == h_Monahan
+        #print("NAME: ", species.name,"\n")
+        #print("n_0 " ,n_0,"\n")
+        if n_0 > 0.0
+            # Electronegative plasmas
+            L = system.l
+            alpha = system.alpha
+            Te = species_list[sID.electron].temp
+            Ti = species.temp
+            sqrt_Te_Ti = sqrt(Te/Ti)
+            mfp = species.mfp
+            uTh = species.v_thermal 
+            K_recombination = GetRecombinationRate(species, temp, species_list, system, sID)
+            ni_star = 15.0/56.0 * uTh / K_recombination / mfp
+            n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
+
+            h_a = 0.86 / sqrt(3.0 + L/mfp) / (1.0 + alpha) 
+            h_b = alpha / (1.0 + alpha) / ( sqrt_Te_Ti * (1.0+1.0/sqrt(2.0*pi)/mfp) )
+            h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_0/n_n0_p3_2) ) 
+            h = sqrt(h_a^2 + h_b^2 + h_c^2)
+
+        #    print("sqrt_Te_Ti " ,sqrt_Te_Ti,"\n")
+        #    print("mfp " ,mfp ,"\n")
+        #    print("K_rec " ,K_recombination ,"\n")
+        #    print("ni_star " ,ni_star ,"\n")
+        #    print("n_n0_p3_2 " ,n_n0_p3_2 ,"\n")
+        #    print("h_a " , h_a,"\n")
+        #    print("h_b " , h_b,"\n")
+        #    print("h_c " , h_c,"\n")
+        #    print("h " , h,"\n\n")
+        else
+            h = 0.0
+        end
+    end
+    n_sheath = n_0 * h
+
     return n_sheath
 end
+
+
+function GetRecombinationRate(species::Species, temp::Vector{Float64},
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
+
+    s_id = species.id
+
+    K_recombination = 0.0
+    for r in species.reaction_list
+        s_index = findall( x -> x == s_id, r.involved_species )[1]
+        sign = r.species_balance[s_index]
+        if sign < 0
+            if system.prerun
+                K = r.rate_coefficient(temp, sID) 
+            else
+                K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                    species_list, system, sID)
+            end
+            K_recombination += K
+        end
+    end
+    return K_recombination
+end
+
+
+function GetStickingCoefficient(species::Species,
+    species_list::Vector{Species}, sID::SpeciesID)
+
+    gamma = species.gamma
+
+    if species.id == sID.O
+        # This is for stainless steel walls ( Gudmundsson 2007)
+        s = species_list[sID.O2]
+        pO2_mTorr = s.dens * kb * s.temp * 0.13332237
+
+        if pO2_mTorr < 2
+            gamma = 1.0 - pO2_mTorr * 0.25
+        else
+            gamma = 0.1438 * exp(2.5069/pO2_mTorr)
+        end
+        #print("Sticking coeff. ", gamma,"\n")
+    end
+
+    return gamma
+end
+
 
 end

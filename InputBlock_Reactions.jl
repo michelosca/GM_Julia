@@ -19,8 +19,7 @@ module InputBlock_Reactions
 
 using SharedData: c_io_error, e, me, K_to_eV
 using SharedData: Species, Reaction, System, SpeciesID
-using SharedData: r_energy_sink, r_elastic, r_wall_loss
-try
+using SharedData: r_elastic, r_wall_loss
 using ReactionSet: K_funct_list
 catch
     print("ReactionSet module is not present\n")
@@ -28,6 +27,7 @@ end
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
 using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
 using EvaluateExpressions: ReplaceDensSymbols!
+using EvaluateExpressions: ReplaceExpressionValues
 using Printf
 
 
@@ -435,8 +435,6 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
 
     if (str == "elastic")
         reaction.case = r_elastic
-    elseif (str == "energy_sink" || str == "energy sink")
-        reaction.case = r_energy_sink
     elseif (str == "wall_rate_coefficient")
         reaction.case = r_wall_loss
     elseif (str == "")
@@ -565,7 +563,7 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                 mass_balance += species_list[id].mass * fact
                 i += 1
             end
-            if !(mass_balance <= me)
+            if !(abs(mass_balance) <= me)
                 print("***ERROR*** Reaction ",r.id,": ",r.name," is mass unbalanced\n")
                 return c_io_error
             end
@@ -573,10 +571,15 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             # Test rate coefficient
             for T_e in range(T_min, T_max, length=100)
                 temp[sID.electron] = T_e 
+                if system.prerun
                 if r.case == r_wall_loss
                     K = r.rate_coefficient(temp, species_list, system, sID) 
                 else
                     K = r.rate_coefficient(temp, sID) 
+                    end
+                else
+                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID)
                 end
                 if K < 0.0
                     @printf("***ERROR*** Reaction %i: %s has negative rate coefficient value at %.2f eV\n",r.id, r.name, T_e * K_to_eV)

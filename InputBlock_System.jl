@@ -18,8 +18,8 @@
 module InputBlock_System
 
 using SharedData: c_io_error
-using SharedData: p_ccp_id, p_icp_id
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
+using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using SharedData: System
 using SharedData: K_to_eV
 using PlasmaParameters: GetLambda
@@ -55,7 +55,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.V = 0.0
         system.l = 0.0
         system.radius = 0.0
-        system.power_input_method = 0
+        system.h_id = 0
         system.Vsheath_solving_method = 0
         system.drivf = 0.0
         system.drivOmega = 0.0
@@ -66,6 +66,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.total_pressure = 0.0
         system.Lambda = 0.0
         system.prerun = true
+        system.plasma_potential = 100.0
     end
     return errcode
 end
@@ -108,20 +109,22 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         elseif (name=="P_duty_ratio" || lname=="power_duty_ratio")
             system.P_duty_ratio = parse(Float64, var)
             errcode = 0
-        elseif (lname=="power_method" || lname=="input_power_method" ||
-                lname=="power_input_method")
+        elseif (lname=="h_factor" || lname=="h" || lname=="h_id")
             lvar = lowercase(var)
-            if (lvar == "ccp")
-                p_id = p_ccp_id
+            if (lvar == "gudmundsson")
+                h_id = h_Gudmundsson
                 errcode = 0
-            elseif (lvar == "icp")
-                p_id = p_icp_id
+            elseif (lvar == "classical")
+                h_id = h_classical
+                errcode = 0 
+            elseif (lvar == "monahan")
+                h_id = h_Monahan
                 errcode = 0 
             else
-                p_id = 0
+                h_id = 0
                 errcode = c_io_error 
             end
-            system.power_input_method = p_id
+            system.h_id = h_id
         elseif (lname=="t_end")
             system.t_end = parse(Float64, var) * units_fact
             errcode = 0
@@ -187,8 +190,8 @@ function EndSystemBlock!(read_step::Int64, system::System)
                 return c_io_error 
             end
         end
-        if (system.power_input_method == 0)
-            print("***ERROR*** System input power method has not been defined\n")
+        if (system.h_id == 0)
+            print("***ERROR*** System h factor has not been defined\n")
             return c_io_error 
         end
         if (system.drivf == 0)

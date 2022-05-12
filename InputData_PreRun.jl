@@ -18,7 +18,6 @@ module InputData_PreRun
 
 
 using SharedData: c_io_error
-using SharedData: p_icp_id, p_ccp_id 
 using SharedData: Species, Reaction, System, SpeciesID
 
 using InputBlock_Species: StartFile_Species!

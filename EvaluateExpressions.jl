@@ -40,6 +40,12 @@ function ReplaceTempSymbols!(expr::Expr)
     ReplaceSymbol!(expr, :T_Ar,     :(temp[sID.Ar]))
     ReplaceSymbol!(expr, :T_Ar_Ion, :(temp[sID.Ar_Ion]))
     ReplaceSymbol!(expr, :T_O,      :(temp[sID.O]))
+    ReplaceSymbol!(expr, :T_O_1d,   :(temp[sID.O_1d]))
+    ReplaceSymbol!(expr, :T_O_1s,   :(temp[sID.O_1s]))
+    ReplaceSymbol!(expr, :T_O_3s,   :(temp[sID.O_3s]))
+    ReplaceSymbol!(expr, :T_O_5s,   :(temp[sID.O_5s]))
+    ReplaceSymbol!(expr, :T_O_3p,   :(temp[sID.O_3s]))
+    ReplaceSymbol!(expr, :T_O_5p,   :(temp[sID.O_5s]))
     ReplaceSymbol!(expr, :T_O2,     :(temp[sID.O2]))
     ReplaceSymbol!(expr, :T_O3,     :(temp[sID.O3]))
     ReplaceSymbol!(expr, :T_O4,     :(temp[sID.O4]))
@@ -63,6 +69,33 @@ function ReplaceSymbolValues!(expr::Expr, temp::Vector{Float64},
         ReplaceSymbol!(expr, :D_Ar,     species_list[sID.Ar].D)
         ReplaceSymbol!(expr, :gamma_Ar, species_list[sID.Ar].gamma)
     end
+    if sID.Ar_m != 0
+        ReplaceSymbol!(expr, :T_Ar_m,     temp[sID.Ar_m])
+        ReplaceSymbol!(expr, :uB_Ar_m,    species_list[sID.Ar_m].v_Bohm)
+        ReplaceSymbol!(expr, :vth_Ar_m,   species_list[sID.Ar_m].v_thermal)
+        ReplaceSymbol!(expr, :h_R_Ar_m,   species_list[sID.Ar_m].h_R)
+        ReplaceSymbol!(expr, :h_L_Ar_m,   species_list[sID.Ar_m].h_L)
+        ReplaceSymbol!(expr, :D_Ar_m,     species_list[sID.Ar_m].D)
+        ReplaceSymbol!(expr, :gamma_Ar_m, species_list[sID.Ar_m].gamma)
+    end
+    if sID.Ar_r != 0
+        ReplaceSymbol!(expr, :T_Ar_r,     temp[sID.Ar_r])
+        ReplaceSymbol!(expr, :uB_Ar_r,    species_list[sID.Ar_r].v_Bohm)
+        ReplaceSymbol!(expr, :vth_Ar_r,   species_list[sID.Ar_r].v_thermal)
+        ReplaceSymbol!(expr, :h_R_Ar_r,   species_list[sID.Ar_r].h_R)
+        ReplaceSymbol!(expr, :h_L_Ar_r,   species_list[sID.Ar_r].h_L)
+        ReplaceSymbol!(expr, :D_Ar_r,     species_list[sID.Ar_r].D)
+        ReplaceSymbol!(expr, :gamma_Ar_r, species_list[sID.Ar_r].gamma)
+    end
+    if sID.Ar_4p != 0
+        ReplaceSymbol!(expr, :T_Ar_4p,     temp[sID.Ar_4p])
+        ReplaceSymbol!(expr, :uB_Ar_4p,    species_list[sID.Ar_4p].v_Bohm)
+        ReplaceSymbol!(expr, :vth_Ar_4p,   species_list[sID.Ar_4p].v_thermal)
+        ReplaceSymbol!(expr, :h_R_Ar_4p,   species_list[sID.Ar_4p].h_R)
+        ReplaceSymbol!(expr, :h_L_Ar_4p,   species_list[sID.Ar_4p].h_L)
+        ReplaceSymbol!(expr, :D_Ar_4p,     species_list[sID.Ar_4p].D)
+        ReplaceSymbol!(expr, :gamma_Ar_4p, species_list[sID.Ar_4p].gamma)
+    end
 
     # Ar ions
     if sID.Ar_Ion != 0
@@ -79,6 +112,51 @@ function ReplaceSymbolValues!(expr::Expr, temp::Vector{Float64},
         ReplaceSymbol!(expr, :D_O2,     species_list[sID.O2].D)
         ReplaceSymbol!(expr, :gamma_O2, species_list[sID.O2].gamma)
     end
+    if sID.O2_v != 0
+        ReplaceSymbol!(expr, :T_O2_v,     temp[sID.O2_v])
+        ReplaceSymbol!(expr, :uB_O2_v,    species_list[sID.O2_v].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O2_v,   species_list[sID.O2_v].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O2_v,   species_list[sID.O2_v].h_R)
+        ReplaceSymbol!(expr, :h_L_O2_v,   species_list[sID.O2_v].h_L)
+        ReplaceSymbol!(expr, :D_O2_v,     species_list[sID.O2_v].D)
+        ReplaceSymbol!(expr, :gamma_O2_v, species_list[sID.O2_v].gamma)
+    end
+    if sID.O2_a1Ag != 0
+        ReplaceSymbol!(expr, :T_O2_a1Ag,     temp[sID.O2_a1Ag])
+        ReplaceSymbol!(expr, :uB_O2_a1Ag,    species_list[sID.O2_a1Ag].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O2_a1Ag,   species_list[sID.O2_a1Ag].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O2_a1Ag,   species_list[sID.O2_a1Ag].h_R)
+        ReplaceSymbol!(expr, :h_L_O2_a1Ag,   species_list[sID.O2_a1Ag].h_L)
+        ReplaceSymbol!(expr, :D_O2_a1Ag,     species_list[sID.O2_a1Ag].D)
+        ReplaceSymbol!(expr, :gamma_O2_a1Ag, species_list[sID.O2_a1Ag].gamma)
+    end
+    if sID.O2_b1Su != 0
+        ReplaceSymbol!(expr, :T_O2_b1Su,     temp[sID.O2_b1Su])
+        ReplaceSymbol!(expr, :uB_O2_b1Su,    species_list[sID.O2_b1Su].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O2_b1Su,   species_list[sID.O2_b1Su].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O2_b1Su,   species_list[sID.O2_b1Su].h_R)
+        ReplaceSymbol!(expr, :h_L_O2_b1Su,   species_list[sID.O2_b1Su].h_L)
+        ReplaceSymbol!(expr, :D_O2_b1Su,     species_list[sID.O2_b1Su].D)
+        ReplaceSymbol!(expr, :gamma_O2_b1Su, species_list[sID.O2_b1Su].gamma)
+    end
+    if sID.O2_a1Ag_v != 0
+        ReplaceSymbol!(expr, :T_O2_a1Ag_v,     temp[sID.O2_a1Ag_v])
+        ReplaceSymbol!(expr, :uB_O2_a1Ag_v,    species_list[sID.O2_a1Ag_v].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O2_a1Ag_v,   species_list[sID.O2_a1Ag_v].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O2_a1Ag_v,   species_list[sID.O2_a1Ag_v].h_R)
+        ReplaceSymbol!(expr, :h_L_O2_a1Ag_v,   species_list[sID.O2_a1Ag_v].h_L)
+        ReplaceSymbol!(expr, :D_O2_a1Ag_v,     species_list[sID.O2_a1Ag_v].D)
+        ReplaceSymbol!(expr, :gamma_O2_a1Ag_v, species_list[sID.O2_a1Ag_v].gamma)
+    end
+    if sID.O2_b1Su_v != 0
+        ReplaceSymbol!(expr, :T_O2_b1Su_v,     temp[sID.O2_b1Su_v])
+        ReplaceSymbol!(expr, :uB_O2_b1Su_v,    species_list[sID.O2_b1Su_v].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O2_b1Su_v,   species_list[sID.O2_b1Su_v].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O2_b1Su_v,   species_list[sID.O2_b1Su_v].h_R)
+        ReplaceSymbol!(expr, :h_L_O2_b1Su_v,   species_list[sID.O2_b1Su_v].h_L)
+        ReplaceSymbol!(expr, :D_O2_b1Su_v,     species_list[sID.O2_b1Su_v].D)
+        ReplaceSymbol!(expr, :gamma_O2_b1Su_v, species_list[sID.O2_b1Su_v].gamma)
+    end
 
     # O neutrals
     if sID.O != 0
@@ -89,6 +167,60 @@ function ReplaceSymbolValues!(expr::Expr, temp::Vector{Float64},
         ReplaceSymbol!(expr, :h_L_O,    species_list[sID.O].h_L)
         ReplaceSymbol!(expr, :D_O,      species_list[sID.O].D)
         ReplaceSymbol!(expr, :gamma_O,  species_list[sID.O].gamma)
+    end
+    if sID.O_1d != 0
+        ReplaceSymbol!(expr, :T_O_1d,      temp[sID.O_1d])
+        ReplaceSymbol!(expr, :uB_O_1d,     species_list[sID.O_1d].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O_1d,    species_list[sID.O_1d].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O_1d,    species_list[sID.O_1d].h_R)
+        ReplaceSymbol!(expr, :h_L_O_1d,    species_list[sID.O_1d].h_L)
+        ReplaceSymbol!(expr, :D_O_1d,      species_list[sID.O_1d].D)
+        ReplaceSymbol!(expr, :gamma_O_1d,  species_list[sID.O_1d].gamma)
+    end
+    if sID.O_1s != 0
+        ReplaceSymbol!(expr, :T_O_1s,      temp[sID.O_1s])
+        ReplaceSymbol!(expr, :uB_O_1s,     species_list[sID.O_1s].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O_1s,    species_list[sID.O_1s].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O_1s,    species_list[sID.O_1s].h_R)
+        ReplaceSymbol!(expr, :h_L_O_1s,    species_list[sID.O_1s].h_L)
+        ReplaceSymbol!(expr, :D_O_1s,      species_list[sID.O_1s].D)
+        ReplaceSymbol!(expr, :gamma_O_1s,  species_list[sID.O_1s].gamma)
+    end
+    if sID.O_3s != 0
+        ReplaceSymbol!(expr, :T_O_3s,      temp[sID.O_3s])
+        ReplaceSymbol!(expr, :uB_O_3s,     species_list[sID.O_3s].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O_3s,    species_list[sID.O_3s].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O_3s,    species_list[sID.O_3s].h_R)
+        ReplaceSymbol!(expr, :h_L_O_3s,    species_list[sID.O_3s].h_L)
+        ReplaceSymbol!(expr, :D_O_3s,      species_list[sID.O_3s].D)
+        ReplaceSymbol!(expr, :gamma_O_3s,  species_list[sID.O_3s].gamma)
+    end
+    if sID.O_5s != 0
+        ReplaceSymbol!(expr, :T_O_5s,      temp[sID.O_5s])
+        ReplaceSymbol!(expr, :uB_O_5s,     species_list[sID.O_5s].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O_5s,    species_list[sID.O_5s].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O_5s,    species_list[sID.O_5s].h_R)
+        ReplaceSymbol!(expr, :h_L_O_5s,    species_list[sID.O_5s].h_L)
+        ReplaceSymbol!(expr, :D_O_5s,      species_list[sID.O_5s].D)
+        ReplaceSymbol!(expr, :gamma_O_5s,  species_list[sID.O_5s].gamma)
+    end
+    if sID.O_3p != 0
+        ReplaceSymbol!(expr, :T_O_3p,      temp[sID.O_3p])
+        ReplaceSymbol!(expr, :uB_O_3p,     species_list[sID.O_3p].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O_3p,    species_list[sID.O_3p].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O_3p,    species_list[sID.O_3p].h_R)
+        ReplaceSymbol!(expr, :h_L_O_3p,    species_list[sID.O_3p].h_L)
+        ReplaceSymbol!(expr, :D_O_3p,      species_list[sID.O_3p].D)
+        ReplaceSymbol!(expr, :gamma_O_3p,  species_list[sID.O_3p].gamma)
+    end
+    if sID.O_5p != 0
+        ReplaceSymbol!(expr, :T_O_5p,      temp[sID.O_5p])
+        ReplaceSymbol!(expr, :uB_O_5p,     species_list[sID.O_5p].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O_5p,    species_list[sID.O_5p].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O_5p,    species_list[sID.O_5p].h_R)
+        ReplaceSymbol!(expr, :h_L_O_5p,    species_list[sID.O_5p].h_L)
+        ReplaceSymbol!(expr, :D_O_5p,      species_list[sID.O_5p].D)
+        ReplaceSymbol!(expr, :gamma_O_5p,  species_list[sID.O_5p].gamma)
     end
 
     # O3 neutrals
@@ -126,12 +258,89 @@ function ReplaceSpeciesSymbols!(expr::Expr)
     ReplaceSymbol!(expr, :D_O,         :(species_list[sID.O].D) )
     ReplaceSymbol!(expr, :gamma_O,     :(species_list[sID.O].gamma) )
     
+    ReplaceSymbol!(expr, :uB_O_1d,        :(species_list[sID.O_1d].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O_1d,       :(species_list[sID.O_1d].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O_1d,       :(species_list[sID.O_1d].h_R) )
+    ReplaceSymbol!(expr, :h_L_O_1d,       :(species_list[sID.O_1d].h_L) )
+    ReplaceSymbol!(expr, :D_O_1d,         :(species_list[sID.O_1d].D) )
+    ReplaceSymbol!(expr, :gamma_O_1d,     :(species_list[sID.O_1d].gamma) )
+    
+    ReplaceSymbol!(expr, :uB_O_1s,        :(species_list[sID.O_1s].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O_1s,       :(species_list[sID.O_1s].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O_1s,       :(species_list[sID.O_1s].h_R) )
+    ReplaceSymbol!(expr, :h_L_O_1s,       :(species_list[sID.O_1s].h_L) )
+    ReplaceSymbol!(expr, :D_O_1s,         :(species_list[sID.O_1s].D) )
+    ReplaceSymbol!(expr, :gamma_O_1s,     :(species_list[sID.O_1s].gamma) )
+    
+    ReplaceSymbol!(expr, :uB_O_3s,        :(species_list[sID.O_3s].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O_3s,       :(species_list[sID.O_3s].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O_3s,       :(species_list[sID.O_3s].h_R) )
+    ReplaceSymbol!(expr, :h_L_O_3s,       :(species_list[sID.O_3s].h_L) )
+    ReplaceSymbol!(expr, :D_O_3s,         :(species_list[sID.O_3s].D) )
+    ReplaceSymbol!(expr, :gamma_O_3s,     :(species_list[sID.O_3s].gamma) )
+    
+    ReplaceSymbol!(expr, :uB_O_5s,        :(species_list[sID.O_5s].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O_5s,       :(species_list[sID.O_5s].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O_5s,       :(species_list[sID.O_5s].h_R) )
+    ReplaceSymbol!(expr, :h_L_O_5s,       :(species_list[sID.O_5s].h_L) )
+    ReplaceSymbol!(expr, :D_O_5s,         :(species_list[sID.O_5s].D) )
+    ReplaceSymbol!(expr, :gamma_O_5s,     :(species_list[sID.O_5s].gamma) )
+    
+    ReplaceSymbol!(expr, :uB_O_3p,        :(species_list[sID.O_3p].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O_3p,       :(species_list[sID.O_3p].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O_3p,       :(species_list[sID.O_3p].h_R) )
+    ReplaceSymbol!(expr, :h_L_O_3p,       :(species_list[sID.O_3p].h_L) )
+    ReplaceSymbol!(expr, :D_O_3p,         :(species_list[sID.O_3p].D) )
+    ReplaceSymbol!(expr, :gamma_O_3p,     :(species_list[sID.O_3p].gamma) )
+    
+    ReplaceSymbol!(expr, :uB_O_5p,        :(species_list[sID.O_5p].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O_5p,       :(species_list[sID.O_5p].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O_5p,       :(species_list[sID.O_5p].h_R) )
+    ReplaceSymbol!(expr, :h_L_O_5p,       :(species_list[sID.O_5p].h_L) )
+    ReplaceSymbol!(expr, :D_O_5p,         :(species_list[sID.O_5p].D) )
+    ReplaceSymbol!(expr, :gamma_O_5p,     :(species_list[sID.O_5p].gamma) )
+    
     ReplaceSymbol!(expr, :uB_O2,       :(species_list[sID.O2].v_Bohm) )
     ReplaceSymbol!(expr, :vth_O2,      :(species_list[sID.O2].v_thermal) )
     ReplaceSymbol!(expr, :h_R_O2,      :(species_list[sID.O2].h_R) )
     ReplaceSymbol!(expr, :h_L_O2,      :(species_list[sID.O2].h_L) )
     ReplaceSymbol!(expr, :D_O2,        :(species_list[sID.O2].D) )
     ReplaceSymbol!(expr, :gamma_O2,    :(species_list[sID.O2].gamma) )
+
+    ReplaceSymbol!(expr, :uB_O2_v,       :(species_list[sID.O2_v].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O2_v,      :(species_list[sID.O2_v].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O2_v,      :(species_list[sID.O2_v].h_R) )
+    ReplaceSymbol!(expr, :h_L_O2_v,      :(species_list[sID.O2_v].h_L) )
+    ReplaceSymbol!(expr, :D_O2_v,        :(species_list[sID.O2_v].D) )
+    ReplaceSymbol!(expr, :gamma_O2_v,    :(species_list[sID.O2_v].gamma) )
+
+    ReplaceSymbol!(expr, :uB_O2_a1Ag,       :(species_list[sID.O2_a1Ag].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O2_a1Ag,      :(species_list[sID.O2_a1Ag].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O2_a1Ag,      :(species_list[sID.O2_a1Ag].h_R) )
+    ReplaceSymbol!(expr, :h_L_O2_a1Ag,      :(species_list[sID.O2_a1Ag].h_L) )
+    ReplaceSymbol!(expr, :D_O2_a1Ag,        :(species_list[sID.O2_a1Ag].D) )
+    ReplaceSymbol!(expr, :gamma_O2_a1Ag,    :(species_list[sID.O2_a1Ag].gamma) )
+
+    ReplaceSymbol!(expr, :uB_O2_b1Su,       :(species_list[sID.O2_b1Su].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O2_b1Su,      :(species_list[sID.O2_b1Su].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O2_b1Su,      :(species_list[sID.O2_b1Su].h_R) )
+    ReplaceSymbol!(expr, :h_L_O2_b1Su,      :(species_list[sID.O2_b1Su].h_L) )
+    ReplaceSymbol!(expr, :D_O2_b1Su,        :(species_list[sID.O2_b1Su].D) )
+    ReplaceSymbol!(expr, :gamma_O2_b1Su,    :(species_list[sID.O2_b1Su].gamma) )
+
+    ReplaceSymbol!(expr, :uB_O2_a1Ag_v,       :(species_list[sID.O2_a1Ag_v].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O2_a1Ag_v,      :(species_list[sID.O2_a1Ag_v].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O2_a1Ag_v,      :(species_list[sID.O2_a1Ag_v].h_R) )
+    ReplaceSymbol!(expr, :h_L_O2_a1Ag_v,      :(species_list[sID.O2_a1Ag_v].h_L) )
+    ReplaceSymbol!(expr, :D_O2_a1Ag_v,        :(species_list[sID.O2_a1Ag_v].D) )
+    ReplaceSymbol!(expr, :gamma_O2_a1Ag_v,    :(species_list[sID.O2_a1Ag_v].gamma) )
+
+    ReplaceSymbol!(expr, :uB_O2_b1Su_v,       :(species_list[sID.O2_b1Su_v].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O2_b1Su_v,      :(species_list[sID.O2_b1Su_v].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O2_b1Su_v,      :(species_list[sID.O2_b1Su_v].h_R) )
+    ReplaceSymbol!(expr, :h_L_O2_b1Su_v,      :(species_list[sID.O2_b1Su_v].h_L) )
+    ReplaceSymbol!(expr, :D_O2_b1Su_v,        :(species_list[sID.O2_b1Su_v].D) )
+    ReplaceSymbol!(expr, :gamma_O2_b1Su_v,    :(species_list[sID.O2_b1Su_v].gamma) )
 
     ReplaceSymbol!(expr, :uB_O3,       :(species_list[sID.O3].v_Bohm) )
     ReplaceSymbol!(expr, :vth_O3,      :(species_list[sID.O3].v_thermal) )
@@ -146,6 +355,27 @@ function ReplaceSpeciesSymbols!(expr::Expr)
     ReplaceSymbol!(expr, :h_L_Ar,      :(species_list[sID.Ar].h_L) )
     ReplaceSymbol!(expr, :D_Ar,        :(species_list[sID.Ar].D) )
     ReplaceSymbol!(expr, :gamma_Ar,    :(species_list[sID.Ar].gamma) )
+
+    ReplaceSymbol!(expr, :uB_Ar_m,       :(species_list[sID.Ar_m].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_Ar_m,      :(species_list[sID.Ar_m].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_Ar_m,      :(species_list[sID.Ar_m].h_R) )
+    ReplaceSymbol!(expr, :h_L_Ar_m,      :(species_list[sID.Ar_m].h_L) )
+    ReplaceSymbol!(expr, :D_Ar_m,        :(species_list[sID.Ar_m].D) )
+    ReplaceSymbol!(expr, :gamma_Ar_m,    :(species_list[sID.Ar_m].gamma) )
+
+    ReplaceSymbol!(expr, :uB_Ar_r,       :(species_list[sID.Ar_r].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_Ar_r,      :(species_list[sID.Ar_r].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_Ar_r,      :(species_list[sID.Ar_r].h_R) )
+    ReplaceSymbol!(expr, :h_L_Ar_r,      :(species_list[sID.Ar_r].h_L) )
+    ReplaceSymbol!(expr, :D_Ar_r,        :(species_list[sID.Ar_r].D) )
+    ReplaceSymbol!(expr, :gamma_Ar_r,    :(species_list[sID.Ar_r].gamma) )
+
+    ReplaceSymbol!(expr, :uB_Ar_4p,       :(species_list[sID.Ar_4p].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_Ar_4p,      :(species_list[sID.Ar_4p].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_Ar_4p,      :(species_list[sID.Ar_4p].h_R) )
+    ReplaceSymbol!(expr, :h_L_Ar_4p,      :(species_list[sID.Ar_4p].h_L) )
+    ReplaceSymbol!(expr, :D_Ar_4p,        :(species_list[sID.Ar_4p].D) )
+    ReplaceSymbol!(expr, :gamma_Ar_4p,    :(species_list[sID.Ar_4p].gamma) )
 end
 
 

@@ -19,8 +19,9 @@ module PrintModule
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
-using SharedData: p_icp_id, p_ccp_id
-using InputBlock_Reactions: r_wall_loss, r_energy_sink, r_elastic
+using SharedData: h_classical, h_Gudmundsson, h_Monahan 
+using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
+using InputBlock_Reactions: r_wall_loss, r_elastic
 using Printf
 
 ###############################################################################
@@ -96,8 +97,6 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             r_name = string(r_name, "-Elastic")
         elseif (r.case == r_wall_loss)
             r_name = string(r_name, "-Wall react.")
-        elseif (r.case == r_energy_sink)
-            r_name = string(r_name, "-Energy sink")
         end
 
         # reaction description
@@ -201,14 +200,26 @@ function PrintSystemList(s::System)
     @printf(" - Volume:             %15g m^3\n", s.V)
     @printf(" - Length:             %15g m\n", s.l)
     @printf(" - Radius:             %15g m\n", s.radius)
-    if (s.power_input_method == p_icp_id)
-        power_str = "ICP"
-    elseif (s.power_input_method == p_ccp_id)
-        power_str = "CCP"
+    if (s.h_id == h_classical)
+        h_str = "classical"
+    elseif (s.h_id == h_Gudmundsson)
+        h_str = "Gudmundsson"
+    elseif (s.h_id == h_Monahan)
+        h_str = "Monahan"
     else
-        power_str = "Not defined"
+        h_str = "Not defined"
     end
-    print(" - Input power method: ",power_str,"\n")
+    print(" - h factor: ",h_str,"\n")
+    if (s.Vsheath_solving_method== s_ohmic_power)
+        vsheath_str = "Ohmic power"
+    elseif (s.Vsheath_solving_method== s_flux_balance)
+        vsheath_str = "Flux balance (electrons and only negative charged species)"
+    elseif (s.Vsheath_solving_method== s_flux_interpolation)
+        vsheath_str = "Flux balance (electrons + negative ions)"
+    else
+        vsheath_str = "Not defined"
+    end
+    print(" - Potential drop through sheath: ",vsheath_str,"\n")
     @printf(" - Driving frequency:      %15g MHz\n", s.drivf/1.e6)
     @printf("                           %15g rad/s\n", s.drivOmega)
     @printf(" - Driving power:          %15.2f W\n", s.drivP)

@@ -20,7 +20,6 @@ module PlasmaSheath
 using PowerInput: PowerInputFunction
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: me, K_to_eV, amu, e, eps0
-using SharedData: p_icp_id, p_ccp_id
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using Roots: find_zeros
 
@@ -32,23 +31,26 @@ using Roots: find_zeros
 #   - SheathVoltage_OhmicPowerSource
 #   - SheathVoltage_InterpolateFluxEquation 
 
-function GetSheathVoltage(species_list::Vector{Species}, system::System, sID::SpeciesID)
+function GetSheathVoltage(species_list::Vector{Species}, system::System,
+    sID::SpeciesID, time::Float64)
 
-    # Obtain the positive and negatice charged particles flux and solve for the potential
+    # Obtain the positive charged particles flux and solve for the potential
     solve_method = system.Vsheath_solving_method
 
     if solve_method == s_ohmic_power 
         electron_species = species_list[sID.electron]
-        V_sheath = SheathVoltage_OhmicPowerSource(electron_species, system, sID)
+        V_sheath = SheathVoltage_OhmicPowerSource(electron_species, system,
+            sID, time)
     elseif solve_method == s_flux_balance 
-        V_sheath = SheathVoltage_FluxBalanceEquation(species_list, sID.electron)
+        V_sheath = SheathVoltage_FluxBalanceEquation(species_list,
+            sID.electron)
     elseif solve_method == s_flux_interpolation
-        V_sheath = SheathVoltage_InterpolateFluxEquation(species_list)
+        V_sheath = SheathVoltage_InterpolateFluxEquation(species_list, system)
     else
         print("***WARNING*** No potential sheath calculation done\n")
         V_sheath = 0.0 
     end
-    return V_sheath
+    system.plasma_potential = V_sheath
 end
 
 function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
@@ -56,7 +58,7 @@ function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
 
     positive_flux = 0.0 # Fluxes of positive charged particles
     electrons = species_list[electron_id]
-    n_e = electrons.n_sheath 
+    n_e = electrons.dens
     Te_eV = electrons.temp * K_to_eV
     v_th = electrons.v_thermal
     for s in species_list
@@ -70,10 +72,10 @@ function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
     return V_sheath
 end
 
-function SheathVoltage_OhmicPowerSource(electrons::Species, system::System, sID::SpeciesID)
+function SheathVoltage_OhmicPowerSource(electrons::Species, system::System, sID::SpeciesID, time::Float64)
     # From: A. Hurlbatt et al. (2017)
 
-    S_ohm = PowerInputFunction(electrons, system, sID)
+    S_ohm = PowerInputFunction(electrons, system, sID, time)
     mfp = electrons.mfp 
     v_th = electrons.v_thermal
     V_sheath = 3.0/2.0 * S_ohm*e*mfp / (me*eps0*system.drivOmega^2*v_th)
@@ -82,7 +84,8 @@ function SheathVoltage_OhmicPowerSource(electrons::Species, system::System, sID:
 end
 
 
-function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species})
+function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
+    system::System)
 
     positive_flux = 0.0        # Fluxes of positive charged particles
     for s in species_list
@@ -95,17 +98,17 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species})
         negative_flux = 0.0        # Fluxes of negative charged particles
         for s in species_list
             if s.charge < 0
-                n_sheath = s.n_sheath 
                 v_th = s.v_thermal
                 T_eV = s.temp * K_to_eV
-                negative_flux += 0.25 * n_sheath * v_th * exp(-pot/T_eV) 
+                negative_flux += 0.25 * s.dens * v_th * exp(-pot/T_eV) 
             end
         end
         return negative_flux - positive_flux
     end
 
     # Solve now plasma potential 
-    V_sheath = find_zeros(negative_flux_funct, (-1000,1000))
+    V_guess = system.plasma_potential * 1.5
+    V_sheath = find_zeros(negative_flux_funct, (0,V_guess))
     if (length(V_sheath) > 1 || V_sheath == Float64[])
         print("***ERROR*** V_sheath interpolation problem. Length ", length(V_sheath),"\n")
     end

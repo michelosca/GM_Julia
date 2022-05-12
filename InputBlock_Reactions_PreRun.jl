@@ -19,7 +19,7 @@ module InputBlock_Reactions_PreRun
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
-using SharedData: r_energy_sink, r_elastic, r_wall_loss
+using SharedData: r_elastic, r_wall_loss
 
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
 using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
@@ -354,8 +354,6 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
 
     if (str == "elastic")
         reaction.case = r_elastic
-    elseif (str == "energy_sink" || str == "energy sink")
-        reaction.case = r_energy_sink
     elseif (str == "wall_rate_coefficient")
         reaction.case = r_wall_loss
     elseif (str == "")

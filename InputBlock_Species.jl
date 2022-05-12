@@ -18,7 +18,7 @@
 module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu, kb 
-using SharedData: c_io_error, p_icp_id
+using SharedData: c_io_error
 using SharedData: r_wall_loss
 using SharedData: Species, Reaction, SpeciesID, System
 using InputBlock_System: GetUnits!
@@ -78,7 +78,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.h_R = 0.0
         current_species.h_L = 0.0
         current_species.gamma = 0.0
-        current_species.n_sheath = 0.0
+        current_species.n_sheath = 0.0 
         current_species.flux = 0.0
         current_species.name = "None"
         current_species.has_flow_rate = false
@@ -249,19 +249,20 @@ function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
     if (read_step == 1)
         # Update equations/ wall losses flags
         current_species = species_list[end]
-        if (current_species.charge > 0 || current_species.id == sID.electron)
-            if (current_species.has_temp_eq)
-                current_species.has_heating_mechanism = true
-            end
+        if !(current_species.charge == 0)
             current_species.has_wall_loss = true
         end
+
+        if current_species.has_temp_eq
+            current_species.has_heating_mechanism = true
+        end
         
-        if (current_species.mass == 0)
+        if current_species.mass == 0
             print("***ERROR*** Species mass has not been defined")
             return c_io_error
         end
 
-        if (current_species.temp == 0)
+        if current_species.temp == 0
             dens = current_species.dens
             p = current_species.pressure
             if (dens != 0 && p != 0)
@@ -269,7 +270,7 @@ function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
             end
         end
 
-        if (current_species.dens == 0)
+        if current_species.dens == 0
             temp = current_species.temp
             p = current_species.pressure
             if (temp != 0 && p != 0)
@@ -277,7 +278,7 @@ function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
             end
         end
 
-        if (current_species.pressure == 0)
+        if current_species.pressure == 0
             temp = current_species.temp
             dens = current_species.dens
             if (temp != 0 && dens != 0)
@@ -314,6 +315,7 @@ function InitializeSpeciesID!(speciesID::SpeciesID)
     speciesID.O_5p = 0
 
     speciesID.O2 = 0
+    speciesID.O2_v = 0
     speciesID.O2_Ion = 0
     speciesID.O2_negIon = 0
     speciesID.O2_a1Ag = 0
@@ -371,8 +373,8 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
             # This is ONLY used in calculating the MFG, therefore
             # - for ION SPECIES (positive and negative) only ion-neutral
             #  reactions are included
-            # - for NEUTRAL SPECIES only ion-neutral reaction are included
-            # - for ELECTRONS all reaction are included
+            # - for NEUTRAL SPECIES only ion-neutral reactions are included
+            # - for ELECTRONS any reaction is included
             for r in reaction_list
                 if r.case == r_wall_loss
                     continue
@@ -391,7 +393,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                     if s_involved!=Int64[]
                         e_involved = findall(x->x==id_electrons, r.reactant_species)
                         if e_involved==Int64[]
-                            # Add it only if electron is not involved
+                            # Add only if electron is not involved
                             push!(s.reaction_list, r)
                         end
                     end

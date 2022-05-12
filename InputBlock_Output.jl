@@ -167,7 +167,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
         if (var=="pL")
             output.case[i] = o_pL
         elseif (var=="dens" || var=="density")
-            output.case = o_dens
+            output.case[i] = o_dens
         elseif (var=="temp" || var=="temperature")
             output.case[i] = o_temp
         elseif (var=="pressure")
@@ -254,6 +254,7 @@ function InitializeOutputBlock!(output::OutputBlock)
     output.n_data_frame = DataFrame()
     output.T_data_frame = DataFrame()
     output.K_data_frame = DataFrame()
+    output.param_data_frame = DataFrame()
     output.name = String[]
     output.label = ""
 end
@@ -324,15 +325,25 @@ function SetupOutputBlock!(output::OutputBlock,
             end
         end
 
-        # Initialize rate coefficient K_data_frame
         output.K_data_frame[!, output.name[i]] = Float64[]
+        output.param_data_frame[!, output.name[i]] = Float64[]
         if i == output.n_parameters
+            # Initialize rate coefficient K_data_frame
             for r in reaction_list
-                if r.case == r_wall_loss
-                    continue
-                end
                 col_label = string("r",r.id,": ",r.name)
                 output.K_data_frame[!, col_label] = Float64[]
+            end
+
+            # Initialize parameter data frame
+            output.param_data_frame[!, "V_plasma"] = Float64[]
+            output.param_data_frame[!, "P_total"] = Float64[]
+            for s in species_list
+                if !(s.charge == 0) && s.has_dens_eq
+                    flux_label = string(s.name * "_flux")
+                    mfp_label = string(s.name * "_mfp")
+                    output.param_data_frame[!, flux_label] = Float64[]
+                    output.param_data_frame[!, mfp_label] = Float64[]
+                end
             end
         end
     end
