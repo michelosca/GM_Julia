@@ -315,9 +315,7 @@ function SetupOutputBlock!(output::OutputBlock,
             output.T_data_frame[!, output.name[i]] = Float64[]
             if i == output.n_parameters 
                 for s in species_list
-                    if s.has_dens_eq
-                        output.n_data_frame[!, s.name] = Float64[]
-                    end
+                    output.n_data_frame[!, s.name] = Float64[]
                     if s.has_temp_eq
                         output.T_data_frame[!, s.name] = Float64[]
                     end
@@ -338,7 +336,7 @@ function SetupOutputBlock!(output::OutputBlock,
             output.param_data_frame[!, "V_plasma"] = Float64[]
             output.param_data_frame[!, "P_total"] = Float64[]
             for s in species_list
-                if !(s.charge == 0) && s.has_dens_eq
+                if !(s.charge == 0)
                     flux_label = string(s.name * "_flux")
                     mfp_label = string(s.name * "_mfp")
                     output.param_data_frame[!, flux_label] = Float64[]
