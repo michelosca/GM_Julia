@@ -217,19 +217,27 @@ function UpdateOutputParameters!(species_list::Vector{Species},
 
     # Update density value on all species
     # - check total pressure
-    press_buffer = 0
+    press_buffer = 0.0
     for s in species_list
+        if isnan(s.pressure)
+            print("***ERROR*** Bad output specification: Species ",s.name," pressure is NaN\n")
+            return c_io_error
+        end
+        if isinf(s.pressure) 
+            print("***ERROR*** Bad output specification: Species ",s.name," pressure is Inf\n")
+            return c_io_error
+        end
+
         s.dens = s.pressure / (kb * s.temp)
-         if s.charge != 0
+         if s.charge == 0
             press_buffer += s.pressure
          end
     end
 
-    if press_buffer - system.total_pressure > 1.e-50
-        print("***ERROR*** Sum of species pressure does not match system total pressure\n")
-        errcode = c_io_error
+    if abs(press_buffer - system.total_pressure) > 1.e-50
+        print("***ERROR*** Bad output specification: Sum of species pressure does not match system total pressure\n")
+        return c_io_error
     end
-
     return errcode
 end
 
@@ -347,8 +355,8 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             push!(param_list, system.total_pressure)
 
             for s in species_list
-                if (!(s.charge==0) && s.has_dens_eq)
-                    push!(param_list, s.flux * abs(s.charge) / e)
+                if !(s.charge==0)
+                    push!(param_list, s.flux)
                     push!(param_list, s.mfp)
                 end
             end
@@ -365,19 +373,27 @@ function LoadOutputBlock!(output::OutputBlock, sol,
         dens_list = copy(param)
         temp_list = copy(param)
         K_list = copy(param)
+        p_list = copy(param)
         temp = zeros(n_species) # temp array is used later for getting rate coefficient values
         dens = zeros(n_species) # dens array is used later for getting rate coefficient values
 
-        # Dump dens/temp into buffer lists 
+        # Various parameter dump
+        push!(p_list, system.plasma_potential)
+        push!(p_list, system.total_pressure)
+
+        # Dump dens/temp and other into buffer lists 
         for s in species_list
-            if s.has_dens_eq
-                push!(dens_list, sol[s.id+n_species, end])
-            end
+            push!(dens_list, sol[s.id+n_species, end])
             if s.has_temp_eq
                 push!(temp_list, sol[s.id, end])
             end
             temp[s.id] = s.temp 
             dens[s.id] = s.dens
+
+            if !(s.charge==0)
+                push!(p_list, s.flux)
+                push!(p_list, s.mfp)
+            end
         end
         # Push dens/temp buffer lists into data_frames
         push!(output.T_data_frame, temp_list)
