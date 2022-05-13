@@ -33,7 +33,7 @@ using EvaluateExpressions: ReplaceExpressionValues
 function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
 
-    # FIRST: Update dens and temperature
+    # FIRST: Update dens, temperature and pressure
     for s in species_list
         s.temp = temp[s.id]
         s.dens = dens[s.id]
@@ -73,6 +73,10 @@ end
 
 function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
     species_list::Vector{Species}, system::System, sID::SpeciesID)
+    # The mean-free-path is calculated using the reaction list associated to
+    # species. This reaction_list is attached when reading the input deck and
+    # for the case of neutrals and pos/neg-ions only reactions are included which
+    # do not involve electrons, i.e. neutral-neutral or neutral-ion reactions
 
     ilambda = 0.0         # inverse mean-free-path
 
@@ -188,18 +192,18 @@ function GetSheathDensity(species::Species, temp::Vector{Float64},
         L = system.l
         mfp = species.mfp
 
-        #if system.total_pressure < 0.26664474 # ( = 2 mTorr) 
-        #    # Low pressure range
-        #    h = 0.425 
-        #elseif system.total_pressure < 20 # ( = 150 mTorr)
-        #    # Intermediate pressure range
-        #    h = 0.86 / sqrt(3.0 + L/mfp)
-        #else
+        if system.total_pressure < 0.26664474 # ( = 2 mTorr) 
+            # Low pressure range
+            h = 0.425 
+        elseif system.total_pressure < 20 # ( = 150 mTorr)
+            # Intermediate pressure range
+            h = 0.86 / sqrt(3.0 + L/mfp)
+        else
            # High pressure
            uB = species.v_Bohm 
            uTh = species.v_thermal 
            h = pi * (uB / uTh) * (mfp / L)
-        #end
+        end
     elseif system.h_id == h_Gudmundsson
         # ICP Ar/O2
         R = system.radius
