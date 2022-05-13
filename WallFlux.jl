@@ -34,7 +34,7 @@ using SharedData: s_ohmic_power
 function DensWallFluxFunction(species::Species, system::System)
     A = system.A
     V = system.V
-    particle_flux = -A /V * species.flux
+    particle_flux = -A/V * species.flux
     return particle_flux 
 end
 
@@ -49,7 +49,7 @@ function TempWallFluxFunction(temp::Vector{Float64}, species::Species,
 
     if s_id == sID.electron
         Te = temp[s_id]
-        temp_flux -= 2.0 * kb * Te * species.flux
+        temp_flux -= 2.0*kb*Te * species.flux
         # Add ion flux terms
         for s in species_list
             charge = s.charge
