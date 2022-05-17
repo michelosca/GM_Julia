@@ -106,13 +106,23 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
         return negative_flux - positive_flux
     end
 
-    # Solve now plasma potential 
-    V_guess = system.plasma_potential * 1.5
-    V_sheath = find_zeros(negative_flux_funct, (0,V_guess))
-    if (length(V_sheath) > 1 || V_sheath == Float64[])
-        print("***ERROR*** V_sheath interpolation problem. Length ", length(V_sheath),"\n")
+    # Solve for plasma potential 
+    interp_flag = true
+    fact = 1.5
+    V_guess = copy(system.plasma_potential)
+    while interp_flag
+        V_guess *= fact 
+        V_sheath = find_zeros(negative_flux_funct, (0,V_guess))
+        if length(V_sheath) == 1
+            interp_flag = false
+            V_guess = V_sheath[1]
+        elseif length(V_sheath) < 1 
+            fact = 1.5
+        elseif length(V_sheath) > 1 
+            fact = 0.5
+        end
     end
-    return V_sheath[1]
+    return V_guess
 end
 
 end

@@ -51,7 +51,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
         s.mfp = GetMFP(temp, dens, s, species_list, system, sID)
 
-        s.gamma = GetStickingCoefficient(s, species_list, sID)
+        #s.gamma = GetStickingCoefficient(s, species_list, sID)
         s.D = GetNeutralDiffusionCoeff(s)
 
         if s.charge > 0.0
@@ -285,19 +285,19 @@ end
 function GetStickingCoefficient(species::Species,
     species_list::Vector{Species}, sID::SpeciesID)
 
-    gamma = species.gamma
-
     if species.id == sID.O
         # This is for stainless steel walls ( Gudmundsson 2007)
         s = species_list[sID.O2]
         pO2_mTorr = s.dens * kb * s.temp * 0.13332237
 
-        if pO2_mTorr < 2
+        if pO2_mTorr < 2.0
             gamma = 1.0 - pO2_mTorr * 0.25
         else
             gamma = 0.1438 * exp(2.5069/pO2_mTorr)
         end
         #print("Sticking coeff. ", gamma,"\n")
+    else
+        gamma = species.gamma
     end
 
     return gamma

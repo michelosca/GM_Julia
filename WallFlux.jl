@@ -66,10 +66,19 @@ end
 
 function UpdatePositiveFlux!(species_list::Vector{Species}, system::System)
 
+    # Reset flux values
+    for s in species_list
+        s.flux = 0.0
+    end
+
     # Particle flux of positive ions
     for s in species_list
         if s.charge > 0.0
-            s.flux = s.v_Bohm * s.n_sheath 
+            flux = s.v_Bohm * s.n_sheath
+            s.flux = flux
+            # Charged species flux recombines, and it's corresponding
+            # neutral species gains this mass
+            species_list[s.species_id].flux += -flux
         end
     end
 end

@@ -349,7 +349,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
         for s in species_list
             s_id = s.id
 
-            # Set the neutral species
+            # Set the "characteristic" species ID
             var = s.name
             if (var=="e" || var=="electrons" || var=="electron")
                 s.species_id = sID.electron 
@@ -400,6 +400,15 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                 end
             end
 
+            # Flux terms can be considered as a reaction X+ -> X,
+            #therefore for each ion (X+) touching the wall a neutral
+            #species (X) is created
+            if s.charge > 0
+                s_neutral = species_list[s.species_id]
+                s_neutral.has_wall_loss = true
+            end
+
+            # Get pressure for total pressure check
             if system.total_pressure > 0 && s.charge == 0
                 pressure_check += s.pressure
             end

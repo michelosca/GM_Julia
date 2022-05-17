@@ -46,7 +46,7 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
     dens_funct = 0.0
 
     # Check if species is meant to have a density ODE 
-    if (s.has_dens_eq)
+    if s.has_dens_eq
         s_id = s.id
         # Loop over the reaction setreaction_lists species s 
         for r in reaction_list
@@ -79,7 +79,7 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             end
         end
 
-        if (s.has_wall_loss)
+        if s.has_wall_loss
             value = DensWallFluxFunction(s, system)
             dens_funct += value 
             #print("   - Flux loss:     ", value, "\n")
@@ -99,7 +99,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
     system::System, sID::SpeciesID, t_sim::Float64)
 
     temp_funct = 0.0 
-    if (s.has_temp_eq)
+    if s.has_temp_eq
         # "Constants" that are used later
         Q0 = 1.5 * kb * s.dens
         Q1 = -1.5 * kb * s.temp
@@ -179,14 +179,14 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             end
         end
 
-        if (s.has_wall_loss)
+        if s.has_wall_loss
             value = TempWallFluxFunction(temp, s, species_list, system,
                 system.plasma_potential, sID) / Q0
             temp_funct += value
             #print("   - Flux loss: ", value, "\n")
         end
 
-        if (s.has_heating_mechanism)
+        if s.has_heating_mechanism
             value = PowerInputFunction(s, system, sID, t_sim) / Q0
             temp_funct += value
             #print("   - Heating :  ", value, "\n")

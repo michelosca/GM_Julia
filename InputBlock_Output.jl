@@ -335,6 +335,7 @@ function SetupOutputBlock!(output::OutputBlock,
             # Initialize parameter data frame
             output.param_data_frame[!, "V_plasma"] = Float64[]
             output.param_data_frame[!, "P_total"] = Float64[]
+            output.param_data_frame[!, "Electronegativity"] = Float64[]
             for s in species_list
                 if !(s.charge == 0)
                     flux_label = string(s.name * "_flux")

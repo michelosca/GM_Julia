@@ -353,6 +353,8 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             param_list = Float64[time, system.plasma_potential]
             # Push total pressure
             push!(param_list, system.total_pressure)
+            # Push electronegativity 
+            push!(param_list, system.alpha)
 
             for s in species_list
                 if !(s.charge==0)
@@ -380,6 +382,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
         # Various parameter dump
         push!(p_list, system.plasma_potential)
         push!(p_list, system.total_pressure)
+        push!(p_list, system.alpha)
 
         # Dump dens/temp and other into buffer lists 
         for s in species_list

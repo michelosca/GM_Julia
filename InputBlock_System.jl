@@ -150,6 +150,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         elseif (lname=="prerun")
             system.prerun = parse(Bool, var)
             errcode = 0
+        elseif (lname=="plasma_potential_guess")
+            system.plasma_potential = parse(Float64, var)
+            errcode = 0
         end
     else
         errcode = 0
