@@ -148,6 +148,7 @@ mutable struct System
 
     plasma_potential::Float64
 
+    log_file::String
     System() = new()
 end
 

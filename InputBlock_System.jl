@@ -23,6 +23,7 @@ using SharedData: h_classical, h_Gudmundsson, h_Monahan
 using SharedData: System
 using SharedData: K_to_eV
 using PlasmaParameters: GetLambda
+using Dates
 
 
 ###############################################################################
@@ -67,6 +68,12 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.Lambda = 0.0
         system.prerun = true
         system.plasma_potential = 100.0
+
+        # Generate a log file name
+        now_stamp = Dates.now()
+        log_num = Dates.format(now_stamp, "yyyymmddHHMMSS")
+        system.log_file = "GM_run_" * log_num * ".log"
+
     end
     return errcode
 end

@@ -364,7 +364,7 @@ function GetInputFolder!(system::System, filename::String)
     else
         system.folder = filename[1:index[1]]
     end
-    #print("System folder ", system.folder,"\n")
+    system.log_file = system.folder * system.log_file
 end
 
 end

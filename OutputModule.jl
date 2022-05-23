@@ -102,7 +102,7 @@ function GenerateOutputs!(
                 for i in 1:n_dims
                     @printf("%4s = %10f - ", output.name[i], param[i])
                 end
-                #PrintSpeciesList(species_list_run, sID)
+                #PrintSpeciesList(species_list_run, system
                 #PrintSystemList(system_run)
 
                 # Run problem
@@ -467,6 +467,7 @@ function copy_system(system::System)
     s.prerun = copy(system.prerun)
     s.folder = system.folder
 
+    s.log_file = system.log_file
     s.plasma_potential = copy(system.plasma_potential)
 
     return s
