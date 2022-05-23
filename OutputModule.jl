@@ -99,8 +99,11 @@ function GenerateOutputs!(
                 if (errcode == c_io_error) return errcode end
 
                 # Print parameter state
+                open(system.log_file, "a") do file
                 for i in 1:n_dims
+                        @printf(file, "%4s = %10f - ", output.name[i], param[i])
                     @printf("%4s = %10f - ", output.name[i], param[i])
+                end
                 end
                 #PrintSpeciesList(species_list_run, system
                 #PrintSystemList(system_run)
