@@ -54,7 +54,9 @@ function ExecuteProblem(species_list::Vector{Species},
             dt=1.e-12,
             #abstol=1.e-8,
             #reltol=1.e-3,
-            save_everystep=save_flag)
+            #dtmax=1.e-6,
+            save_everystep=save_flag
+        )
         return sol
     catch
         print("***WARNING*** Trapezoid solver failed. Rerunning with Rodas5\n")
