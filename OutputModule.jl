@@ -18,20 +18,21 @@
 module OutputModule
 
 using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
-using SharedData: kb, K_to_eV, e
+using SharedData: kb
 using SharedData: c_io_error, r_wall_loss
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, neutral_species_id
 using EvaluateExpressions: ReplaceExpressionValues
 using PlasmaParameters: UpdateSpeciesParameters!
-using SolveSystem: ExecuteProblem
-using Printf
-using PrintModule: PrintSpeciesList, PrintSystemList
-using CSV
-using DataFrames: DataFrame
-using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using PlasmaSheath: GetSheathVoltage
+using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
+using SolveSystem: ExecuteProblem
+
+using CSV
+using Printf
+using DataFrames: DataFrame
+using MPI
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
@@ -62,7 +63,7 @@ function GenerateOutputs!(
             errcode, first_dump = @time LoadOutputBlock!(output, sol,
                 species_list, reaction_list, system, sID, first_dump)
             if (errcode == c_io_error) return errcode end
-        else # Parameter sweep
+        else # Parameter sweep 
 
             # Set parameter lists
             p = Vector[]
@@ -100,13 +101,11 @@ function GenerateOutputs!(
 
                 # Print parameter state
                 open(system.log_file, "a") do file
-                for i in 1:n_dims
+                    for i in 1:n_dims
                         @printf(file, "%4s = %10f - ", output.name[i], param[i])
-                    @printf("%4s = %10f - ", output.name[i], param[i])
+                        @printf("%4s = %10f - ", output.name[i], param[i])
+                    end
                 end
-                end
-                #PrintSpeciesList(species_list_run, system
-                #PrintSystemList(system_run)
 
                 # Run problem
                 sol = @time ExecuteProblem(species_list_run,
@@ -404,27 +403,25 @@ function LoadOutputBlock!(output::OutputBlock, sol,
         # Push dens/temp buffer lists into data_frames
         push!(output.T_data_frame, temp_list)
         push!(output.n_data_frame, dens_list)
+        push!(output.param_data_frame, p_list)
         CSV.write(T_filename, DataFrame(output.T_data_frame[end,:]),
             append=true, writeheader=write_header)
         CSV.write(n_filename, DataFrame(output.n_data_frame[end,:]),
             append=true, writeheader=write_header)
+        CSV.write(param_filename, DataFrame(output.param_data_frame[end,:]),
+            append=true, writeheader=write_header)
 
         # Dump K values into buffer 
         for r in reaction_list
-            if r.case == r_wall_loss
-                UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
-                K = r.rate_coefficient(temp, species_list, system, sID) 
-                #continue
-                #K = r.rate_coefficient(temp, species_list, system, sID) 
-                # Wall loss reactions require to update species parameters
-                # such as h_R, h_L, D, gamma, etc.
-            else
-                if system.prerun
-                    K = r.rate_coefficient(temp, sID)
+            if system.prerun
+                if r.case == r_wall_loss
+                    K = r.rate_coefficient(temp, species_list, system, sID) 
                 else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
+                    K = r.rate_coefficient(temp, sID)
                 end
+            else
+                K = ReplaceExpressionValues(r.rate_coefficient, temp,
+                    species_list, system, sID)
             end
             push!(K_list, prod(dens[r.reactant_species])*K )
         end
