@@ -37,6 +37,7 @@ function GetSheathVoltage(species_list::Vector{Species}, system::System,
     # Obtain the positive charged particles flux and solve for the potential
     solve_method = system.Vsheath_solving_method
 
+    V_sheath = 0.0
     if solve_method == s_ohmic_power 
         electron_species = species_list[sID.electron]
         V_sheath = SheathVoltage_OhmicPowerSource(electron_species, system,
@@ -48,7 +49,6 @@ function GetSheathVoltage(species_list::Vector{Species}, system::System,
         V_sheath = SheathVoltage_InterpolateFluxEquation(species_list, system)
     else
         print("***WARNING*** No potential sheath calculation done\n")
-        V_sheath = 0.0 
     end
     system.plasma_potential = V_sheath
 end
@@ -62,7 +62,7 @@ function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
     Te_eV = electrons.temp * K_to_eV
     v_th = electrons.v_thermal
     for s in species_list
-        if s.charge > 0
+        if s.charge > 0.0
             positive_flux += s.flux 
         end
     end
@@ -89,7 +89,7 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
 
     positive_flux = 0.0        # Fluxes of positive charged particles
     for s in species_list
-        if s.charge > 0
+        if s.charge > 0.0
             positive_flux += s.flux
         end
     end
@@ -97,7 +97,7 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
     function negative_flux_funct(pot::Float64)
         negative_flux = 0.0        # Fluxes of negative charged particles
         for s in species_list
-            if s.charge < 0
+            if s.charge < 0.0
                 v_th = s.v_thermal
                 T_eV = s.temp * K_to_eV
                 negative_flux += 0.25 * s.dens * v_th * exp(-pot/T_eV) 

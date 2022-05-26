@@ -21,23 +21,32 @@ using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
+using Printf
+using PrintModule: PrintSimulationState
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
 ###############################################################################
-# - UpdateSpeciesParameters
-# - GetBohmSpeed
-# - GetThermalSpeed
-# - GetMFP
 
 function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
 
-    # FIRST: Update dens, temperature and pressure
+    errcode = 0
+
+    # FIRST: Update dens, temperature and pressure. Set flux values to zero.
     for s in species_list
         s.temp = temp[s.id]
+        if s.temp < 0.0
+            open(system.log_file, "a") do file
+                @printf(file,"***ERROR*** %s temperature is negative: %15g K\n", s.name, s.temp)
+                @printf("***ERROR*** %s temperature is negative: %15g K\n", s.name, s.temp)
+            end
+            PrintSimulationState(temp, dens, species_list, system, sID)
+            return c_io_error
+        end
         s.dens = dens[s.id]
         s.pressure = s.dens * kb * s.temp
+        s.flux = 0.0
     end
 
     # SECOND: Update parameters that depend on dens,temp and other species parameters
@@ -58,6 +67,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             s.n_sheath = GetSheathDensity(s, temp, species_list, system, sID)
         end
     end
+    return errcode 
 end
 
 function UpdateTotalPressure(species_list::Vector{Species}, sID::SpeciesID)

@@ -415,7 +415,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
         end
         if system.total_pressure > 0
             diff = abs(pressure_check - system.total_pressure)
-            if diff > 1.e-50
+            if diff > 1.e-10
                 print("***ERROR*** Sum of species pressures is not equal to system-defined total pressure\n")
                 errcode = c_io_error
             end

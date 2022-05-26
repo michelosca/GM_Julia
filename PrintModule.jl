@@ -182,8 +182,8 @@ function PrintSystemList(s::System)
 
     open(s.log_file,"a") do file
         @printf(file, "System parameters\n")
-        @printf(file, " - Area:               %15g m^2\n", s.A)
-        @printf(file, " - Volume:             %15g m^3\n", s.V)
+        @printf(file, " - Area:               %15g m2\n", s.A)
+        @printf(file, " - Volume:             %15g m3\n", s.V)
         @printf(file, " - Length:             %15g m\n", s.l)
         @printf(file, " - Radius:             %15g m\n", s.radius)
         if (s.h_id == h_classical)
@@ -212,10 +212,29 @@ function PrintSystemList(s::System)
         @printf(file, " - Power shape:            %s \n", s.P_shape)
         @printf(file, " - Power duty ratio:       %15g \n", s.P_duty_ratio)
         @printf(file, " - Total neutral pressure: %15g Pa\n", s.total_pressure)
+        @printf(file, " - Plasma potential guess: %15g V\n", s.plasma_potential)
         @printf(file, " - Simulation time:        %15g s\n", s.t_end)
         @printf(file, " - Simulation folder:      %s\n", s.folder)
         @printf(file, " - Log file:               %s\n", s.log_file)
         @printf(file, "\n")
+    end
+end
+
+function PrintSimulationState(temp::Vector{Float64}, dens::Vector{Float64},
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
+    PrintSystemList(system)
+    PrintSpeciesList(species_list, system)
+    open(system.log_file,"a") do file
+        @printf(file,"Plasma potential: %15g\n", system.plasma_potential) 
+        @printf(file,"Total pressure:   %15g\n", system.total_pressure) 
+        @printf(file,"Electronegativity:%15g\n", system.alpha) 
+        @printf(file,"Species values\n")
+        for s in species_list
+            @printf(file,"  - Species %s\n    - array-dens: %15g\n    - array-temp: %15g\n", s.name, dens[s.id], temp[s.id])
+            @printf(file,"    - pressure: %15g\n",s.pressure) 
+            @printf(file,"    - flux: %15g\n",s.flux) 
+            @printf(file,"    - mfp: %15g\n", s.mfp) 
+        end
     end
 end
 

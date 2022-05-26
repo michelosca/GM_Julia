@@ -19,7 +19,7 @@ module WallFlux
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb, e, K_to_eV 
-using SharedData: s_ohmic_power
+using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -66,11 +66,6 @@ end
 
 function UpdatePositiveFlux!(species_list::Vector{Species}, system::System)
 
-    # Reset flux values
-    for s in species_list
-        s.flux = 0.0
-    end
-
     # Particle flux of positive ions
     for s in species_list
         if s.charge > 0.0
@@ -94,23 +89,32 @@ function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
         negative_flux = 0.0
     end
 
-    for s in species_list
-        q = s.charge
-        if solve_method == s_ohmic_power 
-            if q > 0
-                negative_flux += s.flux * q 
-            end
-        else
-            if q < 0
-                T_eV = s.temp * K_to_eV
-                s.flux = 0.25 * s.dens * s.v_thermal *
-                    exp(-system.plasma_potential/ T_eV)
+    if solve_method == s_flux_balance
+        # This methods assumes there is no flux from negative ions
+        electrons = species_list[sID.electron]
+        T_eV = electrons.temp * K_to_eV
+        n_e = electrons.dens
+        electron.flux = 0.25 * n_e * electrons.v_thermal *
+            exp(-system.plasma_potential/ T_eV)
+    else
+        for s in species_list
+            q = s.charge
+            if solve_method == s_ohmic_power 
+                if q > 0
+                    negative_flux += s.flux * q 
+                end
+            elseif solve_method == s_flux_interpolation
+                if q < 0
+                    T_eV = s.temp * K_to_eV
+                    s.flux = 0.25 * s.dens * s.v_thermal *
+                        exp(-system.plasma_potential/ T_eV)
+                end
             end
         end
-    end
 
-    if solve_method == s_ohmic_power 
-        species_list[sID.electron].flux = negative_flux / e 
+        if solve_method == s_ohmic_power 
+            species_list[sID.electron].flux = negative_flux / e 
+        end
     end
 
 end

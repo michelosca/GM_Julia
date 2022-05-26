@@ -136,6 +136,7 @@ mutable struct System
     P_shape::String
     P_duty_ratio::Float64
 
+    plasma_potential::Float64
     total_pressure::Float64
 
     t_end::Float64                          # simulation time, seconds
@@ -145,8 +146,6 @@ mutable struct System
 
     prerun::Bool
     folder::String
-
-    plasma_potential::Float64
 
     log_file::String
     System() = new()

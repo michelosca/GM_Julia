@@ -19,13 +19,14 @@ module SolveSystem
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
-using SharedData: o_single_run
+using SharedData: o_single_run, c_io_error
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
 using DifferentialEquations: ODEProblem, solve, Trapezoid, Rodas5
 using Printf
+using PrintModule: PrintSimulationState
 
 function ExecuteProblem(species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System, sID::SpeciesID,
@@ -49,19 +50,30 @@ function ExecuteProblem(species_list::Vector{Species},
 
     try
         print("Solving single problem ...\n")
+        #PrintSimulationState(temp, dens, species_list, system, sID)
         sol = solve(prob,
             Trapezoid(autodiff=false),
             dt=1.e-12,
-            #abstol=1.e-8,
-            #reltol=1.e-3,
-            #dtmax=1.e-6,
+            abstol=1.e-8,
+            reltol=1.e-3,
             save_everystep=save_flag
         )
         return sol
     catch
-        print("***WARNING*** Trapezoid solver failed. Rerunning with Rodas5\n")
-        sol = solve(prob, Rodas5(autodiff=false), dt=1.e-12, abstol=1.e-8,
-            reltol=1.e-3, save_everystep=save_flag)
+        print("***WARNING*** Trapezoid solver failed. Rerun with Rodas5\n")
+        errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+        if errcode == c_io_error
+            print("***ERROR*** While updating plasma parameters\n")
+            return c_io_error
+        end
+        PrintSimulationState(temp, dens, species_list, system, sID)
+
+        sol = solve(prob,
+            Rodas5(autodiff=false),
+            dt=1.e-12,
+            abstol=1.e-8,
+            reltol=1.e-3,
+            save_everystep=save_flag)
         return sol
     end
 
@@ -83,7 +95,13 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     temp = y[1:n_species]
 
     # Update species parameters
-    UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+    errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+    if errcode == c_io_error
+        open(system.log_file,"a") do file
+            print(file,"***ERROR*** Updating plasma parameters in ODE function\n")
+        end
+        return c_io_error
+    end
 
     # First get the positive ion fluxes
     UpdatePositiveFlux!(species_list, system)

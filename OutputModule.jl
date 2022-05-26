@@ -104,6 +104,7 @@ function GenerateOutputs!(
                         @printf(file, "%4s = %10f - ", output.name[i], param[i])
                         @printf("%4s = %10f - ", output.name[i], param[i])
                     end
+                    @printf(file,"\n")
                 end
 
                 # Run problem
@@ -235,7 +236,7 @@ function UpdateOutputParameters!(species_list::Vector{Species},
          end
     end
 
-    if abs(press_buffer - system.total_pressure) > 1.e-50
+    if abs(press_buffer - system.total_pressure) > 1.e-10
         print("***ERROR*** Bad output specification: Sum of species pressure does not match system total pressure\n")
         return c_io_error
     end
@@ -325,7 +326,13 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             end
 
             #### Update plasma parameters
-            UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+            errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+            if errcode == c_io_error
+                open(system.log_file,"a") do file
+                    @printf(file, "***ERROR*** Error updating plasma parameters while dumping outputs\n")
+                end
+                return c_io_error
+            end
 
             #### Update flux and potential values 
             UpdatePositiveFlux!(species_list, system)
@@ -456,6 +463,7 @@ function copy_system(system::System)
     s.P_shape = system.P_shape
     s.P_duty_ratio = copy(system.P_duty_ratio)
 
+    s.plasma_potential = copy(system.plasma_potential)
     s.total_pressure = copy(system.total_pressure)
 
     s.t_end = copy(system.t_end)
@@ -465,9 +473,7 @@ function copy_system(system::System)
 
     s.prerun = copy(system.prerun)
     s.folder = system.folder
-
     s.log_file = system.log_file
-    s.plasma_potential = copy(system.plasma_potential)
 
     return s
 end
