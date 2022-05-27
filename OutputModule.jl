@@ -28,7 +28,6 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
-#using PrintModule: PrintSystemList, PrintSpeciesList 
 
 using CSV
 using Printf
@@ -107,8 +106,6 @@ function GenerateOutputs!(
                     end
                     @printf(file,"\n")
                 end
-                #PrintSystemList(system_run) 
-                #PrintSpeciesList(species_list_run, system_run) 
 
                 # Run problem
                 sol = @time ExecuteProblem(species_list_run,
