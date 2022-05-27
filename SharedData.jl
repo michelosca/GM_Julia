@@ -54,6 +54,9 @@ const o_temp = 4
 const o_power = 5
 const o_pressure = 6
 const o_pressure_percent = 7
+const o_frequency = 8
+const o_duty_ratio = 9
+const o_total_pressure = 10
 
 const neutral_species_id = -1
 

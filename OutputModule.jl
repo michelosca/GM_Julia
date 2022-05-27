@@ -23,6 +23,7 @@ using SharedData: c_io_error, r_wall_loss
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, neutral_species_id
+using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using EvaluateExpressions: ReplaceExpressionValues
 using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage
@@ -150,15 +151,30 @@ function UpdateOutputParameters!(species_list::Vector{Species},
             s_id = output.species_id[i]
             s_pressure = param[i]/system.l
             UpdatePressure!(species_list[s_id], s_pressure, system)
+        
         elseif (output.case[i] == o_dens)
             s_id = output.species_id[i]
             species_list[s_id].dens = param[i]
             s_pressure = param[i] * kb * species_list[s_id].temp
             UpdatePressure!(species_list[s_id], s_pressure, system)
+
         elseif (output.case[i] == o_pressure)
             s_id = output.species_id[i]
             s_pressure = param[i]
             UpdatePressure!(species_list[s_id], s_pressure, system)
+        
+        elseif (output.case[i] == o_total_pressure)
+            # Temperature is kept constant but densities are updated
+            old_total_press = system.total_pressure
+            new_total_press = param[i]
+            system.total_pressure = new_total_press 
+            for s in species_list
+                if s.charge == 0.0
+                    p_fract = s.pressure / old_total_press
+                    s.pressure = p_fract * new_total_press
+                    s.dens = s.pressure / kb / s.temp
+                end
+            end
 
         elseif (output.case[i] == o_pressure_percent)
             s_id = output.species_id[i]
@@ -169,6 +185,7 @@ function UpdateOutputParameters!(species_list::Vector{Species},
             # pressure of the remaining species need to be readjusted
             press_fract_new += param[i]
             push!(part_fract_species, s_id)
+
         elseif (output.case[i] == o_temp)
             s_id = output.species_id[i]
             if s_id == neutral_species_id
@@ -186,6 +203,11 @@ function UpdateOutputParameters!(species_list::Vector{Species},
             end
         elseif (output.case[i] == o_power)
             system.drivP = param[i]
+        elseif (output.case[i] == o_frequency)
+            system.drivf= param[i]
+            system.drivOmega= 2.0*pi*param[i]
+        elseif (output.case[i] == o_duty_ratio)
+            system.P_duty_ratio = param[i]
         end
     end
 
@@ -230,6 +252,7 @@ function UpdateOutputParameters!(species_list::Vector{Species},
             return c_io_error
         end
 
+        # Update density values
         s.dens = s.pressure / (kb * s.temp)
          if s.charge == 0
             press_buffer += s.pressure
@@ -293,7 +316,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
 
         # Dump dens/temp into output block
         for s in species_list
-            output.n_data_frame[!,s.name] = sol[s.id+n_species, :]
+            output.n_data_frame[!,s.name] = sol[s.id+1, :]
             if s.has_temp_eq
                 output.T_data_frame[!,s.name] = sol[s.id, : ]
             end

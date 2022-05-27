@@ -23,6 +23,7 @@ using SharedData: o_scale_lin, o_scale_log
 using SharedData: r_wall_loss
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, neutral_species_id
+using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using InputBlock_System: GetUnits!
 using DataFrames: DataFrame
 
@@ -136,9 +137,36 @@ function EndOutputBlock!(read_step::Int64, output_list::Vector{OutputBlock},
                     errcode = c_io_error
                 end
             end
+
             if (output.case[i] == o_temp)
                 if output.species_id[i] == 0
                     print("***ERROR*** Must specify the 'species' entry for temp outputs\n")
+                    errcode = c_io_error
+                end
+            end
+
+            if (output.case[i] == o_frequency)
+                if system.P_shape != "square"
+                    print("***ERROR*** P_shape must be 'square' in order to use 'frequency' as output parameter\n")
+                    errcode = c_io_error
+                end
+                if system.P_duty_ratio == 1.0
+                    print("***WARNING*** duty_ratio is set to 1.0\n")
+                end
+            end
+
+            if (output.case[i] == o_duty_ratio)
+                if system.P_shape != "square"
+                    print("***ERROR*** P_shape must be 'square' in order to use 'duty_ratio' as output parameter\n")
+                    errcode = c_io_error
+                end
+
+                if output.x_min[i] <= 0.0
+                    print("***ERROR*** Minimum duty ratio must be non-zero and positive\n")
+                    errcode = c_io_error
+                end
+                if output.x_max[i] > 1.0
+                    print("***ERROR*** Maximum duty ratio must be lower or equal 1\n")
                     errcode = c_io_error
                 end
             end
@@ -178,6 +206,12 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
             output.case[i] = o_power
         elseif (var=="time" || var=="t")
             output.case[i] = o_single_run
+        elseif (var=="frequency" || var=="f")
+            output.case[i] = o_frequency
+        elseif (var=="duty_ratio" || var=="dutyratio")
+            output.case[i] = o_duty_ratio
+        elseif (var=="total_pressure" || var=="p_total")
+            output.case[i] = o_total_pressure
         end
     end
 
@@ -305,6 +339,12 @@ function SetupOutputBlock!(output::OutputBlock,
             output.name[i] = string("P%_",sname)
         elseif output.case[i] == o_single_run
             output.name[i] = "time"
+        elseif output.case[i] == o_frequency
+            output.name[i] = "frequency" 
+        elseif output.case[i] == o_duty_ratio
+            output.name[i] = "duty_ratio" 
+        elseif output.case[i] == o_total_pressure
+            output.name[i] = "total_pressure" 
         else
             errcode = c_io_error
             print("***ERROR*** Output parameter not recognized\n")

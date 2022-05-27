@@ -26,12 +26,12 @@ function PowerInputFunction(species::Species, system::System,
         if (system.P_shape == "sinusoidal")
             S_abs = system.drivP/system.V
         elseif (system.P_shape == "square")
-            t_frac = t_sim * system.drivf - floor(t_sim * system.drivf)
-            if (t_frac <= system.P_duty_ratio)
-                S_abs = system.drivP / system.V
-            else
-                S_abs = 0.0
-            end
+                t_frac = t_sim * system.drivf - floor(t_sim * system.drivf)
+                if (t_frac <= system.P_duty_ratio)
+                    S_abs = system.drivP / system.V
+                else
+                    S_abs = 0.0
+                end
         end
     else
         S_abs = 0.0

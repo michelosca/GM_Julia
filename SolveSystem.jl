@@ -54,20 +54,20 @@ function ExecuteProblem(species_list::Vector{Species},
         sol = solve(prob,
             Trapezoid(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-8,
-            reltol=1.e-3,
+            abstol=1.e-10,
+            reltol=1.e-5,
             save_everystep=save_flag
         )
         return sol
     catch
-        open(system.log, "a") do file
+        open(system.log_file, "a") do file
             @printf(file, "***WARNING*** Default Trapezoid solver failed. Rerun with increased convergence tolerances\n")
         end
         sol = solve(prob,
             Trapezoid(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-11,
-            reltol=1.e-6,
+            abstol=1.e-12,
+            reltol=1.e-7,
             save_everystep=save_flag
         )
         return sol
@@ -87,8 +87,15 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     species_list = p[3]
     reaction_list = p[4]
     n_species = length(species_list)
-    dens = y[n_species + 1:end]
-    temp = y[1:n_species]
+    dens = y[2:end]
+    temp = Float64[] 
+    for s in species_list
+        if s.id== sID.electron
+            push!(temp, y[1])
+        else
+            push!(temp, s.temp)
+        end
+    end
 
     # Update species parameters
     errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
@@ -108,16 +115,16 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     # Calculate the electron flux  
     UpdateNegativeFlux!(species_list, system, sID)
 
-    # Generate the dy array
+    ### Generate the dy array
+    # Temperature equation
+    dy[1] = GetTempRateFunction(temp, dens, species_list[sID.electron],
+        species_list, reaction_list, system, sID, t)
     for i in 1:n_species
-        id = i - ((i-1)÷n_species)*n_species
-        species = species_list[id]
+        #id = i - ((i-1)÷n_species)*n_species
+        species = species_list[i]
 
-        # Temperature equation
-        dy[i] = GetTempRateFunction(temp, dens, species, species_list,
-            reaction_list, system, sID, t)
         # Density equation
-        dy[i+n_species] = GetDensRateFunction(temp, dens, species,
+        dy[i+1] = GetDensRateFunction(temp, dens, species,
             species_list, reaction_list, system, sID)
     end
 end
@@ -128,7 +135,9 @@ function GetInitialConditions(species_list::Vector{Species})
     temp = Float64[]
     for s in species_list
         push!(dens, s.dens)
-        push!(temp, s.temp)
+        if s.has_temp_eq
+            push!(temp, s.temp)
+        end
     end
     return dens, temp
 end
