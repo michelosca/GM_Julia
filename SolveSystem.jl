@@ -60,20 +60,16 @@ function ExecuteProblem(species_list::Vector{Species},
         )
         return sol
     catch
-        print("***WARNING*** Trapezoid solver failed. Rerun with Rodas5\n")
-        errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
-        if errcode == c_io_error
-            print("***ERROR*** While updating plasma parameters\n")
-            return c_io_error
+        open(system.log, "a") do file
+            @printf(file, "***WARNING*** Default Trapezoid solver failed. Rerun with increased convergence tolerances\n")
         end
-        PrintSimulationState(temp, dens, species_list, system, sID)
-
         sol = solve(prob,
-            Rodas5(autodiff=false),
+            Trapezoid(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-8,
-            reltol=1.e-3,
-            save_everystep=save_flag)
+            abstol=1.e-11,
+            reltol=1.e-6,
+            save_everystep=save_flag
+        )
         return sol
     end
 

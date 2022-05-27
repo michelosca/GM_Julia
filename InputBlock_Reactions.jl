@@ -21,9 +21,6 @@ using SharedData: c_io_error, e, me, K_to_eV
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: r_elastic, r_wall_loss
 using ReactionSet: K_funct_list
-catch
-    print("ReactionSet module is not present\n")
-end
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
 using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
 using EvaluateExpressions: ReplaceDensSymbols!
@@ -572,10 +569,10 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             for T_e in range(T_min, T_max, length=100)
                 temp[sID.electron] = T_e 
                 if system.prerun
-                if r.case == r_wall_loss
-                    K = r.rate_coefficient(temp, species_list, system, sID) 
-                else
-                    K = r.rate_coefficient(temp, sID) 
+                    if r.case == r_wall_loss
+                        K = r.rate_coefficient(temp, species_list, system, sID) 
+                    else
+                        K = r.rate_coefficient(temp, sID) 
                     end
                 else
                     K = ReplaceExpressionValues(r.rate_coefficient, temp,

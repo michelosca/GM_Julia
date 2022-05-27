@@ -19,6 +19,7 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
+using SharedData: c_io_error 
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf

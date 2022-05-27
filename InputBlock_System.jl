@@ -230,7 +230,6 @@ function EndSystemBlock!(read_step::Int64, system::System)
         if (system.total_pressure > 0)
             print("***NOTE*** TOTAL PRESSURE has been declared in SYSTEM block\n")
             print("  - Species block must be declared AFTER the system block\n")
-            print("  - Species blocks with pressure parameters must be declared AFTER the system block\n")
             print("  - Species pressures declarations (if declared) must be between 0 and 1\n")
             print("  - Output blocks with partial pressure parameters must be declared AFTER the system block\n")
         end

@@ -54,8 +54,8 @@ function run_GM(input)
 
     # Print system, species and reaction lists to terminal
     PrintSystemList(system)
-    PrintSpeciesList(species_list, speciesID)
-    PrintReactionList(reaction_list, species_list, speciesID)
+    PrintSpeciesList(species_list, system)
+    PrintReactionList(reaction_list, species_list, system)
 
     errcode = @time GenerateOutputs!(species_list, reaction_list, system,
         output_list, speciesID)
