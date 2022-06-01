@@ -349,7 +349,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             end
 
             #### Update plasma parameters
-            errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+            errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
             if errcode == c_io_error
                 open(system.log_file,"a") do file
                     @printf(file, "***ERROR*** Error updating plasma parameters while dumping outputs\n")
@@ -365,17 +365,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             # Get K values for the curren time step
             K_list = Float64[time]
             for r in reaction_list
-                if system.prerun
-                    if r.case == r_wall_loss
-                        K = r.rate_coefficient(temp, species_list, system, sID) 
-                    else
-                        K = r.rate_coefficient(temp, sID)
-                    end
-                else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
-                end
-                push!(K_list, prod(dens[r.reactant_species])*K )
+                push!(K_list, prod(dens[r.reactant_species])*r.K_value )
             end
             # Push K data into rate coefficient data_frame
             push!(output.K_data_frame, K_list)
@@ -442,17 +432,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
 
         # Dump K values into buffer 
         for r in reaction_list
-            if system.prerun
-                if r.case == r_wall_loss
-                    K = r.rate_coefficient(temp, species_list, system, sID) 
-                else
-                    K = r.rate_coefficient(temp, sID)
-                end
-            else
-                K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                    species_list, system, sID)
-            end
-            push!(K_list, prod(dens[r.reactant_species])*K )
+            push!(K_list, prod(dens[r.reactant_species])*r.K_value )
         end
         # Push K buffer list into rate coefficient data_frame
         push!(output.K_data_frame, K_list)
@@ -554,6 +534,7 @@ function copy_reaction(r::Reaction)
     new_r.reactant_species = copy(r.reactant_species)
 
     new_r.rate_coefficient = r.rate_coefficient
+    new_r.K_value = copy(r.K_value)
 
     new_r.E_threshold = copy(r.E_threshold)
 

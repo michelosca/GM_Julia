@@ -159,6 +159,7 @@ function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction}
     reaction.case = 0
     reaction.neutral_species_id = Int64[]
     reaction.E_threshold = 0.0
+    reaction.K_value = 0.0
 
 end
 

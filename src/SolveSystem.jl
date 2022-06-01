@@ -100,7 +100,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     end
 
     # Update species parameters
-    errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+    errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
     if errcode == c_io_error
         open(system.log_file,"a") do file
             print(file,"***ERROR*** Updating plasma parameters in ODE function\n")

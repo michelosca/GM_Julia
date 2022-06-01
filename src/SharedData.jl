@@ -75,6 +75,7 @@ mutable struct Reaction
 
     # Rate coefficient function
     rate_coefficient::Union{Float64, Expr, Function}
+    K_value::Float64
 
     # Energy threshold
     E_threshold::Float64

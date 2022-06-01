@@ -19,7 +19,7 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
-using SharedData: c_io_error 
+using SharedData: c_io_error, r_wall_loss 
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf
@@ -30,7 +30,8 @@ using PrintModule: PrintSimulationState
 ###############################################################################
 
 function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
-    species_list::Vector{Species}, system::System, sID::SpeciesID)
+    species_list::Vector{Species}, reaction_list::Vector{Reaction},
+    system::System, sID::SpeciesID)
 
     errcode = 0
 
@@ -50,7 +51,15 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         s.flux = 0.0
     end
 
-    # SECOND: Update parameters that depend on dens,temp and other species parameters
+    # SECOND: Update rate coefficient values that only depend on temperature
+    UpdateRateCoefficientValues!(reaction_list, temp, species_list, system, sID, false)
+    #print("Test check\n")
+    #for r in species_list[sID.O2_a1Ag].reaction_list
+    #    print(r.name," ",r.K_value,"\n")
+    #end
+    #print("\n")
+
+    # THIRD: Update parameters that depend on dens,temp and other species parameters
     system.total_pressure = UpdateTotalPressure(species_list, sID)
     if system.h_id == h_Gudmundsson || system.h_id == h_Monahan 
         system.alpha = UpdateAlpha(dens, species_list, sID.electron)
@@ -68,8 +77,49 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             s.n_sheath = GetSheathDensity(s, temp, species_list, system, sID)
         end
     end
+
+    # FOURTH: Update wall-loss rate coefficients
+    UpdateRateCoefficientValues!(reaction_list, temp, species_list, system, sID, true)
     return errcode 
 end
+
+
+function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
+    temp::Vector{Float64}, species_list::Vector{Species}, system::System,
+    sID::SpeciesID, wall_loss_flag::Bool)
+
+    for r in reaction_list
+        # Updates wall-loss reactions
+        if r.case == r_wall_loss
+            if wall_loss_flag
+                if system.prerun
+                    r.K_value = r.rate_coefficient(temp, species_list, system, sID) 
+                else
+                    r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID)
+                end
+            else
+                continue
+            end
+        end
+
+        # Updates regular reactions
+        if !wall_loss_flag
+            if system.prerun
+                r.K_value = r.rate_coefficient(temp, sID) 
+            else
+                r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
+                    species_list, system, sID)
+            end
+        end
+
+        # Lower bound threshold would be applied here
+        if r.K_value < 0.0
+            r.K_value = 0.0
+        end
+    end
+end
+
 
 function UpdateTotalPressure(species_list::Vector{Species}, sID::SpeciesID)
     p_total = 0.0
@@ -109,13 +159,7 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
         deleteat!(r_species, index)
         
         # Set collision cross section
-        if system.prerun
-            K = r.rate_coefficient(temp, sID)
-        else
-            K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                species_list, system, sID)
-        end
-        cross_section = K / v_th
+        cross_section = r.K_value / v_th
 
         # Density of colliding partners
         n = prod(dens[r_species])
