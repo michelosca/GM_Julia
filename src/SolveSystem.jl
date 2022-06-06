@@ -24,6 +24,7 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
+using DifferentialEquations: ODEProblem, solve, Trapezoid, Rosenbrock23
 using DifferentialEquations: ContinuousCallback, DiscreteCallback
 using DifferentialEquations: CallbackSet
 using DifferentialEquations: terminate!, set_proposed_dt!, get_proposed_dt 
