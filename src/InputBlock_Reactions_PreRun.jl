@@ -59,8 +59,8 @@ function StartReactionsBlock!(reaction_list::Vector{Reaction})
 
     errcode = 0
 
-    global f_ReactionSet = open("ReactionSet.jl","w") 
-    open("ReactionSet.Template","r") do f_temp
+    global f_ReactionSet = open("src/ReactionSet.jl","w") 
+    open("src/ReactionSet.Template","r") do f_temp
         while ! eof(f_temp)
             line_str = readline(f_temp, keep = true)
             if (line_str == "### START REACTION STRINGS ###\n")
@@ -373,7 +373,7 @@ function EndReactionsBlock!(reaction_list::Vector{Reaction},
     errcode = 0 
 
     write_flag = false 
-    open("ReactionSet.Template","r") do f_temp
+    open("src/ReactionSet.Template","r") do f_temp
         while ! eof(f_temp)
             line_str = readline(f_temp, keep = true)
 
