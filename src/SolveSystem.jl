@@ -101,24 +101,28 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     # Update species parameters
     errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
     if errcode == c_io_error
+        system.errcode = errcode 
         PrintErrorMessage(system, "UpdateSpeciesParameters failed")
     end
 
     # First get the positive ion fluxes
     errcode = UpdatePositiveFlux!(species_list)
     if errcode == c_io_error
+        system.errcode = errcode 
         PrintErrorMessage(system, "UpdatePositiveFlux failed")
     end
 
     # Calculate the sheath potential
     errcode = GetSheathVoltage!(system, species_list, sID, t)
     if errcode == c_io_error
+        system.errcode = errcode 
         PrintErrorMessage(system, "GetSheathVoltage failed")
     end
 
     # Calculate the electron flux  
     errcode = UpdateNegativeFlux!(species_list, system, sID)
     if errcode == c_io_error
+        system.errcode = errcode 
         PrintErrorMessage(system, "UpdateNegativeFlux failed")
     end
 
