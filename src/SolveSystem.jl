@@ -24,7 +24,9 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Trapezoid, Rodas5, Rosenbrock23
+using DifferentialEquations: ContinuousCallback, DiscreteCallback
+using DifferentialEquations: CallbackSet
+using DifferentialEquations: terminate!, set_proposed_dt!, get_proposed_dt 
 using Printf
 using PrintModule: PrintErrorMessage, PrintWarningMessage
 
@@ -39,7 +41,15 @@ function ExecuteProblem(species_list::Vector{Species},
     tspan = (0, system.t_end)
     p = (system, sID, species_list, reaction_list )
 
+    # Event handling
+    cb_duty_ratio_off = ContinuousCallback(condition_duty_ratio_off,
+        affect_duty_ratio_off!, save_positions=(true,true))
+    cb_duty_ratio_on = ContinuousCallback(condition_duty_ratio_on,
+        affect_duty_ratio_on!, save_positions=(true,true))
+    cb_error = DiscreteCallback(condition_error, affect_error!)
+    cb = CallbackSet(cb_duty_ratio_on, cb_duty_ratio_off, cb_error)
 
+    # ODE problem
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
 
     if (o_case == o_single_run)
@@ -57,6 +67,7 @@ function ExecuteProblem(species_list::Vector{Species},
             #abstol=1.e-10,
             #reltol=1.e-6,
             maxiters=1.e7,
+            callback = cb,
             save_everystep=save_flag
         )
         return sol
@@ -153,5 +164,65 @@ function GetInitialConditions(species_list::Vector{Species})
     return dens, temp
 end
 
+
+function condition_duty_ratio_off(u, t, integrator)
+    # Event when time has past duty cycle 
+    p = integrator.p
+    system = p[1]
+    if (system.P_shape == "sinusoidal")
+        dr_diff = 1.0
+    elseif (system.P_shape == "square")
+        dr = system.P_duty_ratio
+        dr_time = t * system.drivf - floor(t * system.drivf)
+        dr_diff = dr_time - dr
+    end
+    return dr_diff
+end
+
+function affect_duty_ratio_off!(integrator)
+    # What to do when the event occurs
+    p = integrator.p
+    system = p[1]
+    system.P_absorbed = 0.0 
+    dt = 1.e-12 
+    set_proposed_dt!(integrator, dt) 
+end
+
+function condition_duty_ratio_on(u, t, integrator)
+    # Event when time has past duty cycle 
+    p = integrator.p
+    system = p[1]
+    if (system.P_shape == "sinusoidal")
+        dr_diff = 1.0
+    elseif (system.P_shape == "square")
+        dr = 1.0 - 1.e-10 
+        dr_time = t * system.drivf - floor(t * system.drivf)
+        dr_diff = dr_time - dr
+    end
+    return dr_diff
+end
+
+function affect_duty_ratio_on!(integrator)
+    # What to do when the event occurs
+    p = integrator.p
+    system = p[1]
+    system.P_absorbed = system.drivP / system.V 
+    dt = 1.e-12 
+    set_proposed_dt!(integrator, dt) 
+end
+
+function condition_error(u, t, integrator)
+    # Event when time has past duty cycle 
+    p = integrator.p
+    system = p[1]
+    return system.errcode == c_io_error
+end
+
+function affect_error!(integrator)
+    p = integrator.p
+    system = p[1]
+    PrintErrorMessage(system, "Simulation aborted")
+    terminate!(integrator)
+end
 
 end
