@@ -63,17 +63,7 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if !(sign == 0) 
-                if system.prerun
-                    if r.case == r_wall_loss
-                        K = r.rate_coefficient(temp, species_list, system, sID) 
-                    else
-                        K = r.rate_coefficient(temp, sID) 
-                    end
-                else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
-                end
-                value = sign * prod(dens[r.reactant_species]) * K
+                value = sign * prod(dens[r.reactant_species]) * r.K_value
                 dens_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             end
@@ -120,17 +110,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if (sign != 0)
-                if system.prerun
-                    if r.case == r_wall_loss
-                        K = r.rate_coefficient(temp, species_list, system, sID) 
-                    else
-                        K = r.rate_coefficient(temp, sID) 
-                    end
-                else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
-                end
-                value = sign * prod(dens[r.reactant_species]) * K * Q1 / Q0
+                value = sign * prod(dens[r.reactant_species]) * r.K_value * Q1 / Q0
                 temp_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             else
@@ -142,14 +122,8 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                     m_charged = s.mass
                     Q2 = -3.0 * kb * m_charged / m_neutral
                     t_neutral = temp[n_id]
-                    if system.prerun
-                        K = r.rate_coefficient(temp, sID) 
-                    else
-                        K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                            species_list, system, sID)
-                    end
                     value = Q2 * prod(dens[r.reactant_species]) *
-                        K * (temp[s_id] - t_neutral) / Q0
+                        r.K_value * (temp[s_id] - t_neutral) / Q0
                     temp_funct += value
                     #print("   - Elastic:   ", r.id," - ", value, "\n")
                 end
@@ -167,13 +141,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                     s_index = s_index[1]
                 end
 
-                if system.prerun
-                    K = r.rate_coefficient(temp, sID) 
-                else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
-                end
-                value = -Er * prod(dens[r.reactant_species]) * K / Q0
+                value = -Er * prod(dens[r.reactant_species]) * r.K_value / Q0
                 temp_funct += value
                 #print("   - Ethreshold: ", r.id," - ", value, "\n")
             end

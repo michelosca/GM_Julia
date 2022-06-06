@@ -41,8 +41,9 @@ const s_flux_interpolation = 3
 const c_io_error = 1
 
 # REACTION IDs 
-const r_wall_loss = -2
 const r_elastic = 1
+const r_wall_loss = 2
+const r_lower_threshold = 3
 
 # OUTPUT constants
 const o_scale_lin = -1
@@ -75,6 +76,7 @@ mutable struct Reaction
 
     # Rate coefficient function
     rate_coefficient::Union{Float64, Expr, Function}
+    K_value::Float64
 
     # Energy threshold
     E_threshold::Float64
@@ -136,6 +138,7 @@ mutable struct System
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
+    P_absorbed::Float64                     # power absorbed, W / m^3
     P_shape::String
     P_duty_ratio::Float64
 
@@ -143,6 +146,7 @@ mutable struct System
     total_pressure::Float64
 
     t_end::Float64                          # simulation time, seconds
+    errcode::Int64
 
     alpha::Float64
     Lambda::Float64
@@ -174,6 +178,7 @@ mutable struct OutputBlock
     K_data_frame::DataFrame
     param_data_frame::DataFrame
 
+    first_dump::Bool
     OutputBlock() = new()
 end
 

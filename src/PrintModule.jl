@@ -238,4 +238,20 @@ function PrintSimulationState(temp::Vector{Float64}, dens::Vector{Float64},
     end
 end
 
+function PrintErrorMessage(system::System, message::String)
+
+    open(system.log_file,"a") do file
+        @printf(file, "***ERROR*** %s\n", message)
+    end
+    @printf("***ERROR*** %s\n", message)
+end
+
+function PrintWarningMessage(system::System, message::String)
+
+    open(system.log_file,"a") do file
+        @printf(file, "***WARNING*** %s\n", message)
+    end
+    @printf("***WARNING*** %s\n", message)
+end
+
 end

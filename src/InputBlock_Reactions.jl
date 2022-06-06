@@ -19,7 +19,7 @@ module InputBlock_Reactions
 
 using SharedData: c_io_error, e, me, K_to_eV
 using SharedData: Species, Reaction, System, SpeciesID
-using SharedData: r_elastic, r_wall_loss
+using SharedData: r_elastic, r_wall_loss, r_lower_threshold
 using ReactionSet: K_funct_list
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
 using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
@@ -159,6 +159,7 @@ function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction}
     reaction.case = 0
     reaction.neutral_species_id = Int64[]
     reaction.E_threshold = 0.0
+    reaction.K_value = 0.0
 
 end
 
@@ -434,6 +435,8 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
         reaction.case = r_elastic
     elseif (str == "wall_rate_coefficient")
         reaction.case = r_wall_loss
+    elseif (str == "lower_threshold")
+        reaction.case = r_lower_threshold
     elseif (str == "")
         errcode = 0
     else

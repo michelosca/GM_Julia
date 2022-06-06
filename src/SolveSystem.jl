@@ -21,12 +21,14 @@ using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: o_single_run, c_io_error
 using PlasmaParameters: UpdateSpeciesParameters!
-using PlasmaSheath: GetSheathVoltage
+using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Trapezoid, Rodas5
+using DifferentialEquations: ContinuousCallback, DiscreteCallback
+using DifferentialEquations: CallbackSet
+using DifferentialEquations: terminate!, set_proposed_dt!, get_proposed_dt 
 using Printf
-using PrintModule: PrintSimulationState
+using PrintModule: PrintErrorMessage, PrintWarningMessage
 
 function ExecuteProblem(species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System, sID::SpeciesID,
@@ -39,7 +41,15 @@ function ExecuteProblem(species_list::Vector{Species},
     tspan = (0, system.t_end)
     p = (system, sID, species_list, reaction_list )
 
+    # Event handling
+    cb_duty_ratio_off = ContinuousCallback(condition_duty_ratio_off,
+        affect_duty_ratio_off!, save_positions=(true,true))
+    cb_duty_ratio_on = ContinuousCallback(condition_duty_ratio_on,
+        affect_duty_ratio_on!, save_positions=(true,true))
+    cb_error = DiscreteCallback(condition_error, affect_error!)
+    cb = CallbackSet(cb_duty_ratio_on, cb_duty_ratio_off, cb_error)
 
+    # ODE problem
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
 
     if (o_case == o_single_run)
@@ -54,21 +64,21 @@ function ExecuteProblem(species_list::Vector{Species},
         sol = solve(prob,
             Trapezoid(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-10,
-            reltol=1.e-5,
+            #abstol=1.e-10,
+            #reltol=1.e-6,
             maxiters=1.e7,
+            callback = cb,
             save_everystep=save_flag
         )
         return sol
     catch
-        open(system.log_file, "a") do file
-            @printf(file, "***WARNING*** Default Trapezoid solver failed. Rerun with increased convergence tolerances\n")
-        end
+        PrintWarningMessage(system, "Re-run problem with increases solving tolerances")
         sol = solve(prob,
-            Trapezoid(autodiff=false),
+            #Trapezoid(autodiff=false),
+            Rosenbrock23(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-12,
-            reltol=1.e-7,
+            abstol=1.e-10,
+            reltol=1.e-6,
             maxiters=1.e7,
             save_everystep=save_flag
         )
@@ -100,22 +110,32 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     end
 
     # Update species parameters
-    errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+    errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
     if errcode == c_io_error
-        open(system.log_file,"a") do file
-            print(file,"***ERROR*** Updating plasma parameters in ODE function\n")
-        end
-        return c_io_error
+        system.errcode = errcode 
+        PrintErrorMessage(system, "UpdateSpeciesParameters failed")
     end
 
     # First get the positive ion fluxes
-    UpdatePositiveFlux!(species_list, system)
+    errcode = UpdatePositiveFlux!(species_list)
+    if errcode == c_io_error
+        system.errcode = errcode 
+        PrintErrorMessage(system, "UpdatePositiveFlux failed")
+    end
 
     # Calculate the sheath potential
-    GetSheathVoltage(species_list, system, sID, t)
+    errcode = GetSheathVoltage!(system, species_list, sID, t)
+    if errcode == c_io_error
+        system.errcode = errcode 
+        PrintErrorMessage(system, "GetSheathVoltage failed")
+    end
 
     # Calculate the electron flux  
-    UpdateNegativeFlux!(species_list, system, sID)
+    errcode = UpdateNegativeFlux!(species_list, system, sID)
+    if errcode == c_io_error
+        system.errcode = errcode 
+        PrintErrorMessage(system, "UpdateNegativeFlux failed")
+    end
 
     ### Generate the dy array
     # Temperature equation
@@ -144,5 +164,65 @@ function GetInitialConditions(species_list::Vector{Species})
     return dens, temp
 end
 
+
+function condition_duty_ratio_off(u, t, integrator)
+    # Event when time has past duty cycle 
+    p = integrator.p
+    system = p[1]
+    if (system.P_shape == "sinusoidal")
+        dr_diff = 1.0
+    elseif (system.P_shape == "square")
+        dr = system.P_duty_ratio
+        dr_time = t * system.drivf - floor(t * system.drivf)
+        dr_diff = dr_time - dr
+    end
+    return dr_diff
+end
+
+function affect_duty_ratio_off!(integrator)
+    # What to do when the event occurs
+    p = integrator.p
+    system = p[1]
+    system.P_absorbed = 0.0 
+    dt = 1.e-12 
+    set_proposed_dt!(integrator, dt) 
+end
+
+function condition_duty_ratio_on(u, t, integrator)
+    # Event when time has past duty cycle 
+    p = integrator.p
+    system = p[1]
+    if (system.P_shape == "sinusoidal")
+        dr_diff = 1.0
+    elseif (system.P_shape == "square")
+        dr = 1.0 - 1.e-10 
+        dr_time = t * system.drivf - floor(t * system.drivf)
+        dr_diff = dr_time - dr
+    end
+    return dr_diff
+end
+
+function affect_duty_ratio_on!(integrator)
+    # What to do when the event occurs
+    p = integrator.p
+    system = p[1]
+    system.P_absorbed = system.drivP / system.V 
+    dt = 1.e-12 
+    set_proposed_dt!(integrator, dt) 
+end
+
+function condition_error(u, t, integrator)
+    # Event when time has past duty cycle 
+    p = integrator.p
+    system = p[1]
+    return system.errcode == c_io_error
+end
+
+function affect_error!(integrator)
+    p = integrator.p
+    system = p[1]
+    PrintErrorMessage(system, "Simulation aborted")
+    terminate!(integrator)
+end
 
 end

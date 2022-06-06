@@ -20,6 +20,7 @@ module GM_main
 using SharedData: c_io_error, Species, Reaction, System, SpeciesID, OutputBlock
 using InputData: SetupInputData!
 using PrintModule: PrintSpeciesList, PrintReactionList, PrintSystemList
+using PrintModule: PrintErrorMessage
 using OutputModule: GenerateOutputs!
 
 function run_GM(input)
@@ -60,6 +61,7 @@ function run_GM(input)
     errcode = @time GenerateOutputs!(species_list, reaction_list, system,
         output_list, speciesID)
     if (errcode == c_io_error)
+        PrintErrorMessage(system, "GM run failed")
         return species_list, reaction_list, system, speciesID, output_list 
     end
 

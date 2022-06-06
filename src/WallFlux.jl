@@ -64,7 +64,9 @@ function TempWallFluxFunction(temp::Vector{Float64}, species::Species,
 end
 
 
-function UpdatePositiveFlux!(species_list::Vector{Species}, system::System)
+function UpdatePositiveFlux!(species_list::Vector{Species})
+
+    errcode = 0
 
     # Particle flux of positive ions
     for s in species_list
@@ -76,11 +78,14 @@ function UpdatePositiveFlux!(species_list::Vector{Species}, system::System)
             species_list[s.species_id].flux += -flux
         end
     end
+    return errcode
 end
 
 
 function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
     sID::SpeciesID)
+
+    errcode = 0
 
     solve_method = system.Vsheath_solving_method
     if solve_method == s_ohmic_power 
@@ -94,7 +99,7 @@ function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
         electrons = species_list[sID.electron]
         T_eV = electrons.temp * K_to_eV
         n_e = electrons.dens
-        electron.flux = 0.25 * n_e * electrons.v_thermal *
+        electrons.flux = 0.25 * n_e * electrons.v_thermal *
             exp(-system.plasma_potential/ T_eV)
     else
         for s in species_list
@@ -117,6 +122,7 @@ function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
         end
     end
 
+    return errcode
 end
 
 end

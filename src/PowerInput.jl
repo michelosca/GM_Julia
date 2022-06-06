@@ -23,16 +23,7 @@ function PowerInputFunction(species::Species, system::System,
     sID::SpeciesID, t_sim::Float64)
 
     if (species.id == sID.electron)
-        if (system.P_shape == "sinusoidal")
-            S_abs = system.drivP/system.V
-        elseif (system.P_shape == "square")
-                t_frac = t_sim * system.drivf - floor(t_sim * system.drivf)
-                if (t_frac <= system.P_duty_ratio)
-                    S_abs = system.drivP / system.V
-                else
-                    S_abs = 0.0
-                end
-        end
+        S_abs = system.P_absorbed
     else
         S_abs = 0.0
     end
