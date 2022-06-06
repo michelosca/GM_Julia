@@ -26,9 +26,10 @@ using SharedData: o_pressure_percent, neutral_species_id
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using EvaluateExpressions: ReplaceExpressionValues
 using PlasmaParameters: UpdateSpeciesParameters!
-using PlasmaSheath: GetSheathVoltage
+using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
+using PrintModule: PrintErrorMessage
 
 using CSV
 using Printf
@@ -55,13 +56,13 @@ function GenerateOutputs!(
         
         # This flag is used to determine whether headers must be written on
         # new or existing CSV files
-        first_dump = true
+        output.first_dump = true
 
         if output.case[1] == o_single_run
             sol = @time ExecuteProblem(species_list, reaction_list, system,
                 sID, output.case[1])
-            errcode, first_dump = @time LoadOutputBlock!(output, sol,
-                species_list, reaction_list, system, sID, first_dump)
+            errcode = @time LoadOutputBlock!(sol, output, species_list,
+            reaction_list, system, sID, first_dump)
             if (errcode == c_io_error) return errcode end
         else # Parameter sweep 
 
@@ -111,9 +112,8 @@ function GenerateOutputs!(
                 # Run problem
                 sol = @time ExecuteProblem(species_list_run,
                     reaction_list_run, system_run, sID)
-                errcode, first_dump = LoadOutputBlock!(output, sol,
-                    species_list_run, reaction_list_run, system_run, sID,
-                    first_dump, param)
+                errcode = LoadOutputBlock!(sol, output, species_list_run,
+                    reaction_list_run, system_run, sID, param)
                 if (errcode == c_io_error) return errcode end
 
                 # Update step
@@ -281,10 +281,9 @@ function UpdatePressure!(s::Species, s_pressure::Float64, system::System)
 end
 
 
-function LoadOutputBlock!(output::OutputBlock, sol,
+function LoadOutputBlock!(sol, output::OutputBlock,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
-    system::System, sID::SpeciesID, first_output_dump::Bool, 
-    param::Vector{Float64}=Float64[])
+    system::System, sID::SpeciesID, param::Vector{Float64}=Float64[])
 
     errcode = 0
     print("Load output data...\n")
@@ -293,15 +292,15 @@ function LoadOutputBlock!(output::OutputBlock, sol,
     K_filename = string(system.folder,"K",output.label,".csv")
     param_filename = string(system.folder,"param",output.label,".csv")
     if isfile(T_filename)
-        if first_output_dump
+        if output.first_dump
             write_header = true
-            first_output_dump = false
+            output.first_dump = false
         else
             write_header = false
         end
     else
         write_header = true
-        first_output_dump = false
+        output.first_dump = false
     end
 
     n_species = length(species_list)
@@ -351,16 +350,26 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             #### Update plasma parameters
             errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
             if errcode == c_io_error
-                open(system.log_file,"a") do file
-                    @printf(file, "***ERROR*** Error updating plasma parameters while dumping outputs\n")
-                end
-                return c_io_error
+                PrintErrorMessage(system, "UpdateSpeciesParameters failed")
+                return errcode
             end
 
             #### Update flux and potential values 
-            UpdatePositiveFlux!(species_list, system)
-            GetSheathVoltage(species_list, system, sID, time)
-            UpdateNegativeFlux!(species_list, system, sID)
+            errcode = UpdatePositiveFlux!(species_list)
+            if errcode == c_io_error
+                PrintErrorMessage(system, "UpdatePositiveFlux failed")
+                return errcode
+            end
+            errcode = GetSheathVoltage!(system, species_list, sID, time)
+            if errcode == c_io_error
+                PrintErrorMessage(system, "GetSheathVoltage failed")
+                return errcode
+            end
+            errcode = UpdateNegativeFlux!(species_list, system, sID)
+            if errcode == c_io_error
+                PrintErrorMessage(system, "UpdateNegativeFlux failed")
+                return errcode
+            end
             
             # Get K values for the curren time step
             K_list = Float64[time]
@@ -440,7 +449,7 @@ function LoadOutputBlock!(output::OutputBlock, sol,
             append=true , writeheader=write_header)
     end
 
-    return errcode, first_output_dump
+    return errcode
 end
 
 

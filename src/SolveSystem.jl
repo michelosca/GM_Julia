@@ -21,12 +21,12 @@ using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: o_single_run, c_io_error
 using PlasmaParameters: UpdateSpeciesParameters!
-using PlasmaSheath: GetSheathVoltage
+using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Trapezoid, Rodas5
+using DifferentialEquations: ODEProblem, solve, Trapezoid, Rodas5, Rosenbrock23
 using Printf
-using PrintModule: PrintSimulationState
+using PrintModule: PrintErrorMessage, PrintWarningMessage
 
 function ExecuteProblem(species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System, sID::SpeciesID,
@@ -54,21 +54,20 @@ function ExecuteProblem(species_list::Vector{Species},
         sol = solve(prob,
             Trapezoid(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-10,
-            reltol=1.e-5,
+            #abstol=1.e-10,
+            #reltol=1.e-6,
             maxiters=1.e7,
             save_everystep=save_flag
         )
         return sol
     catch
-        open(system.log_file, "a") do file
-            @printf(file, "***WARNING*** Default Trapezoid solver failed. Rerun with increased convergence tolerances\n")
-        end
+        PrintWarningMessage(system, "Re-run problem with increases solving tolerances")
         sol = solve(prob,
-            Trapezoid(autodiff=false),
+            #Trapezoid(autodiff=false),
+            Rosenbrock23(autodiff=false),
             dt=1.e-12,
-            abstol=1.e-12,
-            reltol=1.e-7,
+            abstol=1.e-10,
+            reltol=1.e-6,
             maxiters=1.e7,
             save_everystep=save_flag
         )
@@ -102,20 +101,26 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     # Update species parameters
     errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
     if errcode == c_io_error
-        open(system.log_file,"a") do file
-            print(file,"***ERROR*** Updating plasma parameters in ODE function\n")
-        end
-        return c_io_error
+        PrintErrorMessage(system, "UpdateSpeciesParameters failed")
     end
 
     # First get the positive ion fluxes
-    UpdatePositiveFlux!(species_list, system)
+    errcode = UpdatePositiveFlux!(species_list)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdatePositiveFlux failed")
+    end
 
     # Calculate the sheath potential
-    GetSheathVoltage(species_list, system, sID, t)
+    errcode = GetSheathVoltage!(system, species_list, sID, t)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "GetSheathVoltage failed")
+    end
 
     # Calculate the electron flux  
-    UpdateNegativeFlux!(species_list, system, sID)
+    errcode = UpdateNegativeFlux!(species_list, system, sID)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdateNegativeFlux failed")
+    end
 
     ### Generate the dy array
     # Temperature equation

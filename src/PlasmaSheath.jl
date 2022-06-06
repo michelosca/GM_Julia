@@ -31,8 +31,10 @@ using Roots: find_zeros
 #   - SheathVoltage_OhmicPowerSource
 #   - SheathVoltage_InterpolateFluxEquation 
 
-function GetSheathVoltage(species_list::Vector{Species}, system::System,
+function GetSheathVoltage!(system::System, species_list::Vector{Species},
     sID::SpeciesID, time::Float64)
+
+    errcode = 0
 
     # Obtain the positive charged particles flux and solve for the potential
     solve_method = system.Vsheath_solving_method
@@ -51,6 +53,7 @@ function GetSheathVoltage(species_list::Vector{Species}, system::System,
         print("***WARNING*** No potential sheath calculation done\n")
     end
     system.plasma_potential = V_sheath
+    return errcode
 end
 
 function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},

@@ -19,11 +19,11 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
-using SharedData: c_io_error, r_wall_loss 
+using SharedData: c_io_error, r_wall_loss, r_lower_threshold 
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf
-using PrintModule: PrintSimulationState
+using PrintModule: PrintErrorMessage 
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -39,12 +39,10 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     for s in species_list
         s.temp = temp[s.id]
         if s.temp < 0.0
-            open(system.log_file, "a") do file
-                @printf(file,"***ERROR*** %s temperature is negative: %15g K\n", s.name, s.temp)
-                @printf("***ERROR*** %s temperature is negative: %15g K\n", s.name, s.temp)
-            end
-            PrintSimulationState(temp, dens, species_list, system, sID)
-            #return c_io_error
+            err_message = @sprintf("%s temperature is negative: %15g eV",
+                s.name, s.temp*K_to_eV)
+            PrintErrorMessage(system, err_message) 
+            return c_io_error
         end
         s.dens = dens[s.id]
         s.pressure = s.dens * kb * s.temp
@@ -52,34 +50,77 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     end
 
     # SECOND: Update rate coefficient values that only depend on temperature
-    UpdateRateCoefficientValues!(reaction_list, temp, species_list, system, sID, false)
-    #print("Test check\n")
-    #for r in species_list[sID.O2_a1Ag].reaction_list
-    #    print(r.name," ",r.K_value,"\n")
-    #end
-    #print("\n")
+    errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
+        system, sID, false)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdateRateCoefficientValues (regular collisions) failed")
+        return c_io_error
+    end
 
     # THIRD: Update parameters that depend on dens,temp and other species parameters
-    system.total_pressure = UpdateTotalPressure(species_list, sID)
+    errcode = UpdateTotalPressure!(system, species_list, sID)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdateTotalPressure failed")
+        return c_io_error
+    end
+
     if system.h_id == h_Gudmundsson || system.h_id == h_Monahan 
-        system.alpha = UpdateAlpha(dens, species_list, sID.electron)
+        errcode = UpdateElectronegativity!(system, dens, species_list,
+            sID.electron)
+        if errcode == c_io_error
+            PrintErrorMessage(system, "UpdateElectronegativity failed")
+            return c_io_error
+        end
     end
 
     for s in species_list
-        s.v_thermal = GetThermalSpeed(s)
-        s.v_Bohm = GetBohmSpeed(temp[sID.electron], s.mass)
-        s.mfp = GetMFP(temp, dens, s, species_list, system, sID)
+        errcode = GetThermalSpeed!(s)
+        if errcode == c_io_error
+            err_message = @sprintf("GetThermalSpeed for %s failed", s.name)
+            PrintErrorMessage(system, err_message)
+            return c_io_error
+        end
 
-        #s.gamma = GetStickingCoefficient(s, species_list, sID)
-        s.D = GetNeutralDiffusionCoeff(s)
+        errcode = GetBohmSpeed!(s, temp[sID.electron])
+        if errcode == c_io_error
+            err_message = @sprintf("GetBohmSpeed for %s failed", s.name)
+            PrintErrorMessage(system, err_message)
+            return c_io_error
+        end
+        
+        errcode = GetMFP!(s, dens, species_list)
+        if errcode == c_io_error
+            err_message = @sprintf("GetMFP for %s failed", s.name)
+            PrintErrorMessage(system, err_message)
+            return c_io_error
+        end
+
+        #errcode = GetStickingCoefficient!(s, species_list, sID)
+        errcode = GetNeutralDiffusionCoeff!(s)
+        if errcode == c_io_error
+            err_message = @sprintf("GetNeutralDiffusionCoeff for %s failed",
+                s.name)
+            PrintErrorMessage(system, err_message)
+            return c_io_error
+        end
 
         if s.charge > 0.0
-            s.n_sheath = GetSheathDensity(s, temp, species_list, system, sID)
+            errcode = GetSheathDensity!(s, species_list, system, sID)
+            if errcode == c_io_error
+                err_message = @sprintf("GetSheathDensity for %s failed",s.name)
+                PrintErrorMessage(system, err_message)
+                return c_io_error
+            end
         end
     end
 
     # FOURTH: Update wall-loss rate coefficients
-    UpdateRateCoefficientValues!(reaction_list, temp, species_list, system, sID, true)
+    errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
+        system, sID, true)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdateRateCoefficientValues (wall collisions) failed")
+        return c_io_error
+    end
     return errcode 
 end
 
@@ -87,6 +128,8 @@ end
 function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
     temp::Vector{Float64}, species_list::Vector{Species}, system::System,
     sID::SpeciesID, wall_loss_flag::Bool)
+
+    errcode = 0
 
     for r in reaction_list
         # Updates wall-loss reactions
@@ -114,14 +157,22 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
         end
 
         # Lower bound threshold would be applied here
-        if r.K_value < 0.0
-            r.K_value = 0.0
-        end
+        #if r.K_value < 0.0
+        #    if r.case == r_lower_threshold
+        #        r.K_value = 0.0
+        #    else
+        #        err_message = @sprintf("%s has negative rate coefficient at Te = %15g eV",
+        #            r.name, temp[sID.electron]*K_to_eV)
+        #        PrintErrorMessage(system, err_message) 
+        #        errcode = c_io_error
+        #    end
+        #end
     end
+    return errcode
 end
 
 
-function UpdateTotalPressure(species_list::Vector{Species}, sID::SpeciesID)
+function UpdateTotalPressure!(system::System, species_list::Vector{Species}, sID::SpeciesID)
     p_total = 0.0
     for s in species_list
         if s.id == sID.electron
@@ -129,15 +180,16 @@ function UpdateTotalPressure(species_list::Vector{Species}, sID::SpeciesID)
         end
         p_total += s.pressure 
     end
-    return p_total
+    system.total_pressure = p_total
+    return 0
 end
 
-function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
-    species_list::Vector{Species}, system::System, sID::SpeciesID)
+function GetMFP!(species::Species, dens::Vector{Float64}, species_list::Vector{Species})
     # The mean-free-path is calculated using the reaction list associated to
     # species. This reaction_list is attached when reading the input deck and
     # for the case of neutrals and pos/neg-ions only reactions are included which
     # do not involve electrons, i.e. neutral-neutral or neutral-ion reactions
+    errcode = 0
 
     ilambda = 0.0         # inverse mean-free-path
 
@@ -175,44 +227,56 @@ function GetMFP(temp::Vector{Float64}, dens::Vector{Float64}, species::Species,
         ilambda = 1.e-100
     end
 
-    lambda = 1.0/ilambda
-    return lambda
+    species.mfp = 1.0/ilambda
+    return errcode 
 end
 
 
-function UpdateAlpha(dens::Vector{Float64}, species_list::Vector{Species},
-    electron_id::Int64)
+function UpdateElectronegativity!(system::System, dens::Vector{Float64},
+    species_list::Vector{Species}, electron_id::Int64)
     # Alpha parameter: is the ratio of negative ion species to electron density
+    errcode = 0
 
-    alpha = 0.0
+    negative_ion_dens = 0.0
     for s in species_list
         if s.id == electron_id
             continue
         elseif s.charge < 0.0
             n = dens[s.id]
             if n > 0.0
-                alpha += n 
+                negative_ion_dens += n 
             end
         end
     end
-    alpha /= dens[electron_id]
-    return alpha
+
+    system.alpha = negative_ion_dens / dens[electron_id]
+    return errcode 
 end
 
 
-function GetBohmSpeed(Te::Float64, mass::Float64)
+function GetBohmSpeed!(species::Species, Te::Float64)
 
-    uB = sqrt(kb * Te / mass)
-    return uB
+    errcode = 0
+    try
+        species.v_Bohm = sqrt(kb * Te / species.mass)
+    catch
+        errcode = c_io_error
+    end
+    return errcode 
 end
 
 
-function GetThermalSpeed(species::Species)
+function GetThermalSpeed!(species::Species)
+    errcode = 0
 
     T = species.temp
     m = species.mass
-    v_th = sqrt(8.0* kb * T /  m / pi)
-    return v_th
+    try
+        species.v_thermal = sqrt(8.0* kb * T /  m / pi)
+    catch
+        errcode = c_io_error
+    end
+    return errcode 
 end
 
 
@@ -226,19 +290,21 @@ function GetLambda(system::System)
 end
 
 
-function GetNeutralDiffusionCoeff(species::Species)
+function GetNeutralDiffusionCoeff!(species::Species)
     # Neutral Diffusion Coefficient
 
     mfp = species.mfp
-    D = e * species.temp * mfp / (species.v_thermal * species.mass)
-    return D
+    species.D = e * species.temp * mfp / (species.v_thermal * species.mass)
+
+    return 0 
 end
 
-function GetSheathDensity(species::Species, temp::Vector{Float64},
-    species_list::Vector{Species}, system::System, sID::SpeciesID)
+function GetSheathDensity!(species::Species, species_list::Vector{Species},
+    system::System, sID::SpeciesID)
     # Calculates the density at sheath edge
     # This is only interesting for positive ions. Used later on to
     # calculate the wall-flux = u_B * n_Sheath
+    errcode = 0
 
     n_0 = species.dens
 
@@ -263,8 +329,8 @@ function GetSheathDensity(species::Species, temp::Vector{Float64},
         # ICP Ar/O2
         R = system.radius
         L = system.l
-        Te = temp[sID.electron]
-        Ti = temp[species.id]
+        Te = species_list[sID.electron].temp
+        Ti = species.temp
         gamma = Te / Ti
         alpha = system.alpha
         lambda = species.mfp
@@ -286,7 +352,7 @@ function GetSheathDensity(species::Species, temp::Vector{Float64},
             sqrt_Te_Ti = sqrt(Te/Ti)
             mfp = species.mfp
             uTh = species.v_thermal 
-            K_recombination = GetRecombinationRate(species, temp, species_list, system, sID)
+            K_recombination = GetRecombinationRate(species)
             ni_star = 15.0/56.0 * uTh / K_recombination / mfp
             n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
 
@@ -306,39 +372,36 @@ function GetSheathDensity(species::Species, temp::Vector{Float64},
         #    print("h " , h,"\n\n")
         else
             h = 0.0
+            errcode = c_io_error
+            PrintErrorMessage(system, "No sheath model found") 
         end
     end
-    n_sheath = n_0 * h
+    species.n_sheath = n_0 * h
 
-    return n_sheath
+    return errcode 
 end
 
 
-function GetRecombinationRate(species::Species, temp::Vector{Float64},
-    species_list::Vector{Species}, system::System, sID::SpeciesID)
+function GetRecombinationRate(species::Species) 
 
     s_id = species.id
 
-    K_recombination = 0.0
+    K_recomb= 0.0
     for r in species.reaction_list
         s_index = findall( x -> x == s_id, r.involved_species )[1]
         sign = r.species_balance[s_index]
         if sign < 0
-            if system.prerun
-                K = r.rate_coefficient(temp, sID) 
-            else
-                K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                    species_list, system, sID)
-            end
-            K_recombination += K
+            K_recomb += r.K_value
         end
     end
-    return K_recombination
+    return K_recomb
 end
 
 
-function GetStickingCoefficient(species::Species,
+function GetStickingCoefficient!(species::Species,
     species_list::Vector{Species}, sID::SpeciesID)
+
+    errcode = 0
 
     if species.id == sID.O
         # This is for stainless steel walls ( Gudmundsson 2007)
@@ -350,12 +413,10 @@ function GetStickingCoefficient(species::Species,
         else
             gamma = 0.1438 * exp(2.5069/pO2_mTorr)
         end
-        #print("Sticking coeff. ", gamma,"\n")
-    else
-        gamma = species.gamma
+        s.gamma = gamma
     end
 
-    return gamma
+    return errcode 
 end
 
 

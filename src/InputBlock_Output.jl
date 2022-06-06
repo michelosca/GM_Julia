@@ -291,6 +291,7 @@ function InitializeOutputBlock!(output::OutputBlock)
     output.param_data_frame = DataFrame()
     output.name = String[]
     output.label = ""
+    output.first_dump = true
 end
 
 

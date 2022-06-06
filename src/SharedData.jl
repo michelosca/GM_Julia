@@ -41,8 +41,9 @@ const s_flux_interpolation = 3
 const c_io_error = 1
 
 # REACTION IDs 
-const r_wall_loss = -2
 const r_elastic = 1
+const r_wall_loss = 2
+const r_lower_threshold = 3
 
 # OUTPUT constants
 const o_scale_lin = -1
@@ -175,6 +176,7 @@ mutable struct OutputBlock
     K_data_frame::DataFrame
     param_data_frame::DataFrame
 
+    first_dump::Bool
     OutputBlock() = new()
 end
 
