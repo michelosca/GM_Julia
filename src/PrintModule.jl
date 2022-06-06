@@ -241,9 +241,9 @@ end
 function PrintErrorMessage(system::System, message::String)
 
     open(system.log_file,"a") do file
-        @printf(file, "***ERROR*** %s\n, ", message)
+        @printf(file, "***ERROR*** %s\n", message)
     end
-    @printf("***ERROR*** %s\n, ", message)
+    @printf("***ERROR*** %s\n", message)
 end
 
 function PrintWarningMessage(system::System, message::String)

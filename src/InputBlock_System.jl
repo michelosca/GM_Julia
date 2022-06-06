@@ -61,6 +61,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivf = 0.0
         system.drivOmega = 0.0
         system.drivP = 0.0
+        system.P_absorbed = 0.0
         system.P_shape = "sinusoidal"
         system.P_duty_ratio = 1.0
         system.t_end = 0.0
@@ -68,6 +69,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.Lambda = 0.0
         system.prerun = true
         system.plasma_potential = 100.0
+        system.errcode = 0
 
         # Generate a log file name
         now_stamp = Dates.now()
@@ -236,6 +238,7 @@ function EndSystemBlock!(read_step::Int64, system::System)
 
         system.Lambda = GetLambda(system)
         system.drivOmega = system.drivf * 2.0 * pi
+        system.P_absorbed = system.drivP / system.V
     end
     return errcode
 end

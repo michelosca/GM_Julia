@@ -62,7 +62,7 @@ function GenerateOutputs!(
             sol = @time ExecuteProblem(species_list, reaction_list, system,
                 sID, output.case[1])
             errcode = @time LoadOutputBlock!(sol, output, species_list,
-            reaction_list, system, sID, first_dump)
+            reaction_list, system, sID)
             if (errcode == c_io_error) return errcode end
         else # Parameter sweep 
 
@@ -472,6 +472,7 @@ function copy_system(system::System)
     s.drivf = copy(system.drivf)
     s.drivOmega = copy(system.drivOmega)
     s.drivP = copy(system.drivP)
+    s.P_absorbed = copy(system.P_absorbed)
     s.P_shape = system.P_shape
     s.P_duty_ratio = copy(system.P_duty_ratio)
 
@@ -479,6 +480,7 @@ function copy_system(system::System)
     s.total_pressure = copy(system.total_pressure)
 
     s.t_end = copy(system.t_end)
+    s.errcode = copy(system.errcode)
 
     s.alpha = copy(system.alpha)
     s.Lambda = copy(system.Lambda)

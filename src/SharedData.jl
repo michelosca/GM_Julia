@@ -138,6 +138,7 @@ mutable struct System
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
+    P_absorbed::Float64                     # power absorbed, W / m^3
     P_shape::String
     P_duty_ratio::Float64
 
@@ -145,6 +146,7 @@ mutable struct System
     total_pressure::Float64
 
     t_end::Float64                          # simulation time, seconds
+    errcode::Int64
 
     alpha::Float64
     Lambda::Float64

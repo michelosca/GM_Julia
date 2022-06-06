@@ -21,6 +21,7 @@ using PowerInput: PowerInputFunction
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: me, K_to_eV, amu, e, eps0
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
+using SharedData: c_io_error
 using Roots: find_zeros
 
 ###############################################################################
@@ -35,29 +36,31 @@ function GetSheathVoltage!(system::System, species_list::Vector{Species},
     sID::SpeciesID, time::Float64)
 
     errcode = 0
+    if system.errcode == c_io_error
+        return errcode 
+    end
 
     # Obtain the positive charged particles flux and solve for the potential
     solve_method = system.Vsheath_solving_method
 
-    V_sheath = 0.0
     if solve_method == s_ohmic_power 
         electron_species = species_list[sID.electron]
-        V_sheath = SheathVoltage_OhmicPowerSource(electron_species, system,
+        errcode = SheathVoltage_OhmicPowerSource(electron_species, system,
             sID, time)
     elseif solve_method == s_flux_balance 
-        V_sheath = SheathVoltage_FluxBalanceEquation(species_list,
+        errcode = SheathVoltage_FluxBalanceEquation(species_list, system,
             sID.electron)
     elseif solve_method == s_flux_interpolation
-        V_sheath = SheathVoltage_InterpolateFluxEquation(species_list, system)
+        errcode = SheathVoltage_InterpolateFluxEquation(species_list, system)
     else
-        print("***WARNING*** No potential sheath calculation done\n")
+        PrintErrorMessage(system, "No potential sheath calculation done")
+        errcode = c_io_error
     end
-    system.plasma_potential = V_sheath
     return errcode
 end
 
 function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
-    electron_id::Int64)
+    system::System, electron_id::Int64)
 
     positive_flux = 0.0 # Fluxes of positive charged particles
     electrons = species_list[electron_id]
@@ -70,20 +73,21 @@ function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
         end
     end
     #print("Positive flux ", positive_flux,"\n")
-    V_sheath = -log(positive_flux / v_th / n_e * 4.0) * Te_eV
+    system.plasma_potential = -log(positive_flux / v_th / n_e * 4.0) * Te_eV
 
-    return V_sheath
+    return 0 
 end
 
-function SheathVoltage_OhmicPowerSource(electrons::Species, system::System, sID::SpeciesID, time::Float64)
+function SheathVoltage_OhmicPowerSource(electrons::Species, system::System,
+    sID::SpeciesID, time::Float64)
     # From: A. Hurlbatt et al. (2017)
 
     S_ohm = PowerInputFunction(electrons, system, sID, time)
     mfp = electrons.mfp 
     v_th = electrons.v_thermal
-    V_sheath = 3.0/2.0 * S_ohm*e*mfp / (me*eps0*system.drivOmega^2*v_th)
+    system.plasma_potential = 3.0/2.0 * S_ohm*e*mfp / (me*eps0*system.drivOmega^2*v_th)
 
-    return V_sheath
+    return 0 
 end
 
 
@@ -125,7 +129,8 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
             fact = 0.5
         end
     end
-    return V_guess
+    system.plasma_potential = V_guess
+    return 0 
 end
 
 end
