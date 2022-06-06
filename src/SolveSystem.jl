@@ -46,7 +46,7 @@ function ExecuteProblem(species_list::Vector{Species},
     cb_duty_ratio_off = ContinuousCallback(condition_duty_ratio_off,
         affect_duty_ratio_off!, save_positions=(true,true))
     cb_duty_ratio_on = ContinuousCallback(condition_duty_ratio_on,
-        affect_duty_ratio_on!, save_positions=(true,true))
+        affect_duty_ratio_on!, affect_neg! = nothing, save_positions=(true,true))
     cb_error = DiscreteCallback(condition_error, affect_error!)
     cb = CallbackSet(cb_duty_ratio_on, cb_duty_ratio_off, cb_error)
 
@@ -185,7 +185,7 @@ function affect_duty_ratio_off!(integrator)
     p = integrator.p
     system = p[1]
     system.P_absorbed = 0.0 
-    dt = 1.e-12 
+    dt = get_proposed_dt(integrator)
     set_proposed_dt!(integrator, dt) 
 end
 
@@ -196,9 +196,7 @@ function condition_duty_ratio_on(u, t, integrator)
     if (system.P_shape == "sinusoidal")
         dr_diff = 1.0
     elseif (system.P_shape == "square")
-        dr = 1.0 - 1.e-10 
-        dr_time = t * system.drivf - floor(t * system.drivf)
-        dr_diff = dr_time - dr
+        dr_diff = t * system.drivf - floor(t * system.drivf + 0.5)
     end
     return dr_diff
 end
@@ -208,7 +206,7 @@ function affect_duty_ratio_on!(integrator)
     p = integrator.p
     system = p[1]
     system.P_absorbed = system.drivP / system.V 
-    dt = 1.e-12 
+    dt = get_proposed_dt(integrator)
     set_proposed_dt!(integrator, dt) 
 end
 
