@@ -59,9 +59,7 @@ function ExecuteProblem(species_list::Vector{Species},
     print("Solving single problem ...\n")
     #PrintSimulationState(temp, dens, species_list, system, sID)
     sol = solve(prob,
-        #Trapezoid(autodiff=false),
-        #Rosenbrock23(autodiff=false),
-        ImplicitEuler(autodiff=false),
+        Trapezoid(autodiff=false),
         dt=1.e-12,
         #abstol=1.e-8,
         #reltol=1.e-6,
@@ -154,12 +152,16 @@ function condition_duty_ratio(out, u, t, integrator)
     # Event when time has past duty cycle 
     p = integrator.p
     system = p[1]
-    if (system.P_shape == "sinusoidal")
-        out = 1.0
-    elseif (system.P_shape == "square")
-        dr = system.P_duty_ratio
-        out[1] = t * system.drivf - floor(t * system.drivf) - dr 
-        out[2] = t * system.drivf - round(t * system.drivf)
+    freq = system.drivf
+    period_10 = 10.0 / freq
+    dr = system.P_duty_ratio
+    out[1] = period_10 * freq - floor(period_10 * freq) - dr 
+    out[2] = period_10 * freq - round(period_10 * freq)
+    if t > period_10
+        if (system.P_shape == "square")
+            out[1] = t * freq - floor(t * freq) - dr 
+            out[2] = t * freq - round(t * freq)
+        end
     end
 end
 
@@ -172,9 +174,6 @@ function affect_duty_ratio!(integrator, cb_index)
     if cb_index == 1
         # Power off
         system.P_absorbed = 0.0 
-        integrator.opts.abstol = 1.e-12
-        integrator.opts.reltol = 1.e-8
-        dt = 1.e-14 #get_proposed_dt(integrator)
         @printf(" Power switch off. Time = %10g s; dt = %10g s\n", integrator.t, dt)
     elseif cb_index == 2
         # Power on
