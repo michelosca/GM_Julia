@@ -24,8 +24,8 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Trapezoid, Rosenbrock23
-using DifferentialEquations: ContinuousCallback, DiscreteCallback
+using DifferentialEquations: ODEProblem, solve, Trapezoid, Rosenbrock23, ImplicitEuler
+using DifferentialEquations: DiscreteCallback, VectorContinuousCallback
 using DifferentialEquations: CallbackSet
 using DifferentialEquations: terminate!, set_proposed_dt!, get_proposed_dt 
 using Printf
@@ -42,12 +42,10 @@ function ExecuteProblem(species_list::Vector{Species},
     p = (system, sID, species_list, reaction_list )
 
     # Event handling
-    cb_duty_ratio_off = ContinuousCallback(condition_duty_ratio_off,
-        affect_duty_ratio_off!, save_positions=(true,true))
-    cb_duty_ratio_on = ContinuousCallback(condition_duty_ratio_on,
-        affect_duty_ratio_on!, affect_neg! = nothing, save_positions=(true,true))
+    cb_duty_ratio = VectorContinuousCallback(condition_duty_ratio,
+        affect_duty_ratio!, 2, affect_neg! = nothing, save_positions=(true,true))
     cb_error = DiscreteCallback(condition_error, affect_error!)
-    cb = CallbackSet(cb_duty_ratio_on, cb_duty_ratio_off, cb_error)
+    cb = CallbackSet(cb_duty_ratio, cb_error)
 
     # ODE problem
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
@@ -62,10 +60,11 @@ function ExecuteProblem(species_list::Vector{Species},
     #PrintSimulationState(temp, dens, species_list, system, sID)
     sol = solve(prob,
         #Trapezoid(autodiff=false),
-        Rosenbrock23(autodiff=false),
+        #Rosenbrock23(autodiff=false),
+        ImplicitEuler(autodiff=false),
         dt=1.e-12,
-        abstol=1.e-8,
-        reltol=1.e-6,
+        #abstol=1.e-8,
+        #reltol=1.e-6,
         maxiters=1.e7,
         callback = cb,
         save_everystep=save_flag
@@ -151,49 +150,40 @@ function GetInitialConditions(species_list::Vector{Species})
 end
 
 
-function condition_duty_ratio_off(u, t, integrator)
+function condition_duty_ratio(out, u, t, integrator)
     # Event when time has past duty cycle 
     p = integrator.p
     system = p[1]
     if (system.P_shape == "sinusoidal")
-        dr_diff = 1.0
+        out = 1.0
     elseif (system.P_shape == "square")
         dr = system.P_duty_ratio
-        dr_time = t * system.drivf - floor(t * system.drivf)
-        dr_diff = dr_time - dr
+        out[1] = t * system.drivf - floor(t * system.drivf) - dr 
+        out[2] = t * system.drivf - round(t * system.drivf)
     end
-    return dr_diff
 end
 
-function affect_duty_ratio_off!(integrator)
+
+function affect_duty_ratio!(integrator, cb_index)
     # What to do when the event occurs
     p = integrator.p
     system = p[1]
-    system.P_absorbed = 0.0 
-    dt = get_proposed_dt(integrator)
-    set_proposed_dt!(integrator, dt) 
-end
-
-function condition_duty_ratio_on(u, t, integrator)
-    # Event when time has past duty cycle 
-    p = integrator.p
-    system = p[1]
-    if (system.P_shape == "sinusoidal")
-        dr_diff = 1.0
-    elseif (system.P_shape == "square")
-        dr_diff = t * system.drivf - floor(t * system.drivf + 0.5)
+    dt = 1.e-12 #get_proposed_dt(integrator)
+    if cb_index == 1
+        # Power off
+        system.P_absorbed = 0.0 
+        integrator.opts.abstol = 1.e-12
+        integrator.opts.reltol = 1.e-8
+        dt = 1.e-14 #get_proposed_dt(integrator)
+        @printf(" Power switch off. Time = %10g s; dt = %10g s\n", integrator.t, dt)
+    elseif cb_index == 2
+        # Power on
+        system.P_absorbed = system.drivP / system.V 
+        @printf(" Power switch on.  Time = %10g s; dt = %10g s\n", integrator.t, dt)
     end
-    return dr_diff
-end
-
-function affect_duty_ratio_on!(integrator)
-    # What to do when the event occurs
-    p = integrator.p
-    system = p[1]
-    system.P_absorbed = system.drivP / system.V 
-    dt = get_proposed_dt(integrator)
     set_proposed_dt!(integrator, dt) 
 end
+
 
 function condition_error(u, t, integrator)
     # Event when time has past duty cycle 
@@ -201,6 +191,7 @@ function condition_error(u, t, integrator)
     system = p[1]
     return system.errcode == c_io_error
 end
+
 
 function affect_error!(integrator)
     p = integrator.p
