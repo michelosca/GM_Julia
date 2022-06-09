@@ -50,22 +50,17 @@ function ExecuteProblem(species_list::Vector{Species},
     # ODE problem
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
 
-    if (o_case == o_single_run)
-        save_flag = true
-    else
-        save_flag = false
-    end
-
     print("Solving single problem ...\n")
     #PrintSimulationState(temp, dens, species_list, system, sID)
     sol = solve(prob,
         Trapezoid(autodiff=false),
-        dt=1.e-12,
-        #abstol=1.e-8,
-        #reltol=1.e-6,
-        maxiters=1.e7,
+        dt = 1.e-12,
+        #abstol = 1.e-8,
+        #reltol = 1.e-6,
+        maxiters = 1.e7,
         callback = cb,
-        save_everystep=save_flag
+        saveat = 0.01 / system.drivf,
+        save_everystep = false
     )
     return sol
 end
@@ -153,11 +148,11 @@ function condition_duty_ratio(out, u, t, integrator)
     p = integrator.p
     system = p[1]
     freq = system.drivf
-    period_10 = 10.0 / freq
+    t_start = 0.0 / freq
     dr = system.P_duty_ratio
-    out[1] = period_10 * freq - floor(period_10 * freq) - dr 
-    out[2] = period_10 * freq - round(period_10 * freq)
-    if t > period_10
+    out[1] = t_start * freq - floor(t_start * freq) - dr 
+    out[2] = t_start * freq - round(t_start * freq)
+    if t > t_start
         if (system.P_shape == "square")
             out[1] = t * freq - floor(t * freq) - dr 
             out[2] = t * freq - round(t * freq)
