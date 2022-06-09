@@ -157,16 +157,16 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
         end
 
         # Lower bound threshold would be applied here
-        #if r.K_value < 0.0
-        #    if r.case == r_lower_threshold
-        #        r.K_value = 0.0
-        #    else
-        #        err_message = @sprintf("%s has negative rate coefficient at Te = %15g eV",
-        #            r.name, temp[sID.electron]*K_to_eV)
-        #        PrintErrorMessage(system, err_message) 
-        #        errcode = c_io_error
-        #    end
-        #end
+        if r.K_value < 0.0
+            if r.case == r_lower_threshold
+                r.K_value = 0.0
+            else
+                err_message = @sprintf("%s has negative rate coefficient at Te = %15g eV",
+                    r.name, temp[sID.electron]*K_to_eV)
+                PrintErrorMessage(system, err_message) 
+                errcode = c_io_error
+            end
+        end
     end
     return errcode
 end
