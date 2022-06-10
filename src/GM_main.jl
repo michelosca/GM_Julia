@@ -58,7 +58,7 @@ function run_GM(input)
     PrintSpeciesList(species_list, system)
     PrintReactionList(reaction_list, species_list, system)
 
-    errcode = @time GenerateOutputs!(species_list, reaction_list, system,
+    errcode = GenerateOutputs!(species_list, reaction_list, system,
         output_list, speciesID)
     if (errcode == c_io_error)
         PrintErrorMessage(system, "GM run failed")

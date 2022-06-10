@@ -66,7 +66,7 @@ function ExecuteProblem(species_list::Vector{Species},
         callback = cb,
         save_everystep = save_flag 
     )
-    PrintMessage(system, "Problem execution finished: ")
+    PrintMessage(system, "Problem execution finished\n")
     return sol
 end
 
