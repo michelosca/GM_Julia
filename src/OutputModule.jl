@@ -34,6 +34,8 @@ using PrintModule: PrintErrorMessage, PrintMessage
 using CSV
 using Printf
 using DataFrames: DataFrame
+using TimerOutputs
+
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
@@ -45,12 +47,14 @@ using DataFrames: DataFrame
 #   - SetupInitialConditions
 #   - Output_PL
 
+const to = TimerOutput()
 
 function GenerateOutputs!(
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, output_list::Vector{OutputBlock}, sID::SpeciesID)
     
     errcode = 0
+    reset_timer!(to)
 
     for output in output_list
         
@@ -59,9 +63,9 @@ function GenerateOutputs!(
         output.first_dump = true
 
         if output.case[1] == o_single_run
-            sol = @time ExecuteProblem(species_list, reaction_list, system,
+            sol = @timeit to "Problem execution" ExecuteProblem(species_list, reaction_list, system,
                 sID, output.case[1])
-            errcode = @time LoadOutputBlock!(sol, output, species_list,
+            errcode = @timeit to "Output dump" LoadOutputBlock!(sol, output, species_list,
             reaction_list, system, sID)
             if (errcode == c_io_error) return errcode end
         else # Parameter sweep 
@@ -104,17 +108,17 @@ function GenerateOutputs!(
                 message=""
                 for i in 1:n_dims
                     if i == n_dims
-                        message *= @sprintf("%s = %8g\n", output.name[i], param[i])
+                        message *= @sprintf("%s = %g", output.name[i], param[i])
                     else
-                        message *= @sprintf("%s = %8g - ", output.name[i], param[i])
+                        message *= @sprintf("%s = %g; ", output.name[i], param[i])
                     end
                 end
-                PrintMessage(system_run, message)
+                PrintMessage(system_run, message*"\n")
 
                 # Run problem
-                sol = @time ExecuteProblem(species_list_run,
+                sol = @timeit to message ExecuteProblem(species_list_run,
                     reaction_list_run, system_run, sID)
-                errcode = @time LoadOutputBlock!(sol, output, species_list_run,
+                errcode = LoadOutputBlock!(sol, output, species_list_run,
                     reaction_list_run, system_run, sID, param)
                 if (errcode == c_io_error) return errcode end
 
@@ -133,7 +137,11 @@ function GenerateOutputs!(
         end # IF: single_run or different
     end # LOOP: Output list
 
-    print("Total runtime: ")
+    show(to)
+    open(system.log_file,"a") do file
+        show(file, to)
+    end
+
     return errcode
 end
 
@@ -455,7 +463,7 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             append=true , writeheader=write_header)
     end
 
-    PrintMessage(system, "Loading data done: ")
+    PrintMessage(system, "Loading data done\n")
     return errcode
 end
 
