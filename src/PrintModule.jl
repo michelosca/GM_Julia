@@ -254,4 +254,12 @@ function PrintWarningMessage(system::System, message::String)
     @printf("***WARNING*** %s\n", message)
 end
 
+function PrintMessage(system::System, message::String)
+
+    open(system.log_file,"a") do file
+        @printf(file, "%s", message)
+    end
+    @printf("%s", message)
+end
+
 end
