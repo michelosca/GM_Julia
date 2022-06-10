@@ -29,7 +29,7 @@ using PlasmaParameters: UpdateSpeciesParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
-using PrintModule: PrintErrorMessage
+using PrintModule: PrintErrorMessage, PrintMessage
 
 using CSV
 using Printf
@@ -101,18 +101,20 @@ function GenerateOutputs!(
                 if (errcode == c_io_error) return errcode end
 
                 # Print parameter state
-                open(system.log_file, "a") do file
-                    for i in 1:n_dims
-                        @printf(file, "%4s = %10f - ", output.name[i], param[i])
-                        @printf("%4s = %10f - ", output.name[i], param[i])
+                message=""
+                for i in 1:n_dims
+                    if i == n_dims
+                        message *= @sprintf("%s = %8g\n", output.name[i], param[i])
+                    else
+                        message *= @sprintf("%s = %8g - ", output.name[i], param[i])
                     end
-                    @printf(file,"\n")
                 end
+                PrintMessage(system_run, message)
 
                 # Run problem
                 sol = @time ExecuteProblem(species_list_run,
                     reaction_list_run, system_run, sID)
-                errcode = LoadOutputBlock!(sol, output, species_list_run,
+                errcode = @time LoadOutputBlock!(sol, output, species_list_run,
                     reaction_list_run, system_run, sID, param)
                 if (errcode == c_io_error) return errcode end
 
@@ -126,11 +128,12 @@ function GenerateOutputs!(
                     end
                 end
 
+            PrintMessage(system_run, "\n")
             end # LOOP: over every parameter value
         end # IF: single_run or different
     end # LOOP: Output list
 
-    print("Total time...\n")
+    print("Total runtime: ")
     return errcode
 end
 
@@ -244,11 +247,13 @@ function UpdateOutputParameters!(species_list::Vector{Species},
     press_buffer = 0.0
     for s in species_list
         if isnan(s.pressure)
-            print("***ERROR*** Bad output specification: Species ",s.name," pressure is NaN\n")
+            err_message = @sprintf("Bad output specification: Species %s pressure is NaN\n", s.name)
+            PrintErrorMessage(message)
             return c_io_error
         end
         if isinf(s.pressure) 
-            print("***ERROR*** Bad output specification: Species ",s.name," pressure is Inf\n")
+            err_message = @sprintf("Bad output specification: Species %s pressure is Inf\n", s.name)
+            PrintErrorMessage(message)
             return c_io_error
         end
 
@@ -260,7 +265,8 @@ function UpdateOutputParameters!(species_list::Vector{Species},
     end
 
     if abs(press_buffer - system.total_pressure) > 1.e-10
-        print("***ERROR*** Bad output specification: Sum of species pressure does not match system total pressure\n")
+        err_message = "Bad output specification: Sum of species pressure does not match system total pressure\n"
+        PrintErrorMessage(message)
         return c_io_error
     end
     return errcode
@@ -286,7 +292,7 @@ function LoadOutputBlock!(sol, output::OutputBlock,
     system::System, sID::SpeciesID, param::Vector{Float64}=Float64[])
 
     errcode = 0
-    print("Load output data...\n")
+    PrintMessage(system, "Loading output data...\n")
     T_filename = string(system.folder,"T",output.label,".csv")
     n_filename = string(system.folder,"n",output.label,".csv")
     K_filename = string(system.folder,"K",output.label,".csv")
@@ -449,6 +455,7 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             append=true , writeheader=write_header)
     end
 
+    PrintMessage(system, "Loading data done: ")
     return errcode
 end
 

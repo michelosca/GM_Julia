@@ -29,7 +29,7 @@ using DifferentialEquations: DiscreteCallback, VectorContinuousCallback
 using DifferentialEquations: CallbackSet
 using DifferentialEquations: terminate!, set_proposed_dt!, get_proposed_dt 
 using Printf
-using PrintModule: PrintErrorMessage, PrintWarningMessage
+using PrintModule: PrintErrorMessage, PrintWarningMessage, PrintMessage
 
 function ExecuteProblem(species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System, sID::SpeciesID,
@@ -55,7 +55,7 @@ function ExecuteProblem(species_list::Vector{Species},
         save_flag = false
     end
 
-    print("Solving single problem ...\n")
+    PrintMessage(system, "Running problem ...\n")
     #PrintSimulationState(temp, dens, species_list, system, sID)
     sol = solve(prob,
         Rosenbrock23(autodiff=false),
@@ -66,6 +66,7 @@ function ExecuteProblem(species_list::Vector{Species},
         callback = cb,
         save_everystep = save_flag 
     )
+    PrintMessage(system, "Problem execution finished: ")
     return sol
 end
 
