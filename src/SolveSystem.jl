@@ -49,18 +49,22 @@ function ExecuteProblem(species_list::Vector{Species},
 
     # ODE problem
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
+    if o_case == o_single_run
+        save_flag = true
+    else
+        save_flag = false
+    end
 
     print("Solving single problem ...\n")
     #PrintSimulationState(temp, dens, species_list, system, sID)
     sol = solve(prob,
-        Trapezoid(autodiff=false),
+        Rosenbrock23(autodiff=false),
         dt = 1.e-12,
-        abstol = 1.e-8,
-        reltol = 1.e-6,
+        #abstol = 1.e-8,
+        #reltol = 1.e-6,
         maxiters = 1.e7,
         callback = cb,
-        saveat = 0.01 / system.drivf,
-        save_everystep = false
+        save_everystep = save_flag 
     )
     return sol
 end
