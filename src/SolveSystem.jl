@@ -174,11 +174,13 @@ function affect_duty_ratio!(integrator, cb_index)
     if cb_index == 1
         # Power off
         system.P_absorbed = 0.0 
-        @printf(" Power switch off. Time = %10g s; dt = %10g s\n", integrator.t, dt)
+        message = @sprintf(" Power switch off. Time = %10g s; dt = %10g s\n", integrator.t, dt)
+        PrintMessage(system, message)
     elseif cb_index == 2
         # Power on
         system.P_absorbed = system.drivP / system.V 
-        @printf(" Power switch on.  Time = %10g s; dt = %10g s\n", integrator.t, dt)
+        message = @sprintf(" Power switch on.  Time = %10g s; dt = %10g s\n", integrator.t, dt)
+        PrintMessage(system, message)
     end
     set_proposed_dt!(integrator, dt) 
 end
@@ -195,7 +197,7 @@ end
 function affect_error!(integrator)
     p = integrator.p
     system = p[1]
-    PrintErrorMessage(system, "Simulation aborted")
+    PrintErrorMessage(system, "Abort simulation")
     terminate!(integrator)
 end
 
