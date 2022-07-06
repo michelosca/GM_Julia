@@ -62,7 +62,7 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # PARTICLE PRODUCTION rates
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
-            if !(sign == 0) 
+            if (sign != 0) 
                 value = sign * prod(dens[r.reactant_species]) * r.K_value
                 dens_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")

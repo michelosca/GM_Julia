@@ -21,9 +21,7 @@ using SharedData: c_io_error, e, me, K_to_eV
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: r_elastic, r_wall_loss, r_lower_threshold
 using ReactionSet: K_funct_list
-using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
-using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
-using EvaluateExpressions: ReplaceDensSymbols!
+using EvaluateExpressions: ReplaceConstantValues!
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf
 

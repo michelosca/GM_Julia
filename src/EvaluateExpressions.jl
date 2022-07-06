@@ -245,6 +245,7 @@ end
 
 function ReplaceDensSymbols!(expr::Expr)
     ReplaceSymbol!(expr, :n_O2,     :(dens[sID.O2]))
+    ReplaceSymbol!(expr, :n_O,     :(dens[sID.O]))
 end
 
 
