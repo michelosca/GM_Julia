@@ -214,6 +214,7 @@ function UpdateOutputParameters!(species_list::Vector{Species},
             end
         elseif (output.case[i] == o_power)
             system.drivP = param[i]
+            system.P_absorbed = system.drivP / system.V 
         elseif (output.case[i] == o_frequency)
             system.drivf= param[i]
             system.drivOmega= 2.0*pi*param[i]
@@ -329,9 +330,9 @@ function LoadOutputBlock!(sol, output::OutputBlock,
 
         # Dump dens/temp into output block
         for s in species_list
-            output.n_data_frame[!,s.name] = sol[s.id+1, :]
-            if s.has_temp_eq
-                output.T_data_frame[!,s.name] = sol[s.id, : ]
+            output.n_data_frame[!,s.name] = sol[s.id+1,:]
+            if s.id == sID.electron 
+                output.T_data_frame[!,s.name] = sol[1,:]
             end
         end
 
@@ -431,8 +432,8 @@ function LoadOutputBlock!(sol, output::OutputBlock,
         # Dump dens/temp and other into buffer lists 
         for s in species_list
             push!(dens_list, sol[s.id+1, end])
-            if s.has_temp_eq
-                push!(temp_list, sol[s.id, end])
+            if s.id == sID.electron
+                push!(temp_list, sol[1, end])
             end
             temp[s.id] = s.temp 
             dens[s.id] = s.dens

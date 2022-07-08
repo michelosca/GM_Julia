@@ -26,6 +26,7 @@ using SharedData: o_pressure_percent, neutral_species_id
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using InputBlock_System: GetUnits!
 using DataFrames: DataFrame
+using PrintModule: PrintErrorMessage
 
 function StartFile_Output!(read_step::Int64, output_list::Vector{OutputBlock})
     
@@ -178,7 +179,7 @@ end
 
 function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
     read_step::Int64, output_list::Vector{OutputBlock},
-    species_list::Vector{Species})
+    species_list::Vector{Species}, system::System)
     
     errcode = 0
 
@@ -212,19 +213,22 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
             output.case[i] = o_duty_ratio
         elseif (var=="total_pressure" || var=="p_total")
             output.case[i] = o_total_pressure
+        else
+            PrintErrorMessage(system, "Output parameter was not found")
+            return c_io_error
         end
     end
 
 
     i = output.n_parameters
     if (i == 0)
-        print("***ERROR*** The first declaration in output block must be 'parameter' or 'x'\n")
+        PrintErrorMessage(system, "The first declaration in output block must be 'parameter' or 'x'")
         return c_io_error
     end
 
     if (name == "species")
         if (i < length(output.species_id))
-            print("***ERROR*** Output block: species has been declared before 'parameter'/'x'\n")
+            PrintErrorMessage(system, "Output block: species has been declared before 'parameter'/'x'")
             return c_io_error
         end
         for s in species_list
@@ -240,7 +244,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
     
     if (name == "x_min")
         if (i < length(output.x_min))
-            print("***ERROR*** Output block: x_min has been declared before 'parameter'/'x'\n")
+            PrintErrorMessage(system, "Output block: x_min has been declared before 'parameter'/'x'")
             return c_io_error
         end
         output.x_min[i] = parse(Float64, var) * units
@@ -248,7 +252,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
 
     if (name == "x_max")
         if (i < length(output.x_max))
-            print("***ERROR*** Output block: x_max has been declared before 'parameter'/'x'\n")
+            PrintErrorMessage(system, "Output block: x_max has been declared before 'parameter'/'x'")
             return c_io_error
         end
         output.x_max[i] = parse(Float64, var) * units
@@ -256,7 +260,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
 
     if (name == "steps")
         if (i < length(output.x_steps))
-            print("***ERROR*** Output block: x_steps has been declared before 'parameter'/'x'\n")
+            PrintErrorMessage(system, "Output block: x_steps has been declared before 'parameter'/'x'")
             return c_io_error
         end
         output.x_steps[i] = parse(Int64, var)
@@ -264,7 +268,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
 
     if (name == "scale")
         if (i < length(output.scale))
-            print("***ERROR*** Output block: scale has been declared before 'parameter'/'x'\n")
+            PrintErrorMessage(system, "Output block: scale has been declared before 'parameter'/'x'")
             return c_io_error
         end
         if (var == "log" || var == "logarithmic")

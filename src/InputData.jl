@@ -334,7 +334,7 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
             system, speciesID)
     elseif (block_id == b_output)
         errcode = ReadOutputEntry!(name, var, read_step, output_list,
-            species_list)
+            species_list, system)
     elseif (block_id == b_constants)
         push!(constants, (name,var))
         errcode = 0

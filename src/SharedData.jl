@@ -138,7 +138,7 @@ mutable struct System
     drivf::Float64                          # driving frequency, Hz
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
-    P_absorbed::Float64                     # power absorbed, W / m^3
+    P_absorbed::Float64                     # power absorbed per unit volume, W / m^3
     P_shape::String
     P_duty_ratio::Float64
 
