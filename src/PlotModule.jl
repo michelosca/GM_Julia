@@ -22,7 +22,8 @@ using Plots.PlotMeasures
 #using LaTeXStrings
 using SharedData: Species, OutputBlock, Reaction, SpeciesID, System
 using SharedData: K_to_eV, kb
-using DataFrames
+using DataFrames, CSV
+using Printf
 
 function CRM_test(out_batch::Vector{Vector{OutputBlock}})
 
@@ -84,7 +85,7 @@ function CRM_test(out_batch::Vector{Vector{OutputBlock}})
         nO_3p_GM_e12 = Float64[]
         dissociation_GM_percent = Float64[] 
 
-        for i in range(1, length(out_list), step=1)
+        for i in range(2, length(out_list), step=1)
             out = out_list[i]
             n_data = out.n_data_frame
             T_data = out.T_data_frame
@@ -188,12 +189,12 @@ function CRM_test(out_batch::Vector{Vector{OutputBlock}})
         push!(dissociation_list, dissociation_GM_percent)
     end
 
-    source = "/home/moe505/Documents/GM_Julia/ArO2/solve_O2/"
+    source = "/home/moe505/Documents/GM_Julia/ArO2/ArO2_Fiebrandt_test/O_loss_test/" 
     #str_list = ["gamma_O2=0.0", "gamma_O2=0.007", "gamma_02=0.1", "gamma_02=1.0"]
     #str_list = ["gamma_02=0.007 / O_x -> O", "gamma_02=0.007 / 2O_x -> O2"]
     #str_list = ["gamma_Ar=1.0", "gamma_Ar=0.0"]
     #str_list = ["gamma_O-meta=0.0", "gamma_O-meta=0.0 / 2O_x -> O2", "gamma_O-meta=1.0", "gamma_O-meta=1.0 / 2O_x -> O2"]
-    str_list = ["GM Julia","GM Julia, solve O2"]
+    str_list = ["GM Julia","GM Julia change"]
     color_list = [:black, :blue, :green, :red]
 
     # ELECTRON TEMPERATURE
@@ -385,12 +386,13 @@ function FindProductSpecies(reaction_list::Vector{Reaction}, species::Species)
 
         sign = r.species_balance[s_index]
         if sign > 0
-            print(r.name, "\n")
+            #print(r.name, "\n")
             push!(output_reaction_list, r) 
         end
     end
     return output_reaction_list
 end
+
 
 function FindReactingSpecies(reaction_list::Vector{Reaction}, species::Species)
     sid = species.id
@@ -518,14 +520,14 @@ function Get2DMap(df::DataFrame, name::String, col1::Int64, col2::Int64)
 end
 
 
-function PlotHeatmap(row, col, matrix, title_str)
+function PlotHeatmap(row, col, matrix, title_str, xlabel_str, ylabel_str)
 
-    #h = heatmap(col,
     h = contourf(col,
+    #h = contourf(col,
     row, matrix,
     size=(1400, 800),
-    ylabel= "P total [Pa]",     # row data label
-    xlabel = "Power [W]",  # row data label
+    ylabel= ylabel_str,
+    xlabel = xlabel_str,
     xscale = :identity,
     yscale = :log10,
     title = title_str,
@@ -698,7 +700,241 @@ function PlotEmissionRates(K_data::DataFrame)
 end
 
 
-function PlotEmissionRatesHeatmap(K_df::DataFrame)
+function PlotDifferentO2fractions(main::String)
+    O2_min = 0.01
+    O2_max = 0.20
+    step = 0.01
+    n_entries = round(Int64, (O2_max - O2_min + step) / step)
+    
+    # 1st col: value
+    # 2nd col: row (press)
+    # 3rd col: col (power)
+    # 4th col: O2 fraction
+    abs_VUV_max = zeros(4,n_entries)  
+    abs_VUV_min = zeros(4,n_entries) 
+    VUV_ion_max = zeros(4,n_entries) 
+    VUV_ion_min = zeros(4,n_entries) 
+    VUV_O_max =   zeros(4,n_entries) 
+    VUV_O_min =   zeros(4,n_entries) 
+
+    entry = 1
+    for O2_fract in range(O2_min, O2_max,step=step)
+        O2_fract_str = @sprintf("%4.2f",O2_fract)
+        folder = main * "O2_" * O2_fract_str * "/"
+        K_file = folder * "K_vs_P_Ar_vs_P%_O2_vs_power.csv"
+        param_file = folder * "param_vs_P_Ar_vs_P%_O2_vs_power.csv"
+        K_dataframe = CSV.read(K_file, DataFrame)
+        param_dataframe = CSV.read(param_file, DataFrame)
+        max_data, min_data = PlotEmissionDataHeatmap(K_dataframe, param_dataframe, folder, 1, 3)
+        # max/min data ist listed as follows:
+        #  1.- 130nm emission from r297: O_3s -> O
+        #  2.- 130nm emission from r332: e + O2 -> e + 2O
+        #  3.- 130nm emission from r333: e + O2_a1Ag -> e + 2O 
+        #  4.- 130nm emission from r334: e + O2_b1Su -> e + 2O
+        #  5.- 130nm emission from r335: e + O2_a1Ag_v -> e + 2O
+        #  6.- 130nm emission from r336: e + O2_b1Su_v -> e + 2O
+        #  7.- 135nm emission from r296: O_5s -> O
+        #  8.- 135nm emission from r337: e + O2 -> e + 2O
+        #  9.- 135nm emission from r338: e + O2_a1Ag -> e + 2O
+        # 10.- 135nm emission from r339: e + O2_b1Su -> e + 2O
+        # 11.- 135nm emission from r340: e + O2_a1Ag_v -> e + 2O
+        # 12.- 135nm emission from r341: e + O2_b1Su_v -> e + 2O
+        # 13.- total emission from 130 nm
+        # 14.- total emission from 135 nm
+        # 15.- total VUV emission: 130 + 135 nm
+        # 16.- total VUV emission / ion loss
+        # 17.- total VUV emission / O loss
+        abs_VUV_max[:, entry] = [max_data[15][1], max_data[15][2], max_data[15][3], O2_fract]
+        abs_VUV_min[:, entry] = [min_data[15][1], min_data[15][2], min_data[15][3], O2_fract]
+        VUV_ion_max[:, entry] = [max_data[16][1], max_data[16][2], max_data[16][3], O2_fract]
+        VUV_ion_min[:, entry] = [min_data[16][1], min_data[16][2], min_data[16][3], O2_fract]
+        VUV_O_max[:, entry]   = [max_data[17][1], max_data[17][2], max_data[17][3], O2_fract]
+        VUV_O_min[:, entry]   = [min_data[17][1], min_data[17][2], min_data[17][3], O2_fract]
+        val = abs_VUV_max[1,entry] 
+        press = abs_VUV_max[2,entry]
+        power = abs_VUV_max[3,entry] 
+        @printf("O2-fract: %2.4f; Power: %15g;  Pressure: %15g, Max. abs. VUV emission %15g \n",
+            O2_fract, power, press, val )
+        entry += 1
+    end
+
+    #### Plots
+   
+    ## Max. Abs. VUV emission
+    plot_data = abs_VUV_max[1,:]/1.e21
+    press = abs_VUV_max[2,:]
+    power = abs_VUV_max[3,:]
+    O2_fract = abs_VUV_max[4,:]
+    title_str = "Max. abs. VUV-emission"
+    file_str = "max_VUV"
+    postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+
+    # Min. Abs. VUV emission
+    plot_data = abs_VUV_min[1,:]/1.e21
+    press = abs_VUV_min[2,:]
+    power = abs_VUV_min[3,:]
+    O2_fract = abs_VUV_min[4,:]
+    title_str = "Min. abs. VUV-emission"
+    file_str = "min_VUV"
+    postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+
+    # Max. VUV/ion
+    plot_data = VUV_ion_max[1,:]
+    press =     VUV_ion_max[2,:]
+    power =     VUV_ion_max[3,:]
+    O2_fract =  VUV_ion_max[4,:]
+    title_str = "Max. VUV-emission/Ion-loss"
+    file_str = "max_VUVion"
+    postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+
+    # Min. VUV/ion
+    plot_data = VUV_ion_min[1,:]
+    press =     VUV_ion_min[2,:]
+    power =     VUV_ion_min[3,:]
+    O2_fract =  VUV_ion_min[4,:]
+    title_str = "Min. VUV-emission/Ion-loss"
+    file_str = "min_VUVion"
+    postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+
+    # Max. VUV/O
+    plot_data = VUV_O_max[1,:]
+    press =     VUV_O_max[2,:]
+    power =     VUV_O_max[3,:]
+    O2_fract =  VUV_O_max[4,:]
+    title_str = "Max. VUV-emission/O-loss"
+    file_str = "max_VUVO"
+    postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+    
+    # Min. VUV/O
+    plot_data = VUV_O_min[1,:]
+    press =     VUV_O_min[2,:]
+    power =     VUV_O_min[3,:]
+    O2_fract =  VUV_O_min[4,:]
+    title_str = "Min. VUV-emission/O-loss"
+    file_str = "min_VUVO"
+    postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+
+    return abs_VUV_max, VUV_ion_max, VUV_O_max, abs_VUV_min, VUV_ion_min, VUV_O_min
+end
+
+
+function postprocess_plots(press, O2_fract, power, plot_data, title_str, file_str, main)
+    vuv_axis_label = "[1.e21 m^-3 s^-1]"
+    press_axis_label = "P [Pa]"
+    O2_axis_label = "O2 fraction [1]"
+    power_axis_label = "Power [W]"
+    # vs. press
+    p = plot(press, plot_data, title = title_str)
+    plot!(p, legend=false)
+    plot!(p, xlabel=press_axis_label, ylabel=vuv_axis_label)
+    png(main * file_str * "_vs_press")
+    # vs. O2 fraction 
+    p = plot(O2_fract, plot_data, title = title_str)
+    plot!(p, xlabel=O2_axis_label, ylabel=vuv_axis_label)
+    plot!(p, legend=false)
+    png(main * file_str *"_vs_O2fraction")
+    # vs. power 
+    p = plot(power, plot_data, title = title_str)
+    plot!(p, xlabel=power_axis_label, ylabel=vuv_axis_label)
+    plot!(p, legend=false)
+    png(main * file_str *"_vs_power")
+    # 3D plots
+    p = plot3d( press, O2_fract, plot_data, title=title_str)
+    plot3d!(p, legend=false)
+    plot3d!(p, xlabel=press_axis_label, ylabel=O2_axis_label, zlabel=vuv_axis_label)
+    png(main * file_str *"_vs_press_vs_O2fraction")
+
+    # Generate a heatmap plot
+    press_min = 0.1 
+    press_max = 100.0
+    press_steps = 95
+    press_arr = [10^y for y in range(log10(press_min), log10(press_max), length=press_steps)]
+    O2f_min = 0.01
+    O2f_max = 0.2
+    O2f_steps = 20
+    O2f_arr = range(O2f_min,O2f_max, length=O2f_steps)
+    data_mat = zeros(press_steps, O2f_steps)
+
+    len_data = length(press)
+    for i in range(1, length=len_data)
+        p = press[i]
+        O2f = O2_fract[i]
+        data_point = plot_data[i]
+        mat_p_ix = 0
+        mat_O2f_ix = 0
+        # Check position of pressure in matrix
+        for p_ix in range(1,length=press_steps)
+            p_val = press_arr[p_ix]
+            p_half_step_min = 0.0
+            p_half_step_max = 0.0
+            if p_ix == 1
+                p_half_step_max = (press_arr[p_ix+1]-p_val)*0.5
+                p_half_step_min = p_half_step_max
+            elseif p_ix == press_steps
+                p_half_step_min = (p_val-press_arr[p_ix-1])*0.5
+                p_half_step_max = p_half_step_min
+            else
+                p_half_step_min = (p_val - press_arr[p_ix-1])*0.5
+                p_half_step_max = (press_arr[p_ix+1]-p_val)*0.5
+            end
+            p_min = p_val - p_half_step_min
+            p_max = p_val + p_half_step_max
+            if p <= p_max && p >= p_min
+                mat_p_ix = p_ix
+                break
+            end
+        end
+        # Check position of O2 fraction in matrix
+        for O2f_ix in range(1,length=O2f_steps)
+            O2f_val = O2f_arr[O2f_ix]
+            O2f_half_step = 0.01 * 0.5
+            O2f_min = O2f_val - O2f_half_step
+            O2f_max = O2f_val + O2f_half_step
+            #print("Value tested ", O2f, "boundaries ", O2f_min, " ", O2f_max,"\n")
+            if O2f <= O2f_max && O2f >= O2f_min
+                #print("VAlue found!\n")
+                mat_O2f_ix = O2f_ix
+                break
+            end
+        end
+        data_mat[mat_p_ix, mat_O2f_ix] = data_point
+    end
+    heatmap(O2f_arr, press_arr, data_mat,
+    size=(1400, 800),
+    ylabel= "Pressure [W]",     # row data label
+    xlabel = "O2 fraction [1]",  # row data label
+    xscale = :identity,
+    yscale = :log10,
+    title = title_str,
+    #colorbar_title="m^3/s",
+    yticks = [1.e-1, 1.e0, 1.e1, 1.e2],
+    xtickfont=20,
+    ytickfont=20,
+    titlefont=30,
+    yguidefontsize=20,
+    xguidefontsize=20,
+    left_margin=10mm,
+    right_margin=40mm,
+    bottom_margin=10mm,
+    top_margin=10mm,
+    colorbar_titlefontsize=20,
+    )#colorbar_title_locations=20mm)
+    png(main * file_str *"_vs_press_vs_O2fraction_heatmap")
+
+    open(main*file_str*".dat","w") do file
+        @printf(file, "%25s %25s %25s %25s\n","Pressure [Pa]", "Power [W]", "O2-fraction [1]", title_str)
+        for i in range(1,length=length(plot_data))
+            @printf(file, "%25g %25g %25g %25g\n", press[i], power[i], O2_fract[i], plot_data[i])
+        end
+    end
+end
+
+
+function PlotEmissionDataHeatmap(K_df::DataFrame, param_df::DataFrame,
+    source::String, col1::Int64, col2::Int64)
+
+    xlabel = "Power [W]"
+    ylabel = "Pressure [Pa]"
     # 130 nm emission from reactions
     # - "r297: O_3s -> O"
     # - "r332: e + O2 -> e + 2O"
@@ -729,9 +965,24 @@ function PlotEmissionRatesHeatmap(K_df::DataFrame)
     push!(r_list_135nm, "r340: e + O2_a1Ag_v -> e + 2O")
     push!(r_list_135nm, "r341: e + O2_b1Su_v -> e + 2O")
 
-    col1 = 1
-    col2 = 3
-    source = "/home/moe505/Documents/GM_Julia/ArO2/Param_Investigation:P_total-Power/"
+    # Generate data for O-atom loss rate
+    row, col, Oflux_mat = Get2DMap(K_df, "r281: 2O -> O2", col1, col2)
+
+    # Generate matrix for ion-flux loss rate
+    row, col, nOion_mat  = Get2DMap(param_df, "O+_flux",  col1, col2)
+    row, col, nO2ion_mat = Get2DMap(param_df, "O2+_flux", col1, col2)
+    row, col, nO3ion_mat = Get2DMap(param_df, "O3+_flux", col1, col2)
+    row, col, nO4ion_mat = Get2DMap(param_df, "O4+_flux", col1, col2)
+    row, col, nArion_mat = Get2DMap(param_df, "Ar+_flux", col1, col2)
+    ionflux_mat = nOion_mat .+ nO2ion_mat .+ nO3ion_mat .+ nO4ion_mat .+ nArion_mat
+    r = 0.2
+    L = 0.2
+    area = pi * r^2 * 2 + 2.0*pi*r * L
+    volume = pi * r^2 * L
+    ionflux_mat *= area / volume
+
+    max_data = Tuple{Float64, Float64, Float64}[]
+    min_data = Tuple{Float64, Float64, Float64}[]
     i = 1
     label_list = ["130nm", "135nm"]
     for r_list in [r_list_130nm, r_list_135nm]
@@ -742,49 +993,313 @@ function PlotEmissionRatesHeatmap(K_df::DataFrame)
             global mat_tot_VUV = zeros(length(row), length(col))
         end
         for r_name in r_list
-            print(r_name,"\n")
+            #print(r_name,"\n")
             row, col, matrix = Get2DMap(K_df, r_name, col1, col2)
+
+            # Get max/min data and store it in list
+            val, row_ix, col_ix = GetMaxValue(matrix)
+            push!(max_data, (val, row[row_ix], col[col_ix]))
+            val, row_ix, col_ix = GetMinValue(matrix)
+            push!(min_data, (val, row[row_ix], col[col_ix]))
+
+            # Add matrix to total emission matrix
             mat_tot .+= matrix
+
+            # Plot and save figure
             title = r_name[7:end] * " + "* label *", log10([1/m^3/s])"
-            PlotHeatmap(row, col, log10.(matrix), title)
-            fig_name = source * label * "_" * r_name 
+            PlotHeatmap(row, col, log10.(matrix), title, xlabel, ylabel)
+            fig_name = source * label * "_" * r_name[1:4] 
+            fig_name = join(map(x -> isspace(fig_name[x]) ? "" : fig_name[x], 1:length(fig_name)))
             png(fig_name)
         end
+        # Get max/min data and store it in list
+        val, row_ix, col_ix = GetMaxValue(mat_tot)
+        push!(max_data, (val, row[row_ix], col[col_ix]))
+        val, row_ix, col_ix = GetMinValue(mat_tot)
+        push!(min_data, (val, row[row_ix], col[col_ix]))
+        
+        # Plot total emission and save figure
         title = "Total "*label*" emission, log10([1/m^3/s])"
-        PlotHeatmap(row, col, log10.(mat_tot), title)
+        PlotHeatmap(row, col, log10.(mat_tot), title, xlabel, ylabel)
         fig_name = source * "total_"*label*"_emission" 
+        fig_name = join(map(x -> isspace(fig_name[x]) ? "" : fig_name[x], 1:length(fig_name)))
         png(fig_name)
 
+        # Generate fraction plots and save figures
         for r_name in r_list
             row, col, matrix = Get2DMap(K_df, r_name, col1, col2)
             title = r_name[7:end] * " + "* label
-            PlotHeatmap(row, col, matrix./mat_tot, title)
-            fig_name = source * label * "_fraction_" * r_name 
+            PlotHeatmap(row, col, matrix./mat_tot, title, xlabel, ylabel)
+            fig_name = source * label * "_fraction_" * r_name[1:4] 
+            fig_name = join(map(x -> isspace(fig_name[x]) ? "" : fig_name[x], 1:length(fig_name)))
             png(fig_name)
         end
 
         mat_tot_VUV .+= mat_tot
         i += 1
     end
+
+    ### TOTAL VUV EMISSION ####################################################
+    # Get max/min data and store it in list
+    val, row_ix, col_ix = GetMaxValue(mat_tot_VUV)
+    push!(max_data, (val, row[row_ix], col[col_ix]))
+    val, row_ix, col_ix = GetMinValue(mat_tot_VUV)
+    push!(min_data, (val, row[row_ix], col[col_ix]))
+
+    # Generate total VUV emission and save plot
     title = "Total VUV emission, log10([1/m^3/s])"
-    PlotHeatmap(row, col, log10.(mat_tot_VUV), title)
+    PlotHeatmap(row, col, log10.(mat_tot_VUV), title, xlabel, ylabel)
     fig_name = source * "total_VUV_emission" 
     png(fig_name)
+
+    ### VUV-EMISSION/ION-LOSS RATE #############################################
+    # Get max/min data and store it in list
+    vuv_ion_rate = mat_tot_VUV ./ ionflux_mat
+    val, row_ix, col_ix = GetMaxValue(vuv_ion_rate)
+    push!(max_data, (val, row[row_ix], col[col_ix]))
+    val, row_ix, col_ix = GetMinValue(vuv_ion_rate)
+    push!(min_data, (val, row[row_ix], col[col_ix]))
+
+    # Generate total VUV emission and save plot
+    ### Log10 scale
+    title = "VUV emission / ion-loss rate [log10()]"
+    PlotHeatmap(row, col, log10.(vuv_ion_rate), title, xlabel, ylabel)
+    fig_name = source * "VUV_ionloss_rate_log10" 
+    png(fig_name)
+    ### Linear scale
+    title = "VUV emission / ion-loss rate"
+    PlotHeatmap(row, col, vuv_ion_rate, title, xlabel, ylabel)
+    fig_name = source * "VUV_ionloss_rate" 
+    png(fig_name)
+    
+    ### VUV-EMISSION/O-LOSS RATE #############################################
+    # Get max/min data and store it in list
+    vuv_O_rate = mat_tot_VUV ./ Oflux_mat
+    val, row_ix, col_ix = GetMaxValue(vuv_O_rate)
+    push!(max_data, (val, row[row_ix], col[col_ix]))
+    val, row_ix, col_ix = GetMinValue(vuv_O_rate)
+    push!(min_data, (val, row[row_ix], col[col_ix]))
+
+    # Generate total VUV emission and save plot
+    ### Linear scale
+    title = "VUV emission / O-loss rate"
+    PlotHeatmap(row, col, vuv_O_rate, title, xlabel, ylabel)
+    fig_name = source * "vuv_Oloss_rate" 
+    png(fig_name)
+    ### Log10 scale
+    title = "VUV emission / O-loss rate [log10()]"
+    PlotHeatmap(row, col, log10.(vuv_O_rate), title, xlabel, ylabel)
+    fig_name = source * "vuv_Oloss_rate_log10" 
+    png(fig_name)
+
+
+    return max_data, min_data
 end
 
-function DissociationRateHeatmap(df::DataFrame)
 
-    col1 = 1
-    col2 = 3
-    source = "/home/moe505/Documents/GM_Julia/ArO2/Param_Investigation:P_total-Power/"
-    row, col, matrix_O = Get2DMap(df, "O", col1, col2)
-    row, col, matrix_O2 = Get2DMap(df, "O2", col1, col2)
+function DissociationRateHeatmap(source::String, col1::Int64, col2::Int64)
+
+    n_df = CSV.read(source * "n_vs_P_Ar_vs_P%_O2_vs_power.csv", DataFrame)
+    row, col, matrix_O = Get2DMap(n_df, "O", col1, col2)
+    row, col, matrix_O2 = Get2DMap(n_df, "O2", col1, col2)
     matrix_O_half = matrix_O .* 0.5
     dissociation = matrix_O_half ./ (matrix_O_half .+ matrix_O2)
-    PlotHeatmap(row, col, dissociation, "Oxygen dissociation rate")
+    title_str = "Oxygen dissociation rate"
+    xlabel_str = "Power [W]"
+    ylabel_str = "Pressure [Pa]"
+    h = contourf(col, row, dissociation,
+        ylabel= ylabel_str, xlabel = xlabel_str, title = title_str,
+        #colorbar_title="m^3/s",
+        size=(1400, 800),
+        xscale = :identity, yscale = :log10,
+        yticks = [1.e-1, 1.e0, 1.e1, 1.e2],
+        xtickfont=20, ytickfont=20, titlefont=30,
+        yguidefontsize=20, xguidefontsize=20, colorbar_titlefontsize=20,
+        left_margin=10mm, right_margin=40mm, bottom_margin=10mm, top_margin=10mm
+    ) #colorbar_title_locations=20mm)
     fig_name = source * "oxygen_dissociation_rate" 
     png(fig_name)
 
+end
+
+
+function DensityHeatmap(source::String, col1::Int64, col2::Int64, species::String)
+
+    n_df = CSV.read(source * "n_vs_P_Ar_vs_P%_O2_vs_power.csv", DataFrame)
+    row, col, matrix = Get2DMap(n_df, species, col1, col2)
+    title_str = species * " number density [log10(m^-3)]" 
+    xlabel_str = "Power [W]"
+    ylabel_str = "Pressure [Pa]"
+    h = contourf(col, row, log10.(matrix),
+        ylabel= ylabel_str, xlabel = xlabel_str, title = title_str,
+        #colorbar_title="m^3/s",
+        size=(1400, 800),
+        xscale = :identity, yscale = :log10,
+        yticks = [1.e-1, 1.e0, 1.e1, 1.e2],
+        xtickfont=20, ytickfont=20, titlefont=30,
+        yguidefontsize=20, xguidefontsize=20, colorbar_titlefontsize=20,
+        left_margin=10mm, right_margin=40mm, bottom_margin=10mm, top_margin=10mm
+    ) #colorbar_title_locations=20mm)
+    fig_name = source * species * "_number_density" 
+    png(fig_name)
+
+end
+
+
+function TempHeatmap(source::String, col1::Int64, col2::Int64)
+
+    T_df = CSV.read(source * "T_vs_P_Ar_vs_P%_O2_vs_power.csv", DataFrame)
+    row, col, matrix = Get2DMap(T_df, "e", col1, col2)
+    title_str = "electron temperature [eV]" 
+    xlabel_str = "Power [W]"
+    ylabel_str = "Pressure [Pa]"
+    h = contourf(col, row, matrix * K_to_eV,
+        ylabel= ylabel_str, xlabel = xlabel_str, title = title_str,
+        #colorbar_title="m^3/s",
+        size=(1400, 800),
+        xscale = :identity, yscale = :log10,
+        yticks = [1.e-1, 1.e0, 1.e1, 1.e2],
+        xtickfont=20, ytickfont=20, titlefont=30,
+        yguidefontsize=20, xguidefontsize=20, colorbar_titlefontsize=20,
+        left_margin=10mm, right_margin=40mm, bottom_margin=10mm, top_margin=10mm
+    ) #colorbar_title_locations=20mm)
+    fig_name = source * "e_temperature" 
+    png(fig_name)
+
+end
+
+
+function GetMaxValue(matrix::Array{Float64,2})
+    max_loc = findall( x -> x == maximum(matrix), matrix)
+    row = max_loc[1][1]
+    col = max_loc[1][2]
+    max_val = matrix[row, col]
+    return max_val, row, col
+end
+
+
+function GetMinValue(matrix::Array{Float64,2})
+    max_loc = findall( x -> x == minimum(matrix), matrix)
+    row = max_loc[1][1]
+    col = max_loc[1][2]
+    min_val = matrix[row, col]
+    return min_val, row, col
+end
+
+function FindReactionPathways(main_species::Species,
+    reaction_list::Vector{Reaction}, species_list::Vector{Species},
+    sID::SpeciesID, source::String)
+
+    # Load rate coefficient data frame
+    K_df = CSV.read(source * "K_vs_P_Ar_vs_P%_O2_vs_power.csv", DataFrame)
+    ## Generate dummy data in order to get number of rows and columns
+    row, col, matrix = Get2DMap(K_df, "r1: e + O -> 2e + O+", 1, 3)
+    nrows = length(row)
+    ncols = length(col)
+
+    # Make a directory where the figures are going to be saved
+    fold_container = main_species.name * "_pathways"
+    try
+        mkdir(source * fold_container)
+    catch
+        print("*** ERROR *** production_rates folder already exists\n")
+        return
+    end
+
+    # Set chain counter
+    pathway_chain = 0
+    
+    # Start loop: find reaction pathways for the 'main_species'
+    #  - find reactions productin 'main_species'
+    #  - selects source species
+    #  - tracks these new species and the reactions that generate them
+    loop_flag = true
+    species_id_list = Int64[main_species.id]
+    species_check_list = species_id_list
+    while loop_flag
+        loop_flag = false
+
+        # New species found are added to the buffer list and added later to 'species_id_list'
+        species_id_buffer = Int64[]
+
+        # Loop over the species list
+        for s in species_id_list
+
+            global species_fold = @sprintf("%2.2i_%s", pathway_chain, species_list[s].name)
+            mkdir(source * fold_container * "/" * species_fold)
+
+            # Find reactions that produce the species
+            reaction_products = FindProductSpecies(reaction_list, species_list[s])
+
+            # Get total reaction rate producing species 's'
+            K_total = zeros(nrows, ncols)
+            for r in reaction_products
+                K_name = "r" * string(r.id) * ": "*r.name
+                row, col, K_data = Get2DMap(K_df, K_name, 1, 3)
+                K_total .+= K_data
+            end
+
+            # Plot reaction data that produces species 's' 
+            for r in reaction_products
+                # Load data into matrix
+                K_name = "r" * string(r.id) * ": "*r.name
+                row, col, K_data = Get2DMap(K_df, K_name, 1, 3)
+
+                # Reaction rate over total rate coefficient
+                K_rate = K_data ./ K_total
+
+                # Data is only relevant if it is more than 10% of the total rate coefficient
+                plot_flag = maximum(K_rate) >= 0.10
+                if plot_flag
+                    # Save product species of the reaction. Only if:
+                    # - Is not an electron species
+                    # - It has not already in the species_id_list
+                    for s_react_id in r.reactant_species
+                        # Skip electron species
+                        if s_react_id == sID.electron
+                            continue
+                        end
+
+                        # Check wether the species is already in the list
+                        list_flag = ( findall(x-> x == s_react_id, species_check_list)==Int64[] ) 
+                        buff_flag = ( findall(x-> x == s_react_id, species_id_buffer)==Int64[] ) 
+                        push_flag = list_flag && buff_flag
+
+                        # Add species id only if not found in the species-list yet
+                        if push_flag
+                            push!(species_id_buffer, s_react_id)
+                        end
+                    end # end loop over involved species in reaction
+
+                    # Plot data
+                    title_str = r.name * " : " * species_list[s].name * " production rate"
+                    xlabel_str = "Power [W]"
+                    ylabel_str = "Pressure [Pa]"
+                    h = contourf(col, row, K_rate,
+                        ylabel= ylabel_str, xlabel = xlabel_str, title = title_str,
+                        #colorbar_title="m^3/s",
+                        size=(1400, 800),
+                        xscale = :identity, yscale = :log10,
+                        yticks = [1.e-1, 1.e0, 1.e1, 1.e2],
+                        xtickfont=20, ytickfont=20, titlefont=30,
+                        yguidefontsize=20, xguidefontsize=20, colorbar_titlefontsize=20,
+                        left_margin=10mm, right_margin=40mm, bottom_margin=10mm, top_margin=10mm
+                    ) #colorbar_title_locations=20mm)
+                    file_name = species_list[s].name * "_r" * string(r.id) * "_" * "production_rate"
+                    png(source * fold_container * "/" * species_fold * "/" * file_name)
+                end
+
+            end # end loop reaction_products list 
+        end # end loop over species_id_list
+
+        # Update species_id_list with species found
+        species_check_list = [species_check_list;species_id_buffer]
+        species_id_list = species_id_buffer
+        if species_id_buffer != Int64[]
+            loop_flag = true
+        end
+        pathway_chain += 1
+    end
 end
 
 end
