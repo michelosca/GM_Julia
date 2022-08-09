@@ -543,6 +543,16 @@ function copy_species(s::Species)
 
     new_s.name = s.name
 
+    new_s.in_nodes = Tuple{Int64, String, Float64}[]
+    for in_tuple in s.in_nodes
+        push!(new_s.in_nodes, (in_tuple[1], in_tuple[2], in_tuple[3]))
+    end
+    
+    new_s.out_nodes = Tuple{Int64, String, Float64}[]
+    for out_tuple in s.out_nodes
+        push!(new_s.out_nodes, (out_tuple[1], out_tuple[2], out_tuple[3]))
+    end
+
     return new_s
 end
 

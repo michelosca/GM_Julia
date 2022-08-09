@@ -121,6 +121,10 @@ mutable struct Species
     flux::Float64
     flow_rate::Float64
 
+    # Node parameters
+    in_nodes::Vector{Tuple{Int64, String, Float64}}
+    out_nodes::Vector{Tuple{Int64, String, Float64}}
+
     # Output features
     name::String
     Species() = new()

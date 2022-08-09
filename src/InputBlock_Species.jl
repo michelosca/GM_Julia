@@ -83,6 +83,8 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.name = "None"
         current_species.has_flow_rate = false
         current_species.flow_rate = 0.0 
+        current_species.in_nodes = Tuple{Int64, String, Float64}[]
+        current_species.out_nodes = Tuple{Int64, String, Float64}[]
         push!(species_list, current_species)
     end
     return errcode
