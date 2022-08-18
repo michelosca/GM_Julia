@@ -151,10 +151,6 @@ function UpdateOutputParameters!(species_list::Vector{Species},
     param::Vector{Float64})
     errcode = 0
 
-    curr_total_pressure = copy(system.total_pressure)
-    press_fract_old = 0.0
-    press_fract_new = 0.0
-    part_fract_species = Int64[]
     for i in 1:output.n_parameters
         if (output.case[i] == o_pL)
             # L is kept constant but p is being changed
@@ -187,16 +183,6 @@ function UpdateOutputParameters!(species_list::Vector{Species},
                 end
             end
 
-        elseif (output.case[i] == o_pressure_percent)
-            s_id = output.species_id[i]
-            press_fract_old += species_list[s_id].pressure / curr_total_pressure 
-            p_partial = param[i] * curr_total_pressure 
-            species_list[s_id].pressure = p_partial
-            # Because partial pressure of this species has changed, the partial
-            # pressure of the remaining species need to be readjusted
-            press_fract_new += param[i]
-            push!(part_fract_species, s_id)
-
         elseif (output.case[i] == o_temp)
             s_id = output.species_id[i]
             if s_id == neutral_species_id
@@ -223,7 +209,49 @@ function UpdateOutputParameters!(species_list::Vector{Species},
         end
     end
 
-    # Re-equilibrate pressures
+    errcode = UpdateOutputParameters_partial_pressure!(species_list, system,
+        output, param)
+    if errcode != 0
+        err_message = "in UpdateOutputParameters while updating partial pressures\n"
+        PrintErrorMessage(err_message)
+        return c_io_error
+    end
+
+    errcode = UpdateOutputParameters_check_pressure(species_list, system)
+    if errcode != 0
+        err_message = "in UpdateOutputParameters while checking pressures\n"
+        PrintErrorMessage(err_message)
+        return c_io_error
+    end
+
+    return errcode
+end
+
+
+function UpdateOutputParameters_partial_pressure!(species_list::Vector{Species},
+    system::System, output::OutputBlock, param::Vector{Float64})
+
+    errcode = 0
+
+    # Change species concentrations (via partial pressures)
+    curr_total_pressure = copy(system.total_pressure)
+    press_fract_old = 0.0
+    press_fract_new = 0.0
+    part_fract_species = Int64[]
+    for i in 1:output.n_parameters
+        if (output.case[i] == o_pressure_percent)
+            s_id = output.species_id[i]
+            press_fract_old += species_list[s_id].pressure / curr_total_pressure 
+            p_partial = param[i] * curr_total_pressure 
+            species_list[s_id].pressure = p_partial
+            # Because partial pressure of this species has changed, the partial
+            # pressure of the remaining species need to be readjusted
+            press_fract_new += param[i]
+            push!(part_fract_species, s_id)
+        end
+    end
+
+    # Readjust partial pressures
     if (press_fract_old != press_fract_new)
         press_fract_remain_old = 1.0 - press_fract_old
         press_fract_remain_new = 1.0 - press_fract_new
@@ -251,18 +279,27 @@ function UpdateOutputParameters!(species_list::Vector{Species},
         end
     end
 
+    return errcode
+end
+
+
+function UpdateOutputParameters_check_pressure(species_list::Vector{Species},
+    system::System)
+    
+    errcode = 0
+
     # Update density value on all species
     # - check total pressure
     press_buffer = 0.0
     for s in species_list
         if isnan(s.pressure)
             err_message = @sprintf("Bad output specification: Species %s pressure is NaN\n", s.name)
-            PrintErrorMessage(message)
+            PrintErrorMessage(err_message)
             return c_io_error
         end
         if isinf(s.pressure) 
             err_message = @sprintf("Bad output specification: Species %s pressure is Inf\n", s.name)
-            PrintErrorMessage(message)
+            PrintErrorMessage(err_message)
             return c_io_error
         end
 
@@ -275,9 +312,10 @@ function UpdateOutputParameters!(species_list::Vector{Species},
 
     if abs(press_buffer - system.total_pressure) > 1.e-10
         err_message = "Bad output specification: Sum of species pressure does not match system total pressure\n"
-        PrintErrorMessage(message)
+        PrintErrorMessage(err_message)
         return c_io_error
     end
+
     return errcode
 end
 
