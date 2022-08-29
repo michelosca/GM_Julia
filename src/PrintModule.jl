@@ -21,7 +21,7 @@ using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
-using InputBlock_Reactions: r_wall_loss, r_elastic
+using SharedData: r_wall_loss, r_elastic
 using Printf
 
 ###############################################################################

@@ -19,10 +19,11 @@ module InputBlock_Reactions
 
 using SharedData: c_io_error, e, me, K_to_eV
 using SharedData: Species, Reaction, System, SpeciesID
-using SharedData: r_elastic, r_wall_loss, r_lower_threshold
+using SharedData: r_elastic, r_wall_loss, r_lower_threshold, r_emission_rate
 using ReactionSet: K_funct_list
 using EvaluateExpressions: ReplaceConstantValues!
 using EvaluateExpressions: ReplaceExpressionValues
+using PrintModule: PrintErrorMessage 
 using Printf
 
 
@@ -48,6 +49,8 @@ using Printf
 #   - AddReactionToList 
 # - EndReactionsBlock
 
+global reaction_block_type = 0::Int64
+
 function StartFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction}) 
 
     errcode = 0
@@ -58,6 +61,8 @@ end
 function StartReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction})
 
     errcode = 0
+
+    global reaction_block_type = 0
 
     return errcode
 end
@@ -71,6 +76,19 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
     # recommended to be included
 
     errcode = 0 
+
+    if name == "reaction_type"
+        if var == "elastic_scattering" || var == "elastic"
+            global reaction_block_type = r_elastic
+        elseif var == "wall_rate_coefficient"
+            global reaction_block_type = r_wall_loss
+        elseif var == "lower_threshold"
+            global reaction_block_type = r_lower_threshold
+        elseif var == "emission_rate" || var == "emission"
+            global reaction_block_type = r_emission_rate
+        end
+        return errcode
+    end
 
     # First part: the reaction process
     idx = findfirst(";", var)
@@ -131,7 +149,7 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
         if (errcode == c_io_error) return errcode end
 
         if !(description_str === nothing)
-            errcode = ParseDescription!(description_str, current_reaction)
+            errcode = ParseDescription!(description_str, current_reaction, system)
             if (errcode == c_io_error) return errcode end
         end
         
@@ -154,7 +172,7 @@ function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction}
 
     reaction.name = ""
     reaction.id = length(reaction_list) + 1 
-    reaction.case = 0
+    reaction.case = reaction_block_type 
     reaction.neutral_species_id = Int64[]
     reaction.E_threshold = 0.0
     reaction.K_value = 0.0
@@ -422,10 +440,10 @@ function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
 end
 
 
-function ParseDescription!(str::SubString{String}, reaction::Reaction)
+function ParseDescription!(str::SubString{String}, reaction::Reaction,
+    system::System)
 
     errcode = 0
-    reaction.case = 0
 
     str = lowercase(str)
 
@@ -439,7 +457,8 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
         errcode = 0
     else
         errcode = c_io_error
-        print("***ERROR*** Reaction description was not recognized\n")
+        error_str = @sprintf("Reaction description '%s' was not recognized",str)
+        PrintErrorMessage(system, error_str)
     end
 
     return errcode

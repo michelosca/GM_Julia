@@ -44,6 +44,7 @@ const c_io_error = 1
 const r_elastic = 1
 const r_wall_loss = 2
 const r_lower_threshold = 3
+const r_emission_rate = 4
 
 # OUTPUT constants
 const o_scale_lin = -1

@@ -23,7 +23,7 @@ using SharedData: Species, Reaction, System, SpeciesID
 using InputBlock_Species: StartFile_Species!
 using InputBlock_Species: StartSpeciesBlock!, EndSpeciesBlock!, ReadSpeciesEntry!
 
-using InputBlock_Reactions_PreRun: StartFile_Reactions!
+using InputBlock_Reactions_PreRun: StartFile_Reactions!, EndFile_Reactions!
 using InputBlock_Reactions_PreRun: StartReactionsBlock!, EndReactionsBlock!, ReadReactionsEntry!
 using InputBlock_Reactions_PreRun: r_elastic, r_wall_loss 
 
@@ -85,13 +85,21 @@ function ReadInputData!(filename::String, species_list::Vector{Species},
 
     print("Reading the input deck...\n")
     read_step = 0
+    
+    # Setup arguments before reading the input deck
     errcode = StartFile!(read_step, species_list, reaction_list, system,
         speciesID)
     if (errcode == c_io_error) return errcode end
+    
+    # Get input deck data
     errcode = ReadFile!(filename, read_step, species_list, reaction_list,
         system, speciesID)
     if (errcode == c_io_error) return errcode end
-    print("End of input deck reading\n\n")
+
+    # Setup arguments after reading the input deck
+    errcode = EndFile!(read_step, species_list, reaction_list, system,
+        speciesID)
+    print("...end reading input deck\n\n")
 
     return errcode
 end
@@ -212,6 +220,18 @@ function StartFile!(read_step::Int64, species_list::Vector{Species},
 end
 
 
+function EndFile!(read_step::Int64, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
+
+    errcode = EndFile_Reactions!(reaction_list) 
+    if (errcode == c_io_error)
+        print("***ERROR*** While finalizing the input reaction block")
+        return errcode
+    end
+    
+    return errcode
+end
+
 function StartBlock!(name::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, speciesID::SpeciesID)
@@ -235,6 +255,7 @@ function StartBlock!(name::SubString{String}, read_step::Int64,
     end
     return errcode
 end
+
 
 function EndBlock!(name::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},

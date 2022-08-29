@@ -19,7 +19,7 @@ module InputBlock_Reactions_PreRun
 
 using SharedData: c_io_error, e
 using SharedData: Species, Reaction, SpeciesID
-using SharedData: r_elastic, r_wall_loss, r_lower_threshold
+using SharedData: r_elastic, r_wall_loss, r_lower_threshold, r_emission_rate
 
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
 using EvaluateExpressions: ReplaceSpeciesSymbols!, ReplaceTempSymbols!
@@ -30,6 +30,7 @@ using InputBlock_Reactions: SelectSpeciesID
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
+global reaction_block_type = 0::Int64
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -51,26 +52,48 @@ using InputBlock_Reactions: SelectSpeciesID
 function StartFile_Reactions!(reaction_list::Vector{Reaction}) 
 
     errcode = 0
-
-    return errcode
-end
-
-function StartReactionsBlock!(reaction_list::Vector{Reaction})
-
-    errcode = 0
-
+    
     global f_ReactionSet = open("src/ReactionSet.jl","w") 
     open("src/ReactionSet.Template","r") do f_temp
         while ! eof(f_temp)
             line_str = readline(f_temp, keep = true)
             if (line_str == "### START REACTION STRINGS ###\n")
-                print("Found start reaction string\n")
                 break
             else
                 write(f_ReactionSet,line_str)
             end
         end
     end
+
+    return errcode
+end
+
+
+function EndFile_Reactions!(reaction_list::Vector{Reaction})
+
+    write_flag = false 
+    open("src/ReactionSet.Template","r") do f_temp
+        while ! eof(f_temp)
+            line_str = readline(f_temp, keep = true)
+
+            if write_flag
+                write(f_ReactionSet,line_str)
+            end
+
+            if (line_str == "### END REACTION STRINGS ###\n")
+                write_flag = true
+            end
+                
+        end
+    end
+    close(f_ReactionSet)
+end
+
+
+function StartReactionsBlock!(reaction_list::Vector{Reaction})
+
+    errcode = 0
+    global reaction_block_type = 0
 
     return errcode
 end
@@ -83,6 +106,19 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
     # recommended to be included
 
     errcode = 0 
+
+    if name == "reaction_type"
+        if var == "elastic_scattering" || var == "elastic"
+            global reaction_block_type = r_elastic
+        elseif var == "wall_rate_coefficient"
+            global reaction_block_type = r_wall_loss
+        elseif var == "lower_threshold"
+            global reaction_block_type = r_lower_threshold
+        elseif var == "emission_rate" || var == "emission"
+            global reaction_block_type = r_emission_rate
+        end
+        return errcode
+    end
 
     # First part: the reaction process
     idx = findfirst(";", var)
@@ -147,7 +183,7 @@ function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction}
 
     reaction.name = ""
     reaction.id = length(reaction_list) + 1 
-    reaction.case = 0
+    reaction.case = reaction_block_type
     reaction.neutral_species_id = Int64[]
     reaction.E_threshold = 0.0
     reaction.K_value = 0.0
@@ -350,7 +386,6 @@ end
 function ParseDescription!(str::SubString{String}, reaction::Reaction)
 
     errcode = 0
-    reaction.case = 0
 
     str = lowercase(str)
 
@@ -375,24 +410,6 @@ function EndReactionsBlock!(reaction_list::Vector{Reaction},
     species_list::Vector{Species})
 
     errcode = 0 
-
-    write_flag = false 
-    open("src/ReactionSet.Template","r") do f_temp
-        while ! eof(f_temp)
-            line_str = readline(f_temp, keep = true)
-
-            if write_flag
-                write(f_ReactionSet,line_str)
-            end
-
-            if (line_str == "### END REACTION STRINGS ###\n")
-                print("Found end reaction string\n")
-                write_flag = true
-            end
-                
-        end
-    end
-    close(f_ReactionSet)
 
     return errcode
 end
