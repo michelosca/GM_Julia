@@ -86,6 +86,9 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
             global reaction_block_type = r_lower_threshold
         elseif var == "emission_rate" || var == "emission"
             global reaction_block_type = r_emission_rate
+        else
+            errcode = c_io_error
+            PrintErrorMessage(system, "Reaction block type not recognized")
         end
         return errcode
     end
@@ -554,6 +557,7 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             end
             if !(charge_balance == 0)
                 error_str = @sprintf("Reaction %i: %s is not chaged balanced",r.id,r.name)
+                PrintErrorMessage(system, error_str)
                 return c_io_error
             end
 

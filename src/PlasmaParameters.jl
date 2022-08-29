@@ -19,7 +19,7 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
-using SharedData: c_io_error, r_wall_loss, r_lower_threshold 
+using SharedData: c_io_error, r_wall_loss, r_lower_threshold, r_emission_rate 
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf
@@ -51,7 +51,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
 
     # SECOND: Update rate coefficient values that only depend on temperature
     errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
-        system, sID, false)
+        system, sID, 0)
     if errcode == c_io_error
         PrintErrorMessage(system, "UpdateRateCoefficientValues (regular collisions) failed")
         return c_io_error
@@ -116,7 +116,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
 
     # FOURTH: Update wall-loss rate coefficients
     errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
-        system, sID, true)
+        system, sID, r_wall_loss)
     if errcode == c_io_error
         PrintErrorMessage(system, "UpdateRateCoefficientValues (wall collisions) failed")
         return c_io_error
@@ -127,19 +127,49 @@ end
 
 function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
     temp::Vector{Float64}, species_list::Vector{Species}, system::System,
-    sID::SpeciesID, wall_loss_flag::Bool)
+    sID::SpeciesID, reaction_id_target::Int64)
 
     errcode = 0
+
+    target_flag = false
+
+    if reaction_id_target == r_wall_loss
+        target_flag = true
+    elseif reaction_id_target == r_emission_rate
+        target_flag = true
+    end
 
     for r in reaction_list
         # Updates wall-loss reactions
         if r.case == r_wall_loss
-            if wall_loss_flag
+            if target_flag 
                 if system.prerun
                     r.K_value = r.rate_coefficient(temp, species_list, system, sID) 
                 else
                     r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
                         species_list, system, sID)
+                end
+                # Check that rate coeff. is positive
+                errcode = K_low_bound_threshold_check(r, system)
+                if errcode == c_io_error
+                    return errcode
+                end
+
+            else
+                continue
+            end
+        elseif r.case == r_emission_rate
+            if target_flag 
+                if system.prerun
+                    r.K_value = r.rate_coefficient(temp, sID) 
+                else
+                    r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
+                        species_list, system, sID)
+                end
+                # Check that rate coeff. is positive
+                errcode = K_low_bound_threshold_check(r, system)
+                if errcode == c_io_error
+                    return errcode
                 end
             else
                 continue
@@ -147,7 +177,7 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
         end
 
         # Updates regular reactions
-        if !wall_loss_flag
+        if !target_flag
             if system.prerun
                 r.K_value = r.rate_coefficient(temp, sID) 
             else
@@ -156,19 +186,30 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
             end
         end
 
-        # Lower bound threshold would be applied here
-        if r.K_value < 0.0
-            if r.case == r_lower_threshold
-                r.K_value = 0.0
-            else
-                err_message = @sprintf("%s has negative rate coefficient at Te = %15g eV",
-                    r.name, temp[sID.electron]*K_to_eV)
-                PrintErrorMessage(system, err_message) 
-                errcode = c_io_error
-            end
+        # Check that rate coeff. is positive
+        errcode = K_low_bound_threshold_check(r, system)
+        if errcode == c_io_error
+            return errcode
         end
     end
     return errcode
+end
+
+
+function K_low_bound_threshold_check(r::Reaction, system::System)
+
+    errcode = 0
+    if r.K_value < 0.0
+        if r.case == r_lower_threshold
+            r.K_value = 0.0
+        else
+            err_message = @sprintf("%s has negative rate coefficient", r.name)
+            PrintErrorMessage(system, err_message)
+            errcode = c_io_error
+        end
+    end
+    return errcode
+
 end
 
 
