@@ -19,7 +19,7 @@ module InputBlock_Species
 
 using SharedData: K_to_eV, e, me, amu, kb 
 using SharedData: c_io_error
-using SharedData: r_wall_loss
+using SharedData: r_wall_loss, r_emission_rate
 using SharedData: Species, Reaction, SpeciesID, System
 using InputBlock_System: GetUnits!
 
@@ -296,6 +296,7 @@ function EndSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
     return errcode 
 end
 
+
 function InitializeSpeciesID!(speciesID::SpeciesID)
 
     speciesID.electron = 0
@@ -378,7 +379,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
             # - for NEUTRAL SPECIES only ion-neutral reactions are included
             # - for ELECTRONS any reaction is included
             for r in reaction_list
-                if r.case == r_wall_loss
+                if r.case == r_wall_loss || r.case == r_emission_rate
                     continue
                 end
 

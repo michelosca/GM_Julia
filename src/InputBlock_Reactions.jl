@@ -545,25 +545,23 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
 
         for r in reaction_list
             # Test reaction charge balance
-            if !(r.case == r_wall_loss)
-                charge_balance = 0.0
-                i = 1
-                for id in r.involved_species 
-                    fact = r.species_balance[i]
-                    charge_balance += species_list[id].charge * fact
-                    i += 1
-                end
-                if !(charge_balance == 0)
-                    print("***ERROR*** Reaction ",r.id,": ",r.name," is charged unbalanced\n")
-                    return c_io_error
-                end
+            charge_balance = 0.0
+            i = 1
+            for id in r.involved_species 
+                fact = r.species_balance[i]
+                charge_balance += species_list[id].charge * fact
+                i += 1
+            end
+            if !(charge_balance == 0)
+                error_str = @sprintf("Reaction %i: %s is not chaged balanced",r.id,r.name)
+                return c_io_error
             end
 
             # Test elastic collisions
             if r.case == r_elastic
                 if length(r.neutral_species_id) > 1
-                    print("***ERROR*** Elastic collision ",r.id,
-                        " can only have one neutral reacting species\n")
+                    error_str = @sprintf("Elastic collision %i can only have one neutral reacting species", r.id)
+                    PrintErrorMessage(system, error_str)
                     return c_io_error
                 end
             end
@@ -581,7 +579,8 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                 i += 1
             end
             if !(abs(mass_balance) <= me)
-                print("***ERROR*** Reaction ",r.id,": ",r.name," is mass unbalanced\n")
+                error_str = @sprintf("Reaction %i: %s is not mass balanced",r.id,r.name)
+                PrintErrorMessage(system, error_str)
                 return c_io_error
             end
 
@@ -599,7 +598,8 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                         species_list, system, sID)
                 end
                 if K < 0.0
-                    @printf("***ERROR*** Reaction %i: %s has negative rate coefficient value at %.2f eV\n",r.id, r.name, T_e * K_to_eV)
+                    error_str = @sprintf("Reaction %i: %s with negative rate coeffciient at %.2f eV",r.id, r.name, T_e*K_to_eV)
+                    PrintErrorMessage(system, error_str)
                     return c_io_error
                 end
             end
