@@ -21,7 +21,7 @@ using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
-using SharedData: r_wall_loss, r_elastic
+using SharedData: r_diffusion, r_elastic
 using Printf
 
 ###############################################################################
@@ -98,8 +98,8 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             # r.case -> reaction name
             if (r.case == r_elastic)
                 r_name = string(r_name, "-Elastic")
-            elseif (r.case == r_wall_loss)
-                r_name = string(r_name, "-Wall react.")
+            elseif (r.case == r_diffusion)
+                r_name = string(r_name, "-Diffusion")
             end
 
             # reaction description

@@ -19,7 +19,7 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e
-using SharedData: c_io_error, r_wall_loss, r_lower_threshold, r_emission_rate 
+using SharedData: c_io_error, r_diffusion, r_lower_threshold, r_emission_rate 
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf
@@ -50,7 +50,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     end
 
     # SECOND: Update rate coefficient values that only depend on temperature
-    errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
+    errcode = UpdateRateCoefficientValues!(reaction_list, dens, temp, species_list,
         system, sID, 0)
     if errcode == c_io_error
         PrintErrorMessage(system, "UpdateRateCoefficientValues (regular collisions) failed")
@@ -115,8 +115,8 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     end
 
     # FOURTH: Update wall-loss rate coefficients
-    errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
-        system, sID, r_wall_loss)
+    errcode = UpdateRateCoefficientValues!(reaction_list, dens, temp, species_list,
+        system, sID, r_diffusion)
     if errcode == c_io_error
         PrintErrorMessage(system, "UpdateRateCoefficientValues (wall collisions) failed")
         return c_io_error
@@ -126,14 +126,14 @@ end
 
 
 function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
-    temp::Vector{Float64}, species_list::Vector{Species}, system::System,
-    sID::SpeciesID, reaction_id_target::Int64)
+    dens::Vector{Float64}, temp::Vector{Float64}, species_list::Vector{Species},
+    system::System, sID::SpeciesID, reaction_id_target::Int64)
 
     errcode = 0
 
     target_flag = false
 
-    if reaction_id_target == r_wall_loss
+    if reaction_id_target == r_diffusion
         target_flag = true
     elseif reaction_id_target == r_emission_rate
         target_flag = true
@@ -141,14 +141,11 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
 
     for r in reaction_list
         # Updates wall-loss reactions
-        if r.case == r_wall_loss
+        if r.case == r_diffusion
             if target_flag 
-                if system.prerun
-                    r.K_value = r.rate_coefficient(temp, species_list, system, sID) 
-                else
-                    r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
-                end
+                r.K_value = r.rate_coefficient(dens, temp, species_list,
+                    system, sID) 
+
                 # Check that rate coeff. is positive
                 errcode = K_low_bound_threshold_check(r, system)
                 if errcode == c_io_error
@@ -224,6 +221,7 @@ function UpdateTotalPressure!(system::System, species_list::Vector{Species}, sID
     system.total_pressure = p_total
     return 0
 end
+
 
 function GetMFP!(species::Species, dens::Vector{Float64}, species_list::Vector{Species})
     # The mean-free-path is calculated using the reaction list associated to
@@ -339,6 +337,20 @@ function GetNeutralDiffusionCoeff!(species::Species)
 
     return 0 
 end
+
+
+function DiffusionRateCoefficient(species::Species, system::System)
+    V = system.V
+    A = system.A
+    lambda = system.Lambda
+    D = species.D
+    gamma = species.gamma
+    vth = species.v_thermal
+
+    K = 1.0/(lambda^2 / D  + 2.0 * V * (2.0 - gamma) / A / vth  / gamma)
+    return K
+end
+
 
 function GetSheathDensity!(species::Species, species_list::Vector{Species},
     system::System, sID::SpeciesID)

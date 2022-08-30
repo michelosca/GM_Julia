@@ -1,3 +1,4 @@
+module InputBlock_Reactions 
 # Copyright (C) 2021 Michel Osca Engelbrecht
 #
 # This file is part of GM Julia.
@@ -15,476 +16,49 @@
 # You should have received a copy of the GNU General Public License
 # along with GM Julia. If not, see <https://www.gnu.org/licenses/>.
 
-module InputBlock_Reactions
-
-using SharedData: c_io_error, e, me, K_to_eV
-using SharedData: Species, Reaction, System, SpeciesID
-using SharedData: r_elastic, r_wall_loss, r_lower_threshold, r_emission_rate
-using ReactionSet: K_funct_list
-using EvaluateExpressions: ReplaceConstantValues!
-using EvaluateExpressions: ReplaceExpressionValues
-using PrintModule: PrintErrorMessage 
+using SharedData: Reaction, Species, SpeciesID, System
+using SharedData: c_io_error
+using SharedData: r_elastic, r_lower_threshold, r_diffusion, r_extended
+using SharedData: r_emission_rate
+using SharedData: K_to_eV, me 
+using ParseReactions: LoadReaction!
+using ParseReactions_PreRun: WriteRateCoefficientFunctions!
+using PrintModule: PrintErrorMessage
 using Printf
-
 
 
 ###############################################################################
 ################################  VARIABLES  ##################################
 ###############################################################################
-
-###############################################################################
-################################  FUNCTIONS  ##################################
-###############################################################################
-# FUNCTION TREE
-# - StartFile_Reactions
-# - StartReactionsBlock
-# - ReadReactionsEntry
-#   - ParseReaction
-#     - GetSpeciesFromString
-#       - SelectSpeciesID
-#     - GetReactionSpeciesLists
-#   - ParseEThreshold
-#   - ParseRateCoefficient
-#   - ParseDescription
-#   - AddReactionToList 
-# - EndReactionsBlock
-
 global reaction_block_type = 0::Int64
+global f_ReactionSet
 
 function StartFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction}) 
 
     errcode = 0
 
+    if read_step == 0
+        global f_ReactionSet = open("src/ReactionSet.jl","w") 
+        open("src/ReactionSet.Template","r") do f_temp
+            while ! eof(f_temp)
+                line_str = readline(f_temp, keep = true)
+                if (line_str == "### START REACTION STRINGS ###\n")
+                    break
+                else
+                    write(f_ReactionSet,line_str)
+                end
+            end
+        end
+    end
+
     return errcode
 end
+
 
 function StartReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction})
 
     errcode = 0
-
     global reaction_block_type = 0
-
-    return errcode
-end
-
-
-function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
-    read_step::Int64, reaction_list::Vector{Reaction}, system::System, 
-    speciesID::SpeciesID)
-    # Splits the input line contained in var into four parts
-    # The fourth part is actually not necessary, but it is 
-    # recommended to be included
-
-    errcode = 0 
-
-    if name == "reaction_type"
-        if var == "elastic_scattering" || var == "elastic"
-            global reaction_block_type = r_elastic
-        elseif var == "wall_rate_coefficient"
-            global reaction_block_type = r_wall_loss
-        elseif var == "lower_threshold"
-            global reaction_block_type = r_lower_threshold
-        elseif var == "emission_rate" || var == "emission"
-            global reaction_block_type = r_emission_rate
-        else
-            errcode = c_io_error
-            PrintErrorMessage(system, "Reaction block type not recognized")
-        end
-        return errcode
-    end
-
-    # First part: the reaction process
-    idx = findfirst(";", var)
-    if !(idx === nothing)
-        idx = idx[1]
-        reaction_process_str = strip(var[1:idx-1])
-        var = var[idx+1:end]
-        str_track = true
-    else
-        errcode = c_io_error
-        str_track = false 
-    end
-
-    # Second part: the threshold energy
-    idx = findfirst(";", var)
-    if (!(idx === nothing) && str_track)
-        idx = idx[1]
-        e_threshold_str = strip(var[1:idx-1])
-        var = var[idx+1:end]
-        str_track = true
-    else
-        errcode = c_io_error
-        str_track = false 
-    end
-
-    # Third part: the rate coefficient expression
-    idx = findfirst(";", var)
-    if (!(idx === nothing) && str_track)
-        idx = idx[1]
-        rate_coeff_str = strip(var[1:idx-1])
-        var = var[idx+1:end]
-        str_track = true
-    else
-        errcode = c_io_error
-        str_track = false
-    end
-
-    # Fourth part, if existing: reaction description string
-    if (str_track)
-        description_str = strip(var)
-    else
-        description_str = nothing 
-    end
-    if (errcode == c_io_error) return errcode end
-
-    if (read_step ==1)
-
-        # Parse each term of the input line
-        current_reaction = Reaction()
-        InitializeReaction!(current_reaction, reaction_list)
-        current_reaction.name = reaction_process_str
-
-        errcode = ParseReaction!(reaction_process_str, current_reaction,
-            speciesID)
-        if (errcode == c_io_error) return errcode end
-
-        errcode = ParseEThreshold!(e_threshold_str, current_reaction)
-        if (errcode == c_io_error) return errcode end
-
-        if !(description_str === nothing)
-            errcode = ParseDescription!(description_str, current_reaction, system)
-            if (errcode == c_io_error) return errcode end
-        end
-        
-        if system.prerun
-            current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
-        else
-            errcode = GetRateCoefficientExpr(rate_coeff_str, current_reaction)
-            if (errcode == c_io_error) return errcode end
-        end
-
-        # Add current_reaction to reaction_list
-        push!(reaction_list, current_reaction)
-    end
-
-    return errcode
-end
-
-
-function InitializeReaction!(reaction::Reaction, reaction_list::Vector{Reaction})
-
-    reaction.name = ""
-    reaction.id = length(reaction_list) + 1 
-    reaction.case = reaction_block_type 
-    reaction.neutral_species_id = Int64[]
-    reaction.E_threshold = 0.0
-    reaction.K_value = 0.0
-
-end
-
-
-function ParseReaction!(str::SubString{String}, reaction::Reaction,
-    speciesID::SpeciesID)
-
-    errcode = c_io_error
-
-    idx = findfirst("->",str)
-    if !(idx===nothing)
-        # Get reactant and product strings
-        reactant_str = strip(str[1:idx[1]-1])
-        product_str = strip(str[idx[2]+1:end])
-        
-        # Get Vector{Int64} with species IDs
-        input_rea_s = GetSpeciesFromString!(reactant_str, speciesID)
-        if (input_rea_s == c_io_error) return errcode end
-
-        input_pro_s = GetSpeciesFromString!(product_str, speciesID)
-        if (input_pro_s == c_io_error) return errcode end
-
-        # Get balance, reactant and involved species vectors
-        errcode = GetReactionSpeciesLists!(input_rea_s, input_pro_s, reaction)
-        if (input_pro_s == c_io_error) return errcode end
-    end
-    return errcode
-end
-
-
-function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
-    # This function links the species found in the given string (str)
-    # to the species ids predefined in the code
-
-    s_list = Int64[]
-    next_species = true 
-    while next_species
-        idx = findfirst(" + ", str)
-        if (idx===nothing)
-            fact, str= GetSpeciesFactor!(str)
-            s_id = SelectSpeciesID(str, speciesID)
-            if (s_id == 0)
-                print("***ERROR*** Reaction species ",str ," is not recognized\n")
-                return c_io_error
-            else 
-                while fact >= 1
-                    push!(s_list, s_id)
-                    fact -= 1
-                end
-            end
-            next_species = false
-        else
-            s = strip(str[1:idx[1]-1])
-            str = strip(str[idx[2]+1:end])
-            fact, s = GetSpeciesFactor!(s)
-            s_id = SelectSpeciesID(s, speciesID)
-            if (s_id == 0)
-                print("***ERROR*** Reaction species ",s ," is not recognized\n")
-                return c_io_error
-            else 
-                while fact >= 1
-                    push!(s_list, s_id)
-                    fact -= 1
-                end
-            end
-        end
-    end
-    return s_list
-end
-
-
-function GetSpeciesFactor!(str::SubString{String})
-
-    fact = 1
-    if str[1:1] == "2"
-        fact = 2
-        str = str[2:end]
-    elseif str[1:1] == "3"
-        fact = 3
-        str = str[2:end]
-    elseif str[1:1] == "4"
-        fact = 4
-        str = str[2:end]
-    elseif str[1:1] == "5"
-        fact = 5
-        str = str[2:end]
-    end
-    return fact, str
-end
-
-
-function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
-
-    id = 0
-    # ARGON 
-    if (s == "Ar")
-        id = speciesID.Ar 
-    elseif (s == "Ar+")
-        id = speciesID.Ar_Ion 
-    elseif (s == "Ar_m")
-        id = speciesID.Ar_m 
-    elseif (s == "Ar_r")
-        id = speciesID.Ar_r 
-    elseif (s == "Ar_4p")
-        id = speciesID.Ar_4p 
-
-    # ATOMIC OXYGEN 
-    elseif (s == "O")
-        id = speciesID.O 
-    elseif (s == "O+")
-        id = speciesID.O_Ion 
-    elseif (s == "O-")
-        id = speciesID.O_negIon 
-    elseif (s == "O_1s")
-        id = speciesID.O_1s
-    elseif (s == "O_3s")
-        id = speciesID.O_3s
-    elseif (s == "O_5s")
-        id = speciesID.O_5s
-    elseif (s == "O_1d")
-        id = speciesID.O_1d
-    elseif (s == "O_3p")
-        id = speciesID.O_3p
-    elseif (s == "O_5p")
-        id = speciesID.O_5p
-
-    # MOLECULAR OXYGEN
-    elseif (s == "O2")
-        id = speciesID.O2
-    elseif (s == "O2_v")
-        id = speciesID.O2_v
-    elseif (s == "O2+")
-        id = speciesID.O2_Ion 
-    elseif (s == "O2-")
-        id = speciesID.O2_negIon 
-    elseif (s == "O2_a1Ag")
-        id = speciesID.O2_a1Ag 
-    elseif (s == "O2_a1Ag_v")
-        id = speciesID.O2_a1Ag_v 
-    elseif (s == "O2_b1Su")
-        id = speciesID.O2_b1Su 
-    elseif (s == "O2_b1Su_v")
-        id = speciesID.O2_b1Su_v 
-
-    # OZONE and O4 
-    elseif (s == "O3")
-        id = speciesID.O3
-    elseif (s == "O3_v")
-        id = speciesID.O3_v
-    elseif (s == "O3+")
-        id = speciesID.O3_Ion
-    elseif (s == "O3-")
-        id = speciesID.O3_negIon
-    elseif (s == "O4+")
-        id = speciesID.O4_Ion
-    elseif (s == "O4-")
-        id = speciesID.O4_negIon
-
-    # ELECTRON
-    elseif (s == "e")
-        id = speciesID.electron 
-    end
-    return id 
-end
-
-
-function GetReactionSpeciesLists!(reac::Vector{Int64}, prod::Vector{Int64},
-    reaction::Reaction)
-
-    errcode = 0
-    try
-        reaction.involved_species = Int64[]
-        reaction.reactant_species = Int64[]
-
-        # Loop over species list and
-        #  - if not in involved_species -> push
-        #  - if already in, move on
-        # Loop for reactant species
-        for r in reac
-            already_in = false
-            i = 0
-            for is in reaction.involved_species
-                i += 1
-                if r == is
-                    already_in = true
-                    break
-                end
-            end
-            if !already_in
-                push!(reaction.involved_species, r)
-                push!(reaction.reactant_species, r)
-            end
-        end
-        
-        # Loop for product species
-        for p in prod 
-            already_in = false
-            i = 0
-            for is in reaction.involved_species
-                i += 1
-                if p == is
-                    already_in = true
-                    break
-                end
-            end
-            if !already_in
-                push!(reaction.involved_species, p)
-            end
-        end
-
-        # Get species balance between reactants and products
-        n_species = length(reaction.involved_species)
-        reaction.species_balance= zeros(Int64, n_species) 
-        for i in 1:n_species
-            s = reaction.involved_species[i]
-            for r in reac
-                if s==r
-                    reaction.species_balance[i] -= 1
-                end
-            end
-
-            for p in prod
-                if s==p
-                    reaction.species_balance[i] += 1
-                end
-            end
-        end
-
-    catch
-        print("***ERROR*** While setting up reaction species lists\n")
-        errcode = c_io_error
-    end
-    return errcode
-end
-
-
-function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
-
-    # Must provide: E_threshold
-    errcode = 0
-
-    try
-        # Default energy units: eV
-        units_fact = e
-        if (occursin("J", str))
-            units_fact = 1.0
-            idx = findfirst("J", str)
-            idx = idx[1]-1
-            str = string(str[1:idx])
-        elseif (occursin("eV", str))
-            idx = findfirst("eV", str)
-            idx = idx[1]-1
-            str = string(str[1:idx])
-        end
-        reaction.E_threshold = parse(Float64, str) * units_fact
-    catch
-        print("***ERROR*** While parsing E threshold\n")
-        errcode = c_io_error
-    end
-        
-    return errcode
-end
-
-
-function ParseDescription!(str::SubString{String}, reaction::Reaction,
-    system::System)
-
-    errcode = 0
-
-    str = lowercase(str)
-
-    if (str == "elastic")
-        reaction.case = r_elastic
-    elseif (str == "wall_rate_coefficient")
-        reaction.case = r_wall_loss
-    elseif (str == "lower_threshold")
-        reaction.case = r_lower_threshold
-    elseif (str == "")
-        errcode = 0
-    else
-        errcode = c_io_error
-        error_str = @sprintf("Reaction description '%s' was not recognized",str)
-        PrintErrorMessage(system, error_str)
-    end
-
-    return errcode
-end
-
-
-function GetRateCoefficientExpr(str::SubString{String},
-    reaction::Reaction)
-
-    errcode = 0 
-
-    try
-        expr = Meta.parse(str)
-        if typeof(expr)==Expr
-            ReplaceConstantValues!(expr)
-        end
-
-        reaction.rate_coefficient = expr
-
-    catch
-        errcode = c_io_error
-        print("***ERROR*** While getting rate coefficient expression\n")
-    end
 
     return errcode
 end
@@ -492,9 +66,10 @@ end
 
 function EndReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction},
     species_list::Vector{Species})
+
     errcode = 0 
 
-    if (read_step == 2)
+    if read_step == 2
         # Set reacting neutral species
         for reaction in reaction_list
             errcode = IdentifyReactingNeutralSpecies!(reaction,
@@ -507,30 +82,11 @@ function EndReactionsBlock!(read_step::Int64, reaction_list::Vector{Reaction},
 end
 
 
-function IdentifyReactingNeutralSpecies!(reaction::Reaction,
-    species_list::Vector{Species})
-
-    for react_id in reaction.reactant_species
-        species = species_list[react_id]
-        if species.charge == 0
-            already_in = false
-            for n_id in reaction.neutral_species_id
-                if react_id == n_id
-                    already_in = true
-                end
-            end
-            if !already_in
-                push!(reaction.neutral_species_id, react_id)
-            end
-        end
-    end
-end
-
-
 function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
 
     errcode = 0
+
     if read_step == 2
         print("Test reactions...\n")
         print("  - Charge balance\n")
@@ -542,8 +98,10 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             T_min*K_to_eV, T_max*K_to_eV)
         # Setup temp array, used later when testing rate coefficients
         temp = Float64[]
+        dens = Float64[]
         for s in species_list
             push!(temp, s.temp)
+            push!(dens, s.dens)
         end
 
         for r in reaction_list
@@ -592,8 +150,8 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             for T_e in range(T_min, T_max, length=100)
                 temp[sID.electron] = T_e 
                 if system.prerun
-                    if r.case == r_wall_loss
-                        K = r.rate_coefficient(temp, species_list, system, sID) 
+                    if r.case == r_extended || r.case == r_diffusion
+                        K = r.rate_coefficient(temp, dens, species_list, system, sID) 
                     else
                         K = r.rate_coefficient(temp, sID) 
                     end
@@ -608,9 +166,189 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                 end
             end
         end
+    elseif read_step == 0
+        write_flag = false 
+        open("src/ReactionSet.Template","r") do f_temp
+            while ! eof(f_temp)
+                line_str = readline(f_temp, keep = true)
+
+                if write_flag
+                    write(f_ReactionSet,line_str)
+                end
+
+                if (line_str == "### END REACTION STRINGS ###\n")
+                    write_flag = true
+                end
+                    
+            end
+        end
+        close(f_ReactionSet)
     end
 
     return errcode
+end
+
+
+
+function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
+    read_step::Int64, reaction_list::Vector{Reaction}, system::System, 
+    sID::SpeciesID)
+    # Splits the input line contained in var into four parts
+    # The fourth part is actually not necessary, but it is 
+    # recommended to be included
+
+    errcode = 0 
+
+    if name == "reaction_type"
+        if var == "elastic_scattering" || var == "elastic"
+            global reaction_block_type = r_elastic
+        elseif var == "diffusion"
+            global reaction_block_type = r_diffusion
+        elseif var == "lower_threshold"
+            global reaction_block_type = r_lower_threshold
+        elseif var == "emission_rate" || var == "emission"
+            global reaction_block_type = r_emission_rate
+        elseif var == "extended_function_parameters"
+            global reaction_block_type = r_extended
+        else
+            errcode = c_io_error
+            err_str = "Reaction block type not recognized" 
+            if read_step > 1
+                PrintErrorMessage(system, err_str)
+            else
+                print("***ERROR*** ", err_str,"\n")
+            end
+        end
+        return errcode
+    end
+
+    # First part: the reaction process
+    idx = findfirst(";", var)
+    if !(idx === nothing)
+        idx = idx[1]
+        reaction_process_str = strip(var[1:idx-1])
+        var = var[idx+1:end]
+        str_track = true
+    else
+        errcode = c_io_error
+        str_track = false 
+    end
+
+    # Second part: the threshold energy
+    idx = findfirst(";", var)
+    if (!(idx === nothing) && str_track)
+        idx = idx[1]
+        e_threshold_str = strip(var[1:idx-1])
+        var = var[idx+1:end]
+        str_track = true
+    else
+        errcode = c_io_error
+        str_track = false 
+    end
+
+    # Third part: the rate coefficient expression
+    idx = findfirst(";", var)
+    if (!(idx === nothing) && str_track)
+        idx = idx[1]
+        rate_coeff_str = strip(var[1:idx-1])
+        var = var[idx+1:end]
+        str_track = true
+    else
+        errcode = c_io_error
+        str_track = false
+    end
+
+    # Fourth part, if existing: reaction description string
+    if (str_track)
+        description_str = strip(var)
+    else
+        description_str = nothing 
+    end
+    if (errcode == c_io_error) return errcode end
+
+    if read_step == 0 || read_step == 1
+
+        # Initialize Reaction structure
+        current_reaction = Reaction()
+        InitializeReaction!(current_reaction, reaction_list)
+
+        # Include description feature to the current reaction structure 
+        if !(description_str === nothing)
+            errcode = ParseDescription!(description_str, current_reaction)
+            if (errcode == c_io_error) return errcode end
+        end
+
+        if read_step == 1
+            # Main simulation procedure: set-up reaction structure
+            errcode = LoadReaction!(current_reaction, system,
+            reaction_process_str, e_threshold_str, sID)
+            push!(reaction_list, current_reaction)
+        elseif read_step == 0
+            # PRERUN: read rate coefficients and write them to ReactionSet module
+            errcode = WriteRateCoefficientFunctions!(current_reaction,
+                rate_coeff_str, f_ReactionSet)
+        end
+    end
+
+    return errcode
+end
+
+
+function InitializeReaction!(reaction::Reaction,
+    reaction_list::Vector{Reaction})
+
+    reaction.name = ""
+    reaction.id = length(reaction_list) + 1 
+    reaction.case = reaction_block_type
+    reaction.neutral_species_id = Int64[]
+    reaction.E_threshold = 0.0
+    reaction.K_value = 0.0
+
+end
+
+
+function ParseDescription!(str::SubString{String}, reaction::Reaction)
+
+    errcode = 0
+
+    str = lowercase(str)
+
+    if str == "elastic"
+        reaction.case = r_elastic
+    elseif str == "diffusion"
+        reaction.case = r_diffusion
+    elseif str == "lower_threshold"
+        reaction.case = r_lower_threshold
+    elseif str == "extended_function_parameters"
+        reaction.case = r_extended
+    elseif str == ""
+        errcode = 0
+    else
+        errcode = c_io_error
+        print("***ERROR*** Reaction description '",str,"' was not recognized\n")
+    end
+
+    return errcode
+end
+
+
+function IdentifyReactingNeutralSpecies!(reaction::Reaction,
+    species_list::Vector{Species})
+
+    for react_id in reaction.reactant_species
+        species = species_list[react_id]
+        if species.charge == 0
+            already_in = false
+            for n_id in reaction.neutral_species_id
+                if react_id == n_id
+                    already_in = true
+                end
+            end
+            if !already_in
+                push!(reaction.neutral_species_id, react_id)
+            end
+        end
+    end
 end
 
 end

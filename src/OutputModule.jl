@@ -19,10 +19,10 @@ module OutputModule
 
 using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
 using SharedData: kb
-using SharedData: c_io_error, r_wall_loss
+using SharedData: c_io_error
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
-using SharedData: o_pressure_percent, neutral_species_id
+using SharedData: o_pressure_percent, heavy_species_id
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using EvaluateExpressions: ReplaceExpressionValues
 using PlasmaParameters: UpdateSpeciesParameters!
@@ -185,7 +185,7 @@ function UpdateOutputParameters!(species_list::Vector{Species},
 
         elseif (output.case[i] == o_temp)
             s_id = output.species_id[i]
-            if s_id == neutral_species_id
+            if s_id == heavy_species_id
                 for s in species_list
                     if s.id != sID.electron
                         s.temp = param[i]

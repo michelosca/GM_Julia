@@ -19,13 +19,13 @@ module InputData
 
 using SharedData: c_io_error
 using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
+using SharedData: b_system, b_species, b_reactions, b_output, b_constants
 
 using InputBlock_Species: StartFile_Species!, EndFile_Species!
 using InputBlock_Species: StartSpeciesBlock!, EndSpeciesBlock!, ReadSpeciesEntry!
 
 using InputBlock_Reactions: StartFile_Reactions!, EndFile_Reactions!
 using InputBlock_Reactions: StartReactionsBlock!, EndReactionsBlock!, ReadReactionsEntry!
-using InputBlock_Reactions: r_elastic, r_wall_loss 
 
 using InputBlock_System: StartFile_System!, EndFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
@@ -38,33 +38,6 @@ using InputBlock_Output: StartOutputBlock!, EndOutputBlock!, ReadOutputEntry!
 ###############################################################################
 # INPUT BLOCK IDs
 global block_id = 0
-const b_system = 1
-const b_species = 2
-const b_reactions = 3
-const b_output = 4
-const b_constants = 5
-
-###############################################################################
-################################  FUNCTIONS  ##################################
-###############################################################################
-# FUNCTION TREE
-# - SetupInputData
-#   - ReadInputData
-#     - StartFile
-#     - ReadFile
-#       - ReadLine
-#         - StartBlock
-#           - StartSystemBlock
-#           - StartSpeciesBlock
-#           - StartReactionsBlock
-#         - ReadInputDeckEntry
-#           - ReadSystemEntry
-#           - ReadSpeciesEntry
-#           - ReadReactionsEntry
-#         - EndBlock
-#           - EndSystemBlock
-#           - EndtSpeciesBlock
-#           - EndtReactionsBlock
 
 function SetupInputData!(filename::String,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
