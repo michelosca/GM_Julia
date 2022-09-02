@@ -21,7 +21,7 @@ using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
-using SharedData: r_diffusion, r_elastic
+using SharedData: r_diffusion, r_elastic, r_emission_rate
 using Printf
 
 ###############################################################################
@@ -94,12 +94,18 @@ function PrintReactionList(reaction_list::Vector{Reaction},
 
         for r in reaction_list
 
-            r_name = string(r.id)
+            r_id = string(r.id)
             # r.case -> reaction name
             if (r.case == r_elastic)
-                r_name = string(r_name, "-Elastic")
+                r_id = string(r_id, "-Elastic")
             elseif (r.case == r_diffusion)
-                r_name = string(r_name, "-Diffusion")
+                r_id = string(r_id, "-Diffusion")
+            elseif (r.case == r_emission_rate)
+                if r.self_absorption
+                    r_id = string(r_id, "-Self-absorption")
+                else
+                    r_id = string(r_id, "-Emission")
+                end
             end
 
             # reaction description
@@ -145,7 +151,12 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             end
 
             # Threshold energy
-            E_eV = r.E_threshold / e
+            if r.self_absorption
+                self_absorption = @sprintf("[%2i, %2i, %2i, %2i, %5.1f nm]",
+                    r.g_high, r.g_low, r.g_high_total, r.g_low_total, r.wavelength/1.e-9)
+            else
+                E_eV = r.E_threshold / e
+            end
 
             # Neutral species
             r_neutral = ""
@@ -170,8 +181,13 @@ function PrintReactionList(reaction_list::Vector{Reaction},
             end
             r_reactants = chop(r_reactants, tail=2)
 
-            @printf(file, "%17s %30s %15.2f %15s %30s %15s\n", r_name, r.name,
-                E_eV, r_neutral, r_involved, r_reactants)
+            if r.self_absorption
+                @printf(file, "%17s %30s %s %15s %30s %15s\n", r_id, r.name,
+                    self_absorption, r_neutral, r_involved, r_reactants)
+            else
+                @printf(file, "%17s %30s %15.2f %15s %30s %15s\n", r_id, r.name,
+                    E_eV, r_neutral, r_involved, r_reactants)
+            end
         end
         @printf(file, "\n")
     end

@@ -20,11 +20,11 @@ using SharedData: Reaction, Species, SpeciesID, System
 using SharedData: c_io_error
 using SharedData: r_elastic, r_lower_threshold, r_diffusion, r_extended
 using SharedData: r_emission_rate
-using SharedData: K_to_eV, me 
+using SharedData: K_to_eV, me, e 
 using ParseReactions: LoadReaction!
 using ParseReactions_PreRun: WriteRateCoefficientFunctions!
 using PrintModule: PrintErrorMessage
-using Printf
+using Printf: @printf, @sprintf
 
 
 ###############################################################################
@@ -105,7 +105,7 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
         end
 
         for r in reaction_list
-            # Test reaction charge balance
+            ##### Test reaction charge balance
             charge_balance = 0.0
             i = 1
             for id in r.involved_species 
@@ -119,7 +119,7 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                 return c_io_error
             end
 
-            # Test elastic collisions
+            ##### Test elastic collisions
             if r.case == r_elastic
                 if length(r.neutral_species_id) > 1
                     error_str = @sprintf("Elastic collision %i can only have one neutral reacting species", r.id)
@@ -128,7 +128,7 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                 end
             end
 
-            # Test reaction mass balance
+            ##### Test reaction mass balance
             mass_balance = 0.0
             i = 1
             for id in r.involved_species 
@@ -146,11 +146,11 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                 return c_io_error
             end
 
-            # Test rate coefficient
+            ##### Test rate coefficient
             for T_e in range(T_min, T_max, length=100)
                 temp[sID.electron] = T_e 
                 if system.prerun
-                    if r.case == r_extended || r.case == r_diffusion
+                    if r.case == r_extended || r.case == r_diffusion || r.case == r_emission_rate
                         K = r.rate_coefficient(temp, dens, species_list, system, sID) 
                     else
                         K = r.rate_coefficient(temp, sID) 
@@ -165,8 +165,65 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                     return c_io_error
                 end
             end
+
+            ##### Test energy threshold
+            # - It is assumed that there is no E-threshold above +/-100 eV
+            if abs(r.E_threshold) > 100.0/e
+                error_str = @sprintf("Energy threshold is above 100 eV")
+                PrintErrorMessage(system, error_str)
+                return c_io_error
+            end
+
+            ##### Test emission reactions and self-absorption
+            if r.case == r_emission_rate
+                if length(r.reactant_species) > 1 || length(r.product_species) > 1
+                    error_str = @sprintf("Radiation processes should only have one species at each side of the reaction")
+                    PrintErrorMessage(system, error_str)
+                    return c_io_error
+                end
+
+                if r.self_absorption
+                    if r.g_high <= 0.0
+                        error_str = @sprintf("Self absorption: statistical weight of higher state is not valid")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                    if r.g_low <= 0.0
+                        error_str = @sprintf("Self absorption: statistical weight of lower state is not valid")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                    if r.g_high_total >= 1.e100
+                        error_str = @sprintf("Self absorption: total statistical weight of higher states is not valid")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                    if r.g_low_total >= 1.e100
+                        error_str = @sprintf("Self absorption: total statistical weight of lower states is not valid")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                    if r.wavelength <= 0.0
+                        error_str = @sprintf("Self absorption: radiation wavelength is not valid")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                    if length(r.product_species) > 1
+                        error_str = @sprintf("Self absorption: process only allows one product species")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                    if length(r.reactant_species) > 1
+                        error_str = @sprintf("Self absorption: process only allows one reacting species")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+                end
+            end
         end
+
     elseif read_step == 0
+        #  PRERUN
         write_flag = false 
         open("src/ReactionSet.Template","r") do f_temp
             while ! eof(f_temp)
@@ -187,7 +244,6 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
 
     return errcode
 end
-
 
 
 function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
@@ -234,7 +290,7 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
         str_track = false 
     end
 
-    # Second part: the threshold energy
+    # Second part: the threshold energy / emission parameters
     idx = findfirst(";", var)
     if (!(idx === nothing) && str_track)
         idx = idx[1]
@@ -301,8 +357,18 @@ function InitializeReaction!(reaction::Reaction,
     reaction.id = length(reaction_list) + 1 
     reaction.case = reaction_block_type
     reaction.neutral_species_id = Int64[]
+    reaction.involved_species = Int64[]
+    reaction.reactant_species = Int64[]
+    reaction.product_species = Int64[] 
+    reaction.species_balance= Int64[] 
     reaction.E_threshold = 0.0
     reaction.K_value = 0.0
+    reaction.self_absorption = false
+    reaction.g_high= 0.0
+    reaction.g_low = 0.0
+    reaction.g_high_total = 1.e100
+    reaction.g_low_total = 1.e100
+    reaction.wavelength = 0.0
 
 end
 

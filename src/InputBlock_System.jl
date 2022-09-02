@@ -21,7 +21,7 @@ using SharedData: c_io_error
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using SharedData: System
-using SharedData: K_to_eV
+using SharedData: K_to_eV, e
 using PlasmaParameters: GetLambda
 using Dates
 
@@ -250,7 +250,7 @@ function EndFile_System!(read_step::Int64, system::System)
 end
 
 
-function GetUnits!(var::SubString{String})
+function GetUnits!(var::Union{String,SubString{String}})
     # Identify units definition
     units_fact = 1.0
     units_index = findlast("_", var)
@@ -259,7 +259,12 @@ function GetUnits!(var::SubString{String})
         units_str = lowercase(var[units_index+1:end])
         match_flag = false
         if (units_str=="ev")
+            # this eV refers to TEMPERATURE!
             units_fact = 1.0/K_to_eV
+            match_flag = true
+        elseif (units_str=="eev")
+            # this eV refers to ENERGY 
+            units_fact = e
             match_flag = true
         elseif (units_str=="mtorr")
             units_fact = 0.13332237
@@ -275,6 +280,9 @@ function GetUnits!(var::SubString{String})
             match_flag = true
         elseif (units_str=="microns")
             units_fact = 1.e-6
+            match_flag = true
+        elseif (units_str=="nm")
+            units_fact = 1.e-9
             match_flag = true
         elseif (units_str=="sccm")
             # The units_fact still needs to be divided by system.V, however,

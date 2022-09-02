@@ -84,6 +84,7 @@ mutable struct Reaction
     involved_species::Vector{Int}
     species_balance::Vector{Int}
     reactant_species::Vector{Int}
+    product_species::Vector{Int}
 
     # Rate coefficient function
     rate_coefficient::Union{Float64, Expr, Function}
@@ -91,6 +92,15 @@ mutable struct Reaction
 
     # Energy threshold
     E_threshold::Float64
+
+    # Radiation emission
+    self_absorption::Bool
+    g_high::Float64 # statistical weight of the higher state (reactant)
+    g_low::Float64  # statistical weight of the lower state (product)
+    g_high_total::Float64 # statistical weight of the higher state (reactant)
+    g_low_total::Float64  # statistical weight of the lower state (product)
+    wavelength::Float64
+
 
     Reaction() = new()
 end
@@ -124,12 +134,18 @@ mutable struct Species
     mfp::Float64       # mean free path
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
+
+    # Flux losses
+    n_sheath::Float64  # number density at sheath entrance
+    flux::Float64      # particle flux [particles/s]
+
+    # Diffusion losses
     D::Float64         # Diffusion coefficient
     h_R::Float64
     h_L::Float64
     gamma::Float64     # Sticking coefficient
-    n_sheath::Float64  # number density at sheath entrance
-    flux::Float64      # particle flux [particles/s]
+
+    # External in/out flow
     flow_rate::Float64
 
     # Node parameters

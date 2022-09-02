@@ -19,13 +19,13 @@ module OutputModule
 
 using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
 using SharedData: kb
-using SharedData: c_io_error
+using SharedData: c_io_error, r_emission_rate
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, heavy_species_id
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using EvaluateExpressions: ReplaceExpressionValues
-using PlasmaParameters: UpdateSpeciesParameters!
+using PlasmaParameters: UpdateParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
@@ -401,9 +401,9 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             end
 
             #### Update plasma parameters
-            errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
+            errcode = UpdateParameters!(temp, dens, species_list, reaction_list, system, sID)
             if errcode == c_io_error
-                PrintErrorMessage(system, "UpdateSpeciesParameters failed")
+                PrintErrorMessage(system, "UpdateSpeciesParameters  at OutputModule failed")
                 return errcode
             end
 
@@ -481,6 +481,7 @@ function LoadOutputBlock!(sol, output::OutputBlock,
                 push!(p_list, s.mfp)
             end
         end
+
         # Push dens/temp buffer lists into data_frames
         push!(output.T_data_frame, temp_list)
         push!(output.n_data_frame, dens_list)
@@ -607,11 +608,19 @@ function copy_reaction(r::Reaction)
     new_r.involved_species = copy(r.involved_species)
     new_r.species_balance = copy(r.species_balance)
     new_r.reactant_species = copy(r.reactant_species)
+    new_r.product_species = copy(r.product_species)
 
     new_r.rate_coefficient = r.rate_coefficient
     new_r.K_value = copy(r.K_value)
 
     new_r.E_threshold = copy(r.E_threshold)
+
+    new_r.self_absorption = copy(r.self_absorption)
+    new_r.g_high = copy(r.g_high)
+    new_r.g_low = copy(r.g_low)
+    new_r.g_high_total = copy(r.g_high_total)
+    new_r.g_low_total = copy(r.g_low_total)
+    new_r.wavelength = copy(r.wavelength)
 
     return new_r
 end

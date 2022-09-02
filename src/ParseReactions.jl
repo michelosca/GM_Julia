@@ -17,40 +17,37 @@
 
 module ParseReactions
 
-using SharedData: c_io_error, e
+using SharedData: c_io_error, r_emission_rate
+using SharedData: e
 using SharedData: Species, Reaction, System, SpeciesID
-using SharedData: r_diffusion, r_emission_rate
 using ReactionSet: K_funct_list
 using EvaluateExpressions: ReplaceConstantValues!
+using Printf: @sprintf
 using PrintModule: PrintErrorMessage 
+using InputBlock_System: GetUnits!
 
 
 
 function LoadReaction!(current_reaction::Reaction, system::System,
     reaction_process_str::SubString{String},
-    e_threshold_str::SubString{String}, sID::SpeciesID)
+    secondentry_str::SubString{String}, sID::SpeciesID)
 
     errcode = 0
 
     # Parse each term of the input line
     current_reaction.name = reaction_process_str
 
-    errcode = ParseReaction!(reaction_process_str, current_reaction, sID)
+    errcode = ParseReaction!(reaction_process_str, current_reaction, system,
+        sID)
     if (errcode == c_io_error) return errcode end
 
-    errcode = ParseEThreshold!(e_threshold_str, current_reaction)
+    errcode = ParseSecondEntry!(secondentry_str, current_reaction, system)
     if (errcode == c_io_error) return errcode end
 
     if system.prerun
-        #if current_reaction.case == r_diffusion
-        #    current_reaction.rate_coefficient =
-        #elseif current_reaction.case == r_emission_rate
-        #    current_reaction.rate_coefficient = 
-        #else
-            current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
-        #end
+        current_reaction.rate_coefficient = K_funct_list[current_reaction.id]
     else
-        errcode = GetRateCoefficientExpr(rate_coeff_str, current_reaction)
+        errcode = GetRateCoefficientExpr(rate_coeff_str, current_reaction, system)
         if (errcode == c_io_error) return errcode end
     end
 
@@ -59,7 +56,7 @@ end
 
 
 function ParseReaction!(str::SubString{String}, reaction::Reaction,
-    speciesID::SpeciesID)
+    system::System, speciesID::SpeciesID)
 
     errcode = c_io_error
 
@@ -71,40 +68,62 @@ function ParseReaction!(str::SubString{String}, reaction::Reaction,
         
         # Get Vector{Int64} with species IDs
         input_rea_s = GetSpeciesFromString!(reactant_str, speciesID)
-        if (input_rea_s == c_io_error) return errcode end
+        if (input_rea_s == c_io_error)
+            err_message = "While getting reacting species"
+            PrintErrorMessage(system, err_message)
+            return errcode
+        end
 
         input_pro_s = GetSpeciesFromString!(product_str, speciesID)
-        if (input_pro_s == c_io_error) return errcode end
+        if (input_pro_s == c_io_error)
+            err_message = "While getting product species"
+            PrintErrorMessage(system, err_message)
+            return errcode
+        end
 
         # Get balance, reactant and involved species vectors
-        errcode = GetReactionSpeciesLists!(input_rea_s, input_pro_s, reaction)
-        if (input_pro_s == c_io_error) return errcode end
+        errcode = GetReactionSpeciesLists!(input_rea_s, input_pro_s, reaction,
+            system)
+        if (input_pro_s == c_io_error)
+            err_message = "While getting species reaction balance, reactants and species vector"
+            PrintErrorMessage(system, err_message)
+            return errcode
+        end
     end
     return errcode
 end
 
 
-function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
+function ParseSecondEntry!(str::SubString{String}, reaction::Reaction,
+    system::System)
 
     # Must provide: E_threshold
     errcode = 0
 
     try
-        # Default energy units: eV
-        units_fact = e
-        if (occursin("J", str))
-            units_fact = 1.0
-            idx = findfirst("J", str)
-            idx = idx[1]-1
-            str = string(str[1:idx])
-        elseif (occursin("eV", str))
-            idx = findfirst("eV", str)
-            idx = idx[1]-1
-            str = string(str[1:idx])
+        if reaction.case == r_emission_rate
+            # String should be of the form "[X,Y,Z]" where X,Y,Z are numbers
+
+            # Check whether there is a vector
+            left_braket = findfirst("[",str)
+            if left_braket === nothing
+                units, new_str = GetUnits!(str)
+                reaction.E_threshold = parse(Float64, new_str) * units
+            else
+                reaction.self_absorption = true
+                GetEmissionParameters!(reaction, str)
+            end
+        else
+            units, new_str = GetUnits!(str)
+            reaction.E_threshold = parse(Float64, new_str) * units
         end
-        reaction.E_threshold = parse(Float64, str) * units_fact
     catch
-        print("***ERROR*** While parsing E threshold\n")
+        if reaction.case == r_emission_rate
+            err_message = "While parsing statistical weights and wavelength"
+        else
+            err_message = "While parsing E threshold"
+        end
+        PrintErrorMessage(system, err_message)
         errcode = c_io_error
     end
         
@@ -112,21 +131,67 @@ function ParseEThreshold!(str::SubString{String}, reaction::Reaction)
 end
 
 
+function GetEmissionParameters!(reaction::Reaction, str::SubString{String})
+
+    # Identify vector brakets
+    left_braket = findfirst("[",str)
+    left_ix = left_braket[1] + 1
+    right_braket = findlast("]",str)
+    right_ix = right_braket[1] - 1
+    str_no_brakets = str[left_ix:right_ix]
+
+    # Find commas
+    comma_ix_list = Int64[]
+    start_ix = 1
+    for i in range(1,4,step=1)
+        comma = findnext(",", str_no_brakets,start_ix)
+        ix = comma[1]
+        push!(comma_ix_list, ix)
+        start_ix = ix+1
+    end
+    c_1 = comma_ix_list[1]
+    c_2 = comma_ix_list[2]
+    c_3 = comma_ix_list[3]
+    c_4 = comma_ix_list[4]
+
+    # Identify parameters
+    g_p_str = str_no_brakets[1:c_1-1]
+    units, g_p_str = GetUnits!(g_p_str)
+    reaction.g_high = parse(Float64, g_p_str) * units
+
+    g_k_str = str_no_brakets[c_1+1:c_2-1]
+    units, g_k_str = GetUnits!(g_k_str)
+    reaction.g_low = parse(Float64, g_k_str) * units
+
+    g_p_tot_str = str_no_brakets[c_2+1:c_3-1]
+    units, g_p_tot_str = GetUnits!(g_p_tot_str)
+    reaction.g_high_total = parse(Float64, g_p_tot_str) * units
+
+    g_k_tot_str = str_no_brakets[c_3+1:c_4-1]
+    units, g_k_tot_str = GetUnits!(g_k_tot_str)
+    reaction.g_low_total = parse(Float64, g_k_tot_str) * units
+
+    wavelen_str = str_no_brakets[c_4+1:end]
+    units, wavelen_str = GetUnits!(wavelen_str)
+    reaction.wavelength = parse(Float64,wavelen_str) * units
+
+end
+
+
 function GetSpeciesFactor!(str::SubString{String})
 
+    # This functions checks wether each species in the
+    # reaction has a multiple on its left
+
     fact = 1
-    if str[1:1] == "2"
-        fact = 2
-        str = str[2:end]
-    elseif str[1:1] == "3"
-        fact = 3
-        str = str[2:end]
-    elseif str[1:1] == "4"
-        fact = 4
-        str = str[2:end]
-    elseif str[1:1] == "5"
-        fact = 5
-        str = str[2:end]
+    num_list = range(2,9,step=1)
+    for num in num_list 
+        num_str = string(num)
+        if str[1:1] == num_str 
+            fact = num
+            str = str[2:end]
+            break
+        end
     end
     return fact, str
 end
@@ -208,17 +273,14 @@ end
 
 
 function GetReactionSpeciesLists!(reac::Vector{Int64}, prod::Vector{Int64},
-    reaction::Reaction)
+    reaction::Reaction, system::System)
 
     errcode = 0
     try
-        reaction.involved_species = Int64[]
-        reaction.reactant_species = Int64[]
-
         # Loop over species list and
         #  - if not in involved_species -> push
         #  - if already in, move on
-        # Loop for reactant species
+        # Loop for reactant/product species
         for r in reac
             already_in = false
             i = 0
@@ -237,6 +299,7 @@ function GetReactionSpeciesLists!(reac::Vector{Int64}, prod::Vector{Int64},
         
         # Loop for product species
         for p in prod 
+            # Check involved species
             already_in = false
             i = 0
             for is in reaction.involved_species
@@ -248,6 +311,20 @@ function GetReactionSpeciesLists!(reac::Vector{Int64}, prod::Vector{Int64},
             end
             if !already_in
                 push!(reaction.involved_species, p)
+            end
+
+            # Check product species
+            already_in = false
+            i = 0
+            for is in reaction.product_species
+                i += 1
+                if p == is
+                    already_in = true
+                    break
+                end
+            end
+            if !already_in
+                push!(reaction.product_species, p)
             end
         end
 
@@ -270,7 +347,7 @@ function GetReactionSpeciesLists!(reac::Vector{Int64}, prod::Vector{Int64},
         end
 
     catch
-        print("***ERROR*** While setting up reaction species lists\n")
+        PrintErrorMessage(system, "While setting up reaction species lists")
         errcode = c_io_error
     end
     return errcode
@@ -278,7 +355,7 @@ end
 
 
 function GetRateCoefficientExpr(str::SubString{String},
-    reaction::Reaction)
+    reaction::Reaction, system::System)
 
     errcode = 0 
 
@@ -292,7 +369,7 @@ function GetRateCoefficientExpr(str::SubString{String},
 
     catch
         errcode = c_io_error
-        print("***ERROR*** While getting rate coefficient expression\n")
+        PrintErrorMessage(system, "While getting rate coefficient expression")
     end
 
     return errcode
@@ -311,7 +388,8 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
             fact, str= GetSpeciesFactor!(str)
             s_id = SelectSpeciesID(str, speciesID)
             if (s_id == 0)
-                print("***ERROR*** Reaction species ",str ," is not recognized\n")
+                err_str = @sprintf("Reaction species %s is not recognized", str)
+                PrintErrorMessage(system, err_str)
                 return c_io_error
             else 
                 while fact >= 1
@@ -326,7 +404,8 @@ function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
             fact, s = GetSpeciesFactor!(s)
             s_id = SelectSpeciesID(s, speciesID)
             if (s_id == 0)
-                print("***ERROR*** Reaction species ",s ," is not recognized\n")
+                err_str = @sprintf("Reaction species %s is not recognized", s)
+                PrintErrorMessage(system, err_str)
                 return c_io_error
             else 
                 while fact >= 1

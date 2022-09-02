@@ -18,7 +18,7 @@
 module ParseReactions_PreRun
 
 using SharedData: c_io_error
-using SharedData: r_extended, r_diffusion
+using SharedData: r_extended, r_diffusion, r_emission_rate
 using SharedData: Reaction
 
 using EvaluateExpressions: ReplaceConstantValues!, ReplaceSystemSymbols!
@@ -28,12 +28,12 @@ using EvaluateExpressions: ReplaceDensSymbols!
 
 
 function WriteRateCoefficientFunctions!(current_reaction::Reaction,
-    str::SubString{String}, f_ReactionSet::IOStream)
+    reaction_str::SubString{String}, f_ReactionSet::IOStream)
 
     errcode = 0
     
     try
-        expr = Meta.parse(str)
+        expr = Meta.parse(reaction_str)
         if !(typeof(expr)==Float64)
             ReplaceConstantValues!(expr)
             ReplaceSystemSymbols!(expr)
@@ -44,7 +44,8 @@ function WriteRateCoefficientFunctions!(current_reaction::Reaction,
 
         # Now that the expression is ready to be evaluated, write it down in a new file
         if current_reaction.case == r_extended || 
-            current_reaction.case == r_diffusion
+            current_reaction.case == r_diffusion ||
+            current_reaction.case == r_emission_rate
             write(f_ReactionSet,
                 string("push!(K_funct_list, (dens::Vector{Float64}, ",
                 "temp::Vector{Float64}, species_list::Vector{Species}, ",
