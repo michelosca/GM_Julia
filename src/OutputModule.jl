@@ -189,14 +189,14 @@ function UpdateOutputParameters!(species_list::Vector{Species},
                 for s in species_list
                     if s.id != sID.electron
                         s.temp = param[i]
-                        s_pressure = s.dens * kb * s.temp
-                        UpdatePressure!(s, s_pressure, system)
+                        #s_pressure = s.dens * kb * s.temp
+                        #UpdatePressure!(s, s_pressure, system)
                     end
                 end
             else
                 species_list[s_id].temp = param[i]
-                s_pressure = species_list[s_id].dens * kb * species_list[s_id].temp
-                UpdatePressure!(species_list[s_id], s_pressure, system)
+                #s_pressure = species_list[s_id].dens * kb * species_list[s_id].temp
+                #UpdatePressure!(species_list[s_id], s_pressure, system)
             end
         elseif (output.case[i] == o_power)
             system.drivP = param[i]
