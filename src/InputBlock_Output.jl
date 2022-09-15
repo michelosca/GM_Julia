@@ -20,9 +20,8 @@ module InputBlock_Output
 using SharedData: OutputBlock, Species, Reaction, System
 using SharedData: c_io_error
 using SharedData: o_scale_lin, o_scale_log
-using SharedData: r_wall_loss
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
-using SharedData: o_pressure_percent, neutral_species_id
+using SharedData: o_pressure_percent, heavy_species_id
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using InputBlock_System: GetUnits!
 using DataFrames: DataFrame
@@ -238,7 +237,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
             end
         end
         if var == "neutral_species" || var == "neutral_gas"
-            output.species_id[i] = neutral_species_id
+            output.species_id[i] = heavy_species_id
         end
     end
     
@@ -330,7 +329,7 @@ function SetupOutputBlock!(output::OutputBlock,
             output.name[i] = string("n_",sname)
         elseif output.case[i] == o_temp
             s_id = output.species_id[i]
-            if s_id == neutral_species_id
+            if s_id == heavy_species_id
                 sname = "neutrals"
             else
                 sname = species_list[s_id].name

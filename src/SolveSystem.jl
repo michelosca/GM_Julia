@@ -20,7 +20,7 @@ module SolveSystem
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: o_single_run, c_io_error
-using PlasmaParameters: UpdateSpeciesParameters!
+using PlasmaParameters: UpdateParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
@@ -93,7 +93,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     end
 
     # Update species parameters
-    errcode = UpdateSpeciesParameters!(temp, dens, species_list, reaction_list, system, sID)
+    errcode = UpdateParameters!(temp, dens, species_list, reaction_list, system, sID)
     if errcode == c_io_error
         system.errcode = errcode 
         PrintErrorMessage(system, "UpdateSpeciesParameters failed")

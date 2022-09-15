@@ -19,7 +19,7 @@ module FunctionTerms
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb 
-using SharedData: r_elastic, r_wall_loss
+using SharedData: r_elastic
 using EvaluateExpressions: ReplaceExpressionValues
 using WallFlux: DensWallFluxFunction, TempWallFluxFunction
 using PowerInput: PowerInputFunction

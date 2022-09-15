@@ -18,18 +18,18 @@
 module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
-using SharedData: kb, K_to_eV, e
-using SharedData: c_io_error, r_wall_loss, r_lower_threshold 
+using SharedData: kb, K_to_eV, e, r_extended
+using SharedData: c_io_error, r_diffusion, r_lower_threshold, r_emission_rate 
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
-using Printf
+using Printf: @sprintf
 using PrintModule: PrintErrorMessage 
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
 ###############################################################################
 
-function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
+function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
     system::System, sID::SpeciesID)
 
@@ -50,14 +50,14 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     end
 
     # SECOND: Update rate coefficient values that only depend on temperature
-    errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
+    errcode = UpdateRateCoefficientValues!(reaction_list, dens, temp, species_list,
         system, sID, false)
     if errcode == c_io_error
         PrintErrorMessage(system, "UpdateRateCoefficientValues (regular collisions) failed")
         return c_io_error
     end
 
-    # THIRD: Update parameters that depend on dens,temp and other species parameters
+    # THIRD: Update parameters that depend on dens, temp and other species parameters
     errcode = UpdateTotalPressure!(system, species_list, sID)
     if errcode == c_io_error
         PrintErrorMessage(system, "UpdateTotalPressure failed")
@@ -72,6 +72,29 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             return c_io_error
         end
     end
+
+    # FOURTH: Update species parameters
+    errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdateSpeciesParameters! failed")
+        return c_io_error
+    end
+
+    # FIFTH: Update special rate coefficients
+    errcode = UpdateRateCoefficientValues!(reaction_list, dens, temp, species_list,
+        system, sID, true)
+    if errcode == c_io_error
+        PrintErrorMessage(system, "UpdateRateCoefficientValues (species collisions) failed")
+        return c_io_error
+    end
+    return errcode 
+end
+
+
+function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
+    species_list::Vector{Species}, system::System, sID::SpeciesID)
+    
+    errcode = 0
 
     for s in species_list
         errcode = GetThermalSpeed!(s)
@@ -114,61 +137,79 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         end
     end
 
-    # FOURTH: Update wall-loss rate coefficients
-    errcode = UpdateRateCoefficientValues!(reaction_list, temp, species_list,
-        system, sID, true)
-    if errcode == c_io_error
-        PrintErrorMessage(system, "UpdateRateCoefficientValues (wall collisions) failed")
-        return c_io_error
-    end
-    return errcode 
+    return errcode
 end
 
 
 function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
-    temp::Vector{Float64}, species_list::Vector{Species}, system::System,
-    sID::SpeciesID, wall_loss_flag::Bool)
+    dens::Vector{Float64}, temp::Vector{Float64}, species_list::Vector{Species},
+    system::System, sID::SpeciesID, special_coll::Bool)
 
     errcode = 0
 
     for r in reaction_list
         # Updates wall-loss reactions
-        if r.case == r_wall_loss
-            if wall_loss_flag
-                if system.prerun
-                    r.K_value = r.rate_coefficient(temp, species_list, system, sID) 
-                else
-                    r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
+        if r.case == r_diffusion || r.case == r_emission_rate
+            if special_coll 
+                r.K_value = r.rate_coefficient(dens, temp, species_list,
+                    system, sID) 
+                
+                # Self-absorption correction in emission reactions
+                if r.case == r_emission_rate && r.self_absorption
+                    gamma = GetEscapeFactor(r, species_list, system)
+                    r.K_value *= gamma
                 end
+
+                # Check that rate coeff. is positive
+                errcode = K_low_bound_threshold_check(r, system)
+                if errcode == c_io_error
+                    return errcode
+                end
+
             else
                 continue
             end
         end
 
         # Updates regular reactions
-        if !wall_loss_flag
+        if !special_coll
             if system.prerun
-                r.K_value = r.rate_coefficient(temp, sID) 
+                if r.case == r_extended
+                    r.K_value = r.rate_coefficient(dens, temp, species_list,
+                        system, sID) 
+                else
+                    r.K_value = r.rate_coefficient(temp, sID) 
+                end
             else
                 r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
                     species_list, system, sID)
             end
         end
 
-        # Lower bound threshold would be applied here
-        if r.K_value < 0.0
-            if r.case == r_lower_threshold
-                r.K_value = 0.0
-            else
-                err_message = @sprintf("%s has negative rate coefficient at Te = %15g eV",
-                    r.name, temp[sID.electron]*K_to_eV)
-                PrintErrorMessage(system, err_message) 
-                errcode = c_io_error
-            end
+        # Check that rate coeff. is positive
+        errcode = K_low_bound_threshold_check(r, system)
+        if errcode == c_io_error
+            return errcode
         end
     end
     return errcode
+end
+
+
+function K_low_bound_threshold_check(r::Reaction, system::System)
+
+    errcode = 0
+    if r.K_value < 0.0
+        if r.case == r_lower_threshold
+            r.K_value = 0.0
+        else
+            err_message = @sprintf("%s has negative rate coefficient", r.name)
+            PrintErrorMessage(system, err_message)
+            errcode = c_io_error
+        end
+    end
+    return errcode
+
 end
 
 
@@ -183,6 +224,7 @@ function UpdateTotalPressure!(system::System, species_list::Vector{Species}, sID
     system.total_pressure = p_total
     return 0
 end
+
 
 function GetMFP!(species::Species, dens::Vector{Float64}, species_list::Vector{Species})
     # The mean-free-path is calculated using the reaction list associated to
@@ -298,6 +340,20 @@ function GetNeutralDiffusionCoeff!(species::Species)
 
     return 0 
 end
+
+
+function DiffusionRateCoefficient(species::Species, system::System)
+    V = system.V
+    A = system.A
+    lambda = system.Lambda
+    D = species.D
+    gamma = species.gamma
+    vth = species.v_thermal
+
+    K = 1.0/(lambda^2 / D  + 2.0 * V * (2.0 - gamma) / A / vth  / gamma)
+    return K
+end
+
 
 function GetSheathDensity!(species::Species, species_list::Vector{Species},
     system::System, sID::SpeciesID)
@@ -419,5 +475,49 @@ function GetStickingCoefficient!(species::Species,
     return errcode 
 end
 
+
+function GetEscapeFactor(reaction::Reaction, species_list::Vector{Species},
+    system::System)
+
+    # Selected species: absorbing species (lower energy state)
+    species = species_list[reaction.product_species[1]]
+
+    # Absorption coefficient
+    kappa = GetAbsorptionCoefficient(reaction, species)
+    kappa_L = kappa * system.l 
+
+    # Escape factor
+    gamma = (2.0 - exp(- kappa_L * 1.e-3)) / (1.0 + kappa_L)
+    gamma *= reaction.g_high /reaction.g_high_total
+
+    return gamma
+end
+
+
+function GetAbsorptionCoefficient(reaction::Reaction, species::Species)
+
+    wavelen2 = reaction.wavelength * reaction.wavelength
+    g_rate = reaction.g_high / reaction.g_low
+    P_pk = GetSpectralLineProfile_DopplerBroadening(reaction, species, 0.0)
+    A_pk = reaction.K_value 
+    dens = species.dens * reaction.g_low / reaction.g_low_total
+    kappa = wavelen2 / (8.0 * pi) * P_pk * g_rate * dens * A_pk 
+    return kappa
+end
+
+
+function GetSpectralLineProfile_DopplerBroadening(reaction::Reaction,
+    species::Species, freq_broadening::Float64)
+
+    wavelen = reaction.wavelength
+    wavelen2 = wavelen * wavelen
+    mass = species.mass
+    temp = species.temp
+    ivel2_fac = mass/(2.0*kb*temp)
+
+    P = wavelen * sqrt( ivel2_fac/pi ) *
+        exp(-wavelen2 * ivel2_fac * freq_broadening*freq_broadening)
+    return P
+end
 
 end

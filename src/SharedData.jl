@@ -27,39 +27,50 @@ const amu = 1.66053904020e-27  # kg
 const eps0 = 8.854187817e-12
 const K_to_eV = kb / e
 
-# h factor ID 
-const h_classical = 1     # https://onlinelibrary.wiley.com/doi/pdf/10.1002/ppap.201600138
-const h_Gudmundsson = 2  # https://doi.org/10.1088/0022-3727/33/11/311 , https://doi.org/10.1088/0963-0252/16/2/025
-const h_Monahan = 3      # https://doi.org/10.1088/0963-0252/17/4/045003
-
-# Solving sheath potential methods
-const s_ohmic_power = 1
-const s_flux_balance = 2
-const s_flux_interpolation = 3
-
 # Read input flags 
 const c_io_error = 1
 
 # REACTION IDs 
-const r_elastic = 1
-const r_wall_loss = 2
-const r_lower_threshold = 3
+const r_elastic = 100
+const r_diffusion = 101
+const r_lower_threshold = 103
+const r_emission_rate = 104
+const r_extended = 105
 
 # OUTPUT constants
-const o_scale_lin = -1
-const o_scale_log = -2
-const o_single_run = 1
-const o_pL = 2
-const o_dens= 3
-const o_temp = 4
-const o_power = 5
-const o_pressure = 6
-const o_pressure_percent = 7
-const o_frequency = 8
-const o_duty_ratio = 9
-const o_total_pressure = 10
+const o_scale_lin = 200
+const o_scale_log = 201
+const o_single_run = 202
+const o_pL = 203
+const o_dens= 204
+const o_temp = 205
+const o_power = 206
+const o_pressure = 207
+const o_pressure_percent = 208
+const o_frequency = 209
+const o_duty_ratio = 210
+const o_total_pressure = 211
 
-const neutral_species_id = -1
+# Species ID referring to ions/atoms
+const heavy_species_id = 300
+
+# INPUT DATA BLOCKS
+const b_system = 301
+const b_species = 302
+const b_reactions = 303
+const b_output = 304
+const b_constants = 305
+
+# h factor ID 
+const h_classical = 401     # https://onlinelibrary.wiley.com/doi/pdf/10.1002/ppap.201600138
+const h_Gudmundsson = 402  # https://doi.org/10.1088/0022-3727/33/11/311 , https://doi.org/10.1088/0963-0252/16/2/025
+const h_Monahan = 403      # https://doi.org/10.1088/0963-0252/17/4/045003
+
+# Solving sheath potential methods
+const s_ohmic_power = 501
+const s_flux_balance = 502
+const s_flux_interpolation = 503
+
 
 # Reaction structure
 mutable struct Reaction
@@ -73,6 +84,7 @@ mutable struct Reaction
     involved_species::Vector{Int}
     species_balance::Vector{Int}
     reactant_species::Vector{Int}
+    product_species::Vector{Int}
 
     # Rate coefficient function
     rate_coefficient::Union{Float64, Expr, Function}
@@ -80,6 +92,15 @@ mutable struct Reaction
 
     # Energy threshold
     E_threshold::Float64
+
+    # Radiation emission
+    self_absorption::Bool
+    g_high::Float64 # statistical weight of the higher state (reactant)
+    g_low::Float64  # statistical weight of the lower state (product)
+    g_high_total::Float64 # statistical weight of the higher state (reactant)
+    g_low_total::Float64  # statistical weight of the lower state (product)
+    wavelength::Float64
+
 
     Reaction() = new()
 end
@@ -110,15 +131,21 @@ mutable struct Species
 
     # Other features
     reaction_list::Vector{Reaction}
-    mfp::Float64
+    mfp::Float64       # mean free path
     v_thermal::Float64 # Thermal speed
     v_Bohm::Float64    # Bohm speed
+
+    # Flux losses
+    n_sheath::Float64  # number density at sheath entrance
+    flux::Float64      # particle flux [particles/s]
+
+    # Diffusion losses
     D::Float64         # Diffusion coefficient
     h_R::Float64
     h_L::Float64
     gamma::Float64     # Sticking coefficient
-    n_sheath::Float64
-    flux::Float64
+
+    # External in/out flow
     flow_rate::Float64
 
     # Node parameters

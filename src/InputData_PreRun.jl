@@ -19,13 +19,14 @@ module InputData_PreRun
 
 using SharedData: c_io_error
 using SharedData: Species, Reaction, System, SpeciesID
+using SharedData: b_system, b_species, b_reactions, b_output, b_constants
 
 using InputBlock_Species: StartFile_Species!
 using InputBlock_Species: StartSpeciesBlock!, EndSpeciesBlock!, ReadSpeciesEntry!
 
-using InputBlock_Reactions_PreRun: StartFile_Reactions!
-using InputBlock_Reactions_PreRun: StartReactionsBlock!, EndReactionsBlock!, ReadReactionsEntry!
-using InputBlock_Reactions_PreRun: r_elastic, r_wall_loss 
+using InputBlock_Reactions: StartFile_Reactions!, EndFile_Reactions!
+using InputBlock_Reactions: StartReactionsBlock!, EndReactionsBlock!
+using InputBlock_Reactions: ReadReactionsEntry!
 
 using InputBlock_System: StartFile_System!
 using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
@@ -35,33 +36,6 @@ using InputBlock_System: StartSystemBlock!, EndSystemBlock!, ReadSystemEntry!
 ###############################################################################
 # INPUT BLOCK IDs
 global block_id = 0
-const b_system = 1
-const b_species = 2
-const b_reactions = 3
-const b_output = 4
-const b_constants = 5
-
-###############################################################################
-################################  FUNCTIONS  ##################################
-###############################################################################
-# FUNCTION TREE
-# - SetupInputData
-#   - ReadInputData
-#     - StartFile
-#     - ReadFile
-#       - ReadLine
-#         - StartBlock
-#           - StartSystemBlock
-#           - StartSpeciesBlock
-#           - StartReactionsBlock
-#         - ReadInputDeckEntry
-#           - ReadSystemEntry
-#           - ReadSpeciesEntry
-#           - ReadReactionsEntry
-#         - EndBlock
-#           - EndSystemBlock
-#           - EndtSpeciesBlock
-#           - EndtReactionsBlock
 
 function SetupInputData!(filename::String, species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
@@ -85,13 +59,21 @@ function ReadInputData!(filename::String, species_list::Vector{Species},
 
     print("Reading the input deck...\n")
     read_step = 0
+    
+    # Setup arguments before reading the input deck
     errcode = StartFile!(read_step, species_list, reaction_list, system,
         speciesID)
     if (errcode == c_io_error) return errcode end
+    
+    # Get input deck data
     errcode = ReadFile!(filename, read_step, species_list, reaction_list,
         system, speciesID)
     if (errcode == c_io_error) return errcode end
-    print("End of input deck reading\n\n")
+
+    # Setup arguments after reading the input deck
+    errcode = EndFile!(read_step, species_list, reaction_list, system,
+        speciesID)
+    print("...end reading input deck\n\n")
 
     return errcode
 end
@@ -198,7 +180,7 @@ function StartFile!(read_step::Int64, species_list::Vector{Species},
         print("***ERROR*** While initializing the input species block")
     end
 
-    errcode = StartFile_Reactions!(reaction_list) 
+    errcode = StartFile_Reactions!(read_step, reaction_list) 
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input reaction block")
     end
@@ -206,6 +188,19 @@ function StartFile!(read_step::Int64, species_list::Vector{Species},
     errcode = StartFile_System!(read_step, system) 
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input system block")
+    end
+    
+    return errcode
+end
+
+
+function EndFile!(read_step::Int64, species_list::Vector{Species},
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
+
+    errcode = EndFile_Reactions!(read_step, reaction_list, species_list, system, sID) 
+    if (errcode == c_io_error)
+        print("***ERROR*** While finalizing the input reaction block")
+        return errcode
     end
     
     return errcode
@@ -225,7 +220,7 @@ function StartBlock!(name::SubString{String}, read_step::Int64,
         errcode = StartSpeciesBlock!(read_step, species_list, speciesID)
     elseif (occursin("reactions",name))
         global block_id = b_reactions
-        errcode = StartReactionsBlock!(reaction_list)
+        errcode = StartReactionsBlock!(read_step, reaction_list)
     elseif (occursin("output", name))
         global block_id = b_output
         errcode = 0
@@ -235,6 +230,7 @@ function StartBlock!(name::SubString{String}, read_step::Int64,
     end
     return errcode
 end
+
 
 function EndBlock!(name::SubString{String}, read_step::Int64,
     species_list::Vector{Species}, reaction_list::Vector{Reaction},
@@ -247,7 +243,7 @@ function EndBlock!(name::SubString{String}, read_step::Int64,
     elseif (occursin("species",name))
         errcode = EndSpeciesBlock!(read_step, species_list, sID)
     elseif (occursin("reactions",name))
-        errcode = EndReactionsBlock!(reaction_list, species_list)
+        errcode = EndReactionsBlock!(read_step, reaction_list, species_list)
     elseif (occursin("output", name))
         errcode = 0
     elseif (occursin("constants", name))
@@ -259,7 +255,7 @@ end
 
 function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
     read_step::Int64, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
+    reaction_list::Vector{Reaction}, system::System, sID::SpeciesID)
 
     errcode = c_io_error 
     
@@ -267,10 +263,10 @@ function ReadInputDeckEntry!(name::SubString{String}, var::SubString{String},
         errcode = ReadSystemEntry!(name, var, read_step, system)
     elseif (block_id == b_species)
         errcode = ReadSpeciesEntry!(name, var, read_step, species_list,
-            system, speciesID)
+            system, sID)
     elseif (block_id == b_reactions)
-        errcode = ReadReactionsEntry!(name, var, reaction_list,
-            speciesID)
+        errcode = ReadReactionsEntry!(name, var, read_step, reaction_list,
+            system, sID)
     end
 
     return errcode 
