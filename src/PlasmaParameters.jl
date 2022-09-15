@@ -157,7 +157,6 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
                 # Self-absorption correction in emission reactions
                 if r.case == r_emission_rate && r.self_absorption
                     gamma = GetEscapeFactor(r, species_list, system)
-                    #print(r.name," : ",gamma,"\n")
                     r.K_value *= gamma
                 end
 
