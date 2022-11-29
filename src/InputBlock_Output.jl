@@ -236,7 +236,7 @@ function ReadOutputEntry!(name::SubString{String}, var::SubString{String},
                 break
             end
         end
-        if var == "neutral_species" || var == "neutral_gas"
+        if var == "neutral_species" || var == "neutral_gas" || var == "neutrals"
             output.species_id[i] = heavy_species_id
         end
     end
