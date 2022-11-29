@@ -364,6 +364,7 @@ function SetupOutputBlock!(output::OutputBlock,
                         output.T_data_frame[!, s.name] = Float64[]
                     end
                 end
+                output.T_data_frame[!, "neutrals"] = Float64[]
             end
         end
 

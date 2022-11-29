@@ -357,6 +357,16 @@ function LoadOutputBlock!(sol, output::OutputBlock,
     end
 
     n_species = length(species_list)
+
+    # Get neutral/ions temperature
+    neutral_temp = -1
+    for s in species_list
+        if s.id != sID.electron
+            neutral_temp = s.temp
+            break 
+        end
+    end
+
     if output.case[1] == o_single_run
         # - dens & temp data frames are filled by columns:
         #   time and followed by dens/temp species
@@ -373,6 +383,9 @@ function LoadOutputBlock!(sol, output::OutputBlock,
                 output.T_data_frame[!,s.name] = sol[1,:]
             end
         end
+
+        data_len = length(sol[1,:])
+        output.T_data_frame[!,"neutrals"] = ones(data_len) * neutral_temp
 
         # Initialize temp/dens array 
         temp = zeros(n_species)
@@ -481,6 +494,8 @@ function LoadOutputBlock!(sol, output::OutputBlock,
                 push!(p_list, s.mfp)
             end
         end
+        # Add neutral temperature to temperature array
+        push!(temp_list, neutral_temp)
 
         # Push dens/temp buffer lists into data_frames
         push!(output.T_data_frame, temp_list)
