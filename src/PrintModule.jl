@@ -246,7 +246,7 @@ function PrintSimulationState(temp::Vector{Float64}, dens::Vector{Float64},
         @printf(file,"Electronegativity:%15g\n", system.alpha) 
         @printf(file,"Species values\n")
         for s in species_list
-            @printf(file,"  - Species %s\n    - array-dens: %15g\n    - array-temp: %15g\n", s.name, dens[s.id], temp[s.id])
+            @printf(file,"  - Species %s\n    - array-dens: %15g\n    - array-temp: %15g\n", s.name, dens[s.id], s.temp)
             @printf(file,"    - pressure: %15g\n", s.pressure) 
             @printf(file,"    - flux: %15g\n", s.flux) 
             @printf(file,"    - mfp: %15g\n", s.mfp) 

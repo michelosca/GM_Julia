@@ -97,11 +97,10 @@ function GenerateOutputs!(
 
                 # Copy species & reaction lists and system
                 species_list_run = copy_species_list(species_list)
-                reaction_list_run = copy_reaction_list(reaction_list)
                 system_run = copy_system(system)
 
                 errcode = UpdateOutputParameters!(species_list_run,
-                    reaction_list_run, system_run, sID, output, param)
+                    reaction_list, system_run, sID, output, param)
                 if (errcode == c_io_error) return errcode end
 
                 # Print parameter state
@@ -117,9 +116,9 @@ function GenerateOutputs!(
 
                 # Run problem
                 sol = @timeit to message ExecuteProblem(species_list_run,
-                    reaction_list_run, system_run, sID)
+                    reaction_list, system_run, sID)
                 errcode = LoadOutputBlock!(sol, output, species_list_run,
-                    reaction_list_run, system_run, sID, param)
+                    reaction_list, system_run, sID, param)
                 if (errcode == c_io_error) return errcode end
 
                 # Update step
@@ -583,19 +582,17 @@ function copy_species(s::Species)
     new_s.temp = copy(s.temp)
     new_s.pressure = copy(s.pressure)
 
-    new_s.reaction_list = copy_reaction_list(s.reaction_list)
+    new_s.reaction_list = s.reaction_list
     new_s.mfp = copy(s.mfp)
     new_s.v_thermal = copy(s.v_thermal)
     new_s.v_Bohm = copy(s.v_Bohm)
-    new_s.D = copy(s.D)
-    new_s.h_L = copy(s.h_L)
-    new_s.h_R = copy(s.h_R)
-    new_s.gamma = copy(s.gamma)
     new_s.n_sheath = copy(s.n_sheath)
     new_s.flux = copy(s.flux)
+    new_s.D = copy(s.D)
+    new_s.h_R = copy(s.h_R)
+    new_s.h_L = copy(s.h_L)
+    new_s.gamma = copy(s.gamma)
     new_s.flow_rate = copy(s.flow_rate)
-
-    new_s.name = s.name
 
     new_s.in_nodes = Tuple{Int64, String, Float64}[]
     for in_tuple in s.in_nodes
@@ -606,6 +603,8 @@ function copy_species(s::Species)
     for out_tuple in s.out_nodes
         push!(new_s.out_nodes, (out_tuple[1], out_tuple[2], out_tuple[3]))
     end
+
+    new_s.name = s.name
 
     return new_s
 end
