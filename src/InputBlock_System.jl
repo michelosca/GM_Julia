@@ -70,6 +70,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.prerun = true
         system.plasma_potential = 100.0
         system.errcode = 0
+        system.alpha = 0.0
 
         # Generate a log file name
         now_stamp = Dates.now()
