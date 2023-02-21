@@ -22,6 +22,7 @@ using SharedData: e, K_to_eV
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: r_diffusion, r_elastic, r_emission_rate
+using SharedData: p_constant, p_square
 using Printf
 
 ###############################################################################
@@ -225,7 +226,12 @@ function PrintSystemList(s::System)
         @printf(file, " - Driving frequency:      %15g MHz\n", s.drivf/1.e6)
         @printf(file, "                           %15g rad/s\n", s.drivOmega)
         @printf(file, " - Driving power:          %15.2f W\n", s.drivP)
-        @printf(file, " - Power shape:            %s \n", s.P_shape)
+        if (s.P_shape == p_constant)
+            p_shape_str = "constant"
+        elseif (s.P_shape == p_square)
+            p_shape_str = "square"
+        end
+        @printf(file, " - Power shape:            %s\n", p_shape_str)
         @printf(file, " - Power duty ratio:       %15g \n", s.P_duty_ratio)
         @printf(file, " - Power start time:       %15g s\n", s.P_start)
         @printf(file, " - Total neutral pressure: %15g Pa\n", s.total_pressure)
