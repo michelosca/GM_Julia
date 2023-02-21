@@ -542,8 +542,10 @@ function copy_system(system::System)
     s.drivOmega = copy(system.drivOmega)
     s.drivP = copy(system.drivP)
     s.P_absorbed = copy(system.P_absorbed)
-    s.P_shape = system.P_shape
+    s.P_shape = copy(system.P_shape)
     s.P_duty_ratio = copy(system.P_duty_ratio)
+    s.P_start = copy(system.P_start)
+    s.dt_start = copy(system.dt_start)
 
     s.plasma_potential = copy(system.plasma_potential)
     s.total_pressure = copy(system.total_pressure)

@@ -20,6 +20,7 @@ module SolveSystem
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
 using SharedData: o_single_run, c_io_error
+using SharedData: p_constant, p_square
 using PlasmaParameters: UpdateParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
@@ -43,10 +44,13 @@ function ExecuteProblem(species_list::Vector{Species},
     p = (system, sID, species_list, reaction_list )
 
     # Event handling
+    cb = nothing
+    if system.P_shape == p_square
     cb_duty_ratio = VectorContinuousCallback(condition_duty_ratio,
         affect_duty_ratio!, 2, affect_neg! = nothing, save_positions=(true,true))
     cb_error = DiscreteCallback(condition_error, affect_error!)
     cb = CallbackSet(cb_duty_ratio, cb_error)
+    end
 
     # ODE problem
     prob = ODEProblem{true}(ode_fn!, init, tspan, p)
@@ -60,7 +64,7 @@ function ExecuteProblem(species_list::Vector{Species},
     #PrintSimulationState(temp, dens, species_list, system, sID)
     sol = solve(prob,
         Rosenbrock23(autodiff=false),
-        dt = 1.e-12,
+        dt = system.dt_start,
         #abstol = 1.e-8,
         #reltol = 1.e-6,
         maxiters = 1.e7,
@@ -153,17 +157,19 @@ function condition_duty_ratio(out, u, t, integrator)
     # Event when time has past duty cycle 
     p = integrator.p
     system = p[1]
+
+    t_start = system.P_start
+    t_offset = t - t_start
     freq = system.drivf
-    t_start = 0.0 / freq
     dr = system.P_duty_ratio
-    out[1] = t_start * freq - floor(t_start * freq) - dr 
-    out[2] = t_start * freq - round(t_start * freq)
-    if t > t_start
-        if (system.P_shape == "square")
-            out[1] = t * freq - floor(t * freq) - dr 
-            out[2] = t * freq - round(t * freq)
+    if t_offset > 0
+            period_fraction = t_offset * freq
+            out[1] = period_fraction - floor(period_fraction) - dr 
+            out[2] = period_fraction - round(period_fraction)
+        else
+            out[1] = -dr 
+            out[2] = 0.0
         end
-    end
 end
 
 
@@ -171,7 +177,7 @@ function affect_duty_ratio!(integrator, cb_index)
     # What to do when the event occurs
     p = integrator.p
     system = p[1]
-    dt = 1.e-12 #get_proposed_dt(integrator)
+    dt = system.dt_start
     if cb_index == 1
         # Power off
         system.P_absorbed = 0.0 

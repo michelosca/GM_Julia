@@ -71,6 +71,10 @@ const s_ohmic_power = 501
 const s_flux_balance = 502
 const s_flux_interpolation = 503
 
+# Time dependent power waveforms
+const p_constant = 600
+const p_square = 601 
+
 
 # Reaction structure
 mutable struct Reaction
@@ -170,8 +174,10 @@ mutable struct System
     drivOmega::Float64                      # driving frequency, rad/s
     drivP::Float64                          # driving power, W 
     P_absorbed::Float64                     # power absorbed per unit volume, W / m^3
-    P_shape::String
+    P_shape::Int64
     P_duty_ratio::Float64
+    P_start::Float64
+    dt_start::Float64
 
     plasma_potential::Float64
     total_pressure::Float64

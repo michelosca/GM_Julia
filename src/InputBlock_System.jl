@@ -20,6 +20,7 @@ module InputBlock_System
 using SharedData: c_io_error
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
+using SharedData: p_constant, p_square
 using SharedData: System
 using SharedData: K_to_eV, e
 using PlasmaParameters: GetLambda
@@ -62,8 +63,10 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.drivOmega = 0.0
         system.drivP = 0.0
         system.P_absorbed = 0.0
-        system.P_shape = "sinusoidal"
+        system.P_shape = p_constant
         system.P_duty_ratio = 1.0
+        system.P_start = 0.0
+        system.dt_start = 1.e-12
         system.t_end = 0.0
         system.total_pressure = 0.0
         system.Lambda = 0.0
@@ -114,10 +117,25 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
             system.drivP = parse(Float64, var) * units_fact
             errcode = 0
         elseif (name=="P_shape" || lname=="power_shape")
-            system.P_shape = var
-            errcode = 0
+            if var=="constant"
+                system.P_shape = p_constant
+                errcode = 0
+            elseif var=="square"
+                system.P_shape = p_square
+                errcode = 0
+            else
+                print("***ERROR*** Power waveform is not defined\n")
+                errcode = c_io_error
+            end
         elseif (name=="P_duty_ratio" || lname=="power_duty_ratio")
             system.P_duty_ratio = parse(Float64, var)
+            errcode = 0
+        elseif (name=="P_t_start" || lname=="power_t_start" ||
+            name=="P_time_start" || lname=="power_time_start")
+            system.P_start = parse(Float64, var)
+            errcode = 0
+        elseif (lname=="dt_start")
+            system.dt_start = parse(Float64, var)
             errcode = 0
         elseif (lname=="h_factor" || lname=="h" || lname=="h_id")
             lvar = lowercase(var)
@@ -220,8 +238,8 @@ function EndSystemBlock!(read_step::Int64, system::System)
             return c_io_error 
         end
 
-        if (system.P_shape != "sinusoidal" && system.P_shape != "square")
-            print("***ERROR*** Input power shape not recognized\n")
+        if (system.dt_start < 0.0)
+            print("***ERROR*** Initial simulation time-step must be positive\n")
             return c_io_error 
         end
 
