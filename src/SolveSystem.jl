@@ -46,10 +46,12 @@ function ExecuteProblem(species_list::Vector{Species},
     # Event handling
     cb = nothing
     if system.P_shape == p_square
-    cb_duty_ratio = VectorContinuousCallback(condition_duty_ratio,
-        affect_duty_ratio!, 2, affect_neg! = nothing, save_positions=(true,true))
-    cb_error = DiscreteCallback(condition_error, affect_error!)
-    cb = CallbackSet(cb_duty_ratio, cb_error)
+        cb_duty_ratio = VectorContinuousCallback(condition_duty_ratio,
+            affect_duty_ratio!, 2, affect_neg! = nothing, save_positions=(true,true))
+        cb_error = DiscreteCallback(condition_error, affect_error!)
+        cb = CallbackSet(cb_duty_ratio, cb_error)
+    else
+        cb = CallbackSet(cb_duty_ratio, cb_error)
     end
 
     # ODE problem
