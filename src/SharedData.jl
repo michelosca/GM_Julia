@@ -181,6 +181,7 @@ mutable struct System
 
     plasma_potential::Float64
     total_pressure::Float64
+    T_e_min::Float64
 
     t_end::Float64                          # simulation time, seconds
     errcode::Int64

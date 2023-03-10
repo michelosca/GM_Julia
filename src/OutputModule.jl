@@ -549,6 +549,7 @@ function copy_system(system::System)
 
     s.plasma_potential = copy(system.plasma_potential)
     s.total_pressure = copy(system.total_pressure)
+    s.T_e_min = copy(system.T_e_min)
 
     s.t_end = copy(system.t_end)
     s.errcode = copy(system.errcode)

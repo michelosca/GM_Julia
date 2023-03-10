@@ -230,6 +230,7 @@ function PrintSystemList(s::System)
             p_shape_str = "constant"
         elseif (s.P_shape == p_square)
             p_shape_str = "square"
+            @printf(file, " - T_e min.:               %15g eV\n", s.T_e_min * K_to_eV)
         end
         @printf(file, " - Power shape:            %s\n", p_shape_str)
         @printf(file, " - Power duty ratio:       %15g \n", s.P_duty_ratio)

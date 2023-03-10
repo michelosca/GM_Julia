@@ -69,6 +69,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.dt_start = 1.e-12
         system.t_end = 0.0
         system.total_pressure = 0.0
+        system.T_e_min = 0.04 / K_to_eV
         system.Lambda = 0.0
         system.prerun = true
         system.plasma_potential = 100.0
@@ -181,6 +182,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         elseif (lname=="plasma_potential_guess")
             system.plasma_potential = parse(Float64, var)
             errcode = 0
+        elseif (lname=="t_e_min")
+            system.T_e_min = parse(Float64, var) * units_fact
+            errcode = 0
         end
     else
         errcode = 0
@@ -254,6 +258,12 @@ function EndSystemBlock!(read_step::Int64, system::System)
             print("  - Species pressures declarations (if declared) must be between 0 and 1\n")
             print("  - Output blocks with partial pressure parameters must be declared AFTER the system block\n")
         end
+
+        if (system.T_e_min <= 0)
+            print("***ERROR*** Make sure that T_e_min > 0\n")
+            return c_io_error 
+        end
+
 
         system.Lambda = GetLambda(system)
         system.drivOmega = system.drivf * 2.0 * pi
