@@ -46,11 +46,13 @@ function ExecuteProblem(species_list::Vector{Species},
     # Event handling
     cb = nothing
     if system.P_shape == p_square
-        cb_duty_ratio = VectorContinuousCallback(condition_duty_ratio,
-            affect_duty_ratio!, 2, affect_neg! = nothing, save_positions=(true,true))
+        cb_duty_ratio = VectorContinuousCallback(condition_pulsed_power,
+            affect_pulsed_power!, 2, affect_neg! = nothing, save_positions=(true,true))
         cb_error = DiscreteCallback(condition_error, affect_error!)
-        cb = CallbackSet(cb_duty_ratio, cb_error)
+        cb_Te_lower_bound = DiscreteCallback(condition_Te_lower_bound, affect_Te_lower_bound!)
+        cb = CallbackSet(cb_duty_ratio, cb_Te_lower_bound, cb_error)
     else
+        cb_error = DiscreteCallback(condition_error, affect_error!)
         cb = CallbackSet(cb_duty_ratio, cb_error)
     end
 
@@ -155,7 +157,7 @@ function GetInitialConditions(species_list::Vector{Species})
 end
 
 
-function condition_duty_ratio(out, u, t, integrator)
+function condition_pulsed_power(out, u, t, integrator)
     # Event when time has past duty cycle 
     p = integrator.p
     system = p[1]
@@ -175,7 +177,7 @@ function condition_duty_ratio(out, u, t, integrator)
 end
 
 
-function affect_duty_ratio!(integrator, cb_index)
+function affect_pulsed_power!(integrator, cb_index)
     # What to do when the event occurs
     p = integrator.p
     system = p[1]
@@ -208,6 +210,25 @@ function affect_error!(integrator)
     system = p[1]
     PrintErrorMessage(system, "Abort simulation")
     terminate!(integrator)
+end
+
+
+function condition_Te_lower_bound(u, t, integrator)
+    u = integrator.u
+    system = integrator.p[1]
+
+    if u[1] < system.T_e_min
+        return true 
+    end
+
+    return false 
+end
+
+
+function affect_Te_lower_bound!(integrator)
+    p = integrator.p
+    system = p[1]
+    integrator.u[1] = system.T_e_min
 end
 
 end
