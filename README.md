@@ -23,9 +23,10 @@ git clone https://github.com/michelosca/GM_Julia.git
 2. Open the Julia REPL and type the following commands
 ```Julia
 push!(LOAD_PATH, "path/to/GM-Julia/src")
-using GM_main
+using GM_main: run_GM
 species_list, reaction_list, system, speciesIDs, output_list = run_GM(input)
 ```
+where ``input`` is a variable of type ``String`` with the path to the input deck file
 
 # Input deck
 ## Constants
