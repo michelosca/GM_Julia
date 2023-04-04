@@ -73,7 +73,7 @@ function ExecuteProblem(species_list::Vector{Species},
         #reltol = 1.e-6,
         maxiters = 1.e7,
         callback = cb,
-        save_everystep = save_flag 
+        save_everystep = save_flag
     )
     PrintMessage(system, "Problem execution finished\n")
     return sol
@@ -167,13 +167,17 @@ function condition_pulsed_power(out, u, t, integrator)
     freq = system.drivf
     dr = system.P_duty_ratio
     if t_offset > 0
-            period_fraction = t_offset * freq
-            out[1] = period_fraction - floor(period_fraction) - dr 
-            out[2] = period_fraction - round(period_fraction)
-        else
-            out[1] = -dr 
-            out[2] = 0.0
-        end
+        period_fraction = t_offset * freq
+        out[1] = period_fraction - floor(period_fraction) - dr
+        out[2] = period_fraction - round(period_fraction)
+    else
+        out[1] = -dr
+        out[2] = 0.0
+    end
+
+    #T_e_min = system.T_e_min
+    #T_e = integrator.u[1]
+    #out[3] = T_e_min - T_e
 end
 
 
@@ -192,6 +196,12 @@ function affect_pulsed_power!(integrator, cb_index)
         system.P_absorbed = system.drivP / system.V 
         #message = @sprintf(" Power switch on.  Time = %10g s; dt = %10g s\n", integrator.t, dt)
         #PrintMessage(system, message)
+    #elseif cb_index == 3
+    #    T_e = integrator.u[1]
+    #    T_e_min = system.T_e_min
+    #    if T_e < T_e_min
+    #        integrator.u[1] = system.T_e_min
+    #    end
     end
     set_proposed_dt!(integrator, dt) 
 end
