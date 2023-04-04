@@ -53,7 +53,7 @@ function ExecuteProblem(species_list::Vector{Species},
         cb = CallbackSet(cb_duty_ratio, cb_Te_lower_bound, cb_error)
     else
         cb_error = DiscreteCallback(condition_error, affect_error!)
-        cb = CallbackSet(cb_duty_ratio, cb_error)
+        cb = CallbackSet(cb_error)
     end
 
     # ODE problem

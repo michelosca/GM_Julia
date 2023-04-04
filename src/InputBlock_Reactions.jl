@@ -92,9 +92,9 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
         print("  - Charge balance\n")
         print("  - Mass balance\n")
         print("  - Elastic scattering reactions\n")
-        T_min = 1.5 / K_to_eV
-        T_max = 4.0 / K_to_eV
-        @printf("  - Rate coefficients values between %.2f <= T_e <= %.2f [eV]\n",
+        T_min = system.T_e_min
+        T_max = system.T_e_max / K_to_eV
+        @printf("  - Rate coefficients values between %.2f <= T_e [eV] <= %.2f \n",
             T_min*K_to_eV, T_max*K_to_eV)
         # Setup temp array, used later when testing rate coefficients
         temp = Float64[]

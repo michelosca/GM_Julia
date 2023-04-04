@@ -69,7 +69,8 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.dt_start = 1.e-12
         system.t_end = 0.0
         system.total_pressure = 0.0
-        system.T_e_min = 0.04 / K_to_eV
+        system.T_e_min = 1.5 / K_to_eV
+        system.T_e_max = 4.0 / K_to_eV
         system.Lambda = 0.0
         system.prerun = true
         system.plasma_potential = 100.0
@@ -185,6 +186,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         elseif (lname=="t_e_min")
             system.T_e_min = parse(Float64, var) * units_fact
             errcode = 0
+        elseif (lname=="t_e_max")
+            system.T_e_max = parse(Float64, var) * units_fact
+            errcode = 0
         end
     else
         errcode = 0
@@ -229,7 +233,7 @@ function EndSystemBlock!(read_step::Int64, system::System)
             print("***ERROR*** System h factor has not been defined\n")
             return c_io_error 
         end
-        if (system.drivf == 0)
+        if (system.drivf == 0 && system.P_shape != p_constant )
             print("***ERROR*** System driving frequency has not been defined\n")
             return c_io_error 
         end
