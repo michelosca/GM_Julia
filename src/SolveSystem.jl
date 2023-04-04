@@ -107,6 +107,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     if errcode == c_io_error
         system.errcode = errcode 
         PrintErrorMessage(system, "UpdateSpeciesParameters failed")
+        return
     end
 
     # First get the positive ion fluxes
@@ -114,6 +115,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     if errcode == c_io_error
         system.errcode = errcode 
         PrintErrorMessage(system, "UpdatePositiveFlux failed")
+        return
     end
 
     # Calculate the sheath potential
@@ -121,6 +123,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     if errcode == c_io_error
         system.errcode = errcode 
         PrintErrorMessage(system, "GetSheathVoltage failed")
+        return
     end
 
     # Calculate the electron flux  
@@ -128,6 +131,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     if errcode == c_io_error
         system.errcode = errcode 
         PrintErrorMessage(system, "UpdateNegativeFlux failed")
+        return
     end
 
     ### Generate the dy array
