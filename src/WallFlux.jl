@@ -53,7 +53,7 @@ function TempWallFluxFunction(temp::Vector{Float64}, species::Species,
         # Add ion flux terms
         for s in species_list
             charge = s.charge
-            if charge != 0.0
+            if charge > 0.0
                 temp_flux -= (0.5*kb*Te + charge*V_sheath) * s.flux
             end
         end
@@ -105,11 +105,11 @@ function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
         for s in species_list
             q = s.charge
             if solve_method == s_ohmic_power 
-                if q > 0
+                if q > 0.0
                     negative_flux += s.flux * q 
                 end
             elseif solve_method == s_flux_interpolation
-                if q < 0
+                if q < 0.0
                     T_eV = s.temp * K_to_eV
                     s.flux = 0.25 * s.dens * s.v_thermal *
                         exp(-system.plasma_potential/ T_eV)
