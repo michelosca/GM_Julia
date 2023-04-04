@@ -38,7 +38,7 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     # FIRST: Update dens, temperature and pressure. Set flux values to zero.
     for s in species_list
         s.temp = temp[s.id]
-        if s.temp < 0.0
+        if s.temp < 0.03
             err_message = @sprintf("%s temperature is negative: %15g eV",
                 s.name, s.temp*K_to_eV)
             PrintErrorMessage(system, err_message) 

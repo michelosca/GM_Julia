@@ -49,8 +49,9 @@ function ExecuteProblem(species_list::Vector{Species},
         cb_duty_ratio = VectorContinuousCallback(condition_pulsed_power,
             affect_pulsed_power!, 2, affect_neg! = nothing, save_positions=(true,true))
         cb_error = DiscreteCallback(condition_error, affect_error!)
-        cb_Te_lower_bound = DiscreteCallback(condition_Te_lower_bound, affect_Te_lower_bound!)
-        cb = CallbackSet(cb_duty_ratio, cb_Te_lower_bound, cb_error)
+        cb = CallbackSet(cb_duty_ratio, cb_error)
+        #cb_Te_lower_bound = DiscreteCallback(condition_Te_lower_bound, affect_Te_lower_bound!)
+        #cb = CallbackSet(cb_Te_lower_bound, cb_duty_ratio, cb_error)
     else
         cb_error = DiscreteCallback(condition_error, affect_error!)
         cb = CallbackSet(cb_error)

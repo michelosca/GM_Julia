@@ -53,7 +53,7 @@ function TempWallFluxFunction(temp::Vector{Float64}, species::Species,
         # Add ion flux terms
         for s in species_list
             charge = s.charge
-            if (charge > 0)
+            if charge != 0.0
                 temp_flux -= (0.5*kb*Te + charge*V_sheath) * s.flux
             end
         end
