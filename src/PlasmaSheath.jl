@@ -47,20 +47,35 @@ function GetSheathVoltage!(system::System, species_list::Vector{Species},
         electron_species = species_list[sID.electron]
         errcode = SheathVoltage_OhmicPowerSource(electron_species, system,
             sID, time)
+        if errcode == c_io_error
+            message = "SheathVoltage_OhmicPowerSource"
+            PrintErrorMessage(system, message)
+        end
     elseif solve_method == s_flux_balance 
         errcode = SheathVoltage_FluxBalanceEquation(species_list, system,
             sID.electron)
+        if errcode == c_io_error
+            message = "SheathVoltage_FluxBalanceEquation"
+            PrintErrorMessage(system, message)
+        end
     elseif solve_method == s_flux_interpolation
         errcode = SheathVoltage_InterpolateFluxEquation(species_list, system)
+        if errcode == c_io_error
+            message = "SheathVoltage_InterpolateFluxEquation"
+            PrintErrorMessage(system, message)
+        end
     else
         PrintErrorMessage(system, "No potential sheath calculation done")
         errcode = c_io_error
     end
+
     return errcode
 end
 
 function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
     system::System, electron_id::Int64)
+
+    errcode = 0
 
     positive_flux = 0.0 # Fluxes of positive charged particles
     electrons = species_list[electron_id]
@@ -75,24 +90,28 @@ function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
     #print("Positive flux ", positive_flux,"\n")
     system.plasma_potential = -log(positive_flux / v_th / n_e * 4.0) * Te_eV
 
-    return 0 
+    return errcode 
 end
 
 function SheathVoltage_OhmicPowerSource(electrons::Species, system::System,
     sID::SpeciesID, time::Float64)
     # From: A. Hurlbatt et al. (2017)
 
+    errcode = 0
+
     S_ohm = PowerInputFunction(electrons, system, sID, time)
     mfp = electrons.mfp 
     v_th = electrons.v_thermal
     system.plasma_potential = 3.0/2.0 * S_ohm*e*mfp / (me*eps0*system.drivOmega^2*v_th)
 
-    return 0 
+    return errcode 
 end
 
 
 function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
     system::System)
+
+    errcode = 0
 
     positive_flux = 0.0        # Fluxes of positive charged particles
     for s in species_list
@@ -130,7 +149,7 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
         end
     end
     system.plasma_potential = V_guess
-    return 0 
+    return errcode 
 end
 
 end
