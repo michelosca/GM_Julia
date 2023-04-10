@@ -163,6 +163,12 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
                 # Check that rate coeff. is positive
                 errcode = K_low_bound_threshold_check(r, system)
                 if errcode == c_io_error
+                    special_coll_str = ""
+                    if species_coll
+                        special_coll_str = "special collisions"
+                    end
+                    message = @sprintf("Interrupt in UpdateRateCoefficientValues! %s", special_coll_str)
+                    PrintErrorMessage(system, message)
                     return errcode
                 end
 
@@ -189,6 +195,12 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
         # Check that rate coeff. is positive
         errcode = K_low_bound_threshold_check(r, system)
         if errcode == c_io_error
+            special_coll_str = ""
+            if species_coll
+                special_coll_str = "special collisions"
+            end
+            message = @sprintf("Interrupt in UpdateRateCoefficientValues! %s", special_coll_str)
+            PrintErrorMessage(system, message)
             return errcode
         end
     end
@@ -205,7 +217,7 @@ function K_low_bound_threshold_check(r::Reaction, system::System)
         else
             err_message = @sprintf("%s has negative rate coefficient", r.name)
             PrintErrorMessage(system, err_message)
-            errcode = c_io_error
+            return c_io_error
         end
     end
     return errcode
