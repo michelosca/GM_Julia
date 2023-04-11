@@ -67,6 +67,8 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.P_duty_ratio = 1.0
         system.P_start = 0.0
         system.dt_start = 1.e-12
+        system.on_slope = 0.0
+        system.off_slope = 0.0
         system.t_end = 0.0
         system.total_pressure = 0.0
         system.T_e_min = 1.5 / K_to_eV
@@ -138,6 +140,12 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
             errcode = 0
         elseif (lname=="dt_start")
             system.dt_start = parse(Float64, var)
+            errcode = 0
+        elseif (lname=="on_slope") || (lname == "p_on_slope")
+            system.on_slope = parse(Float64, var)
+            errcode = 0
+        elseif (lname=="off_slope") || (lname == "p_off_slope")
+            system.off_slope = parse(Float64, var)
             errcode = 0
         elseif (lname=="h_factor" || lname=="h" || lname=="h_id")
             lvar = lowercase(var)
@@ -265,6 +273,21 @@ function EndSystemBlock!(read_step::Int64, system::System)
 
         if (system.T_e_min <= 0)
             print("***ERROR*** Make sure that T_e_min > 0\n")
+            return c_io_error 
+        end
+
+        if (system.on_slope < 0.0) || (system.on_slope >= 1.0)
+            print("***ERROR*** Power on-slope must be >= 0.0 and < 1.0\n")
+            return c_io_error 
+        end
+
+        if (system.off_slope < 0.0) || (system.off_slope >= 1.0)
+            print("***ERROR*** Power off-slope must be >= 0.0 and < 1.0\n")
+            return c_io_error 
+        end
+
+        if (system.off_slope + system.on_slope >= 1.0)
+            print("***ERROR*** Power on and off-slope cannot overlap\n")
             return c_io_error 
         end
 

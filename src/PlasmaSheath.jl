@@ -147,7 +147,7 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
             if iteration == 1
                 V_guess_min = -10.0
                 V_guess_max = 10.0
-            elseif iteration > 10
+            elseif iteration > 20
                 message = "Plasma potential interpolation: iteration limit"
                 PrintErrorMessage(system, message)
                 return c_io_error

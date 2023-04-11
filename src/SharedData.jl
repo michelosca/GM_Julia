@@ -179,6 +179,8 @@ mutable struct System
     P_duty_ratio::Float64
     P_start::Float64
     dt_start::Float64
+    on_slope::Float64
+    off_slope::Float64
 
     plasma_potential::Float64
     total_pressure::Float64
