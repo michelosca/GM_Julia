@@ -1,0 +1,908 @@
+################################################################################
+#                                                                              #
+# - Paper reference: Marcel Fiebrandt et al 2020 Plasma Sources Sci. Technol.  #
+#     29 045018                                                                #
+# - Title: "Determination of atomic oxygen state densities in a double         #
+#     inductively coupled plasma using optical emission and absorption         #
+#     spectroscopy and probe measurements"                                     #
+# - Link: https://doi.org/10.1088/1361-6595/ab7cbe                             #
+#                                                                              # 
+################################################################################
+begin:constants
+  T_gas = 787                           # K
+  T_electrons = 1.5                     # eV
+  nO2 = 0.0                             # m^-3
+  nAr = 1.e12                           # m^-3
+  ne = 1.e12                            # m^-3
+  pAr = 1.0                             # partial pressure (fraction) 
+  pO2 = 0.0                             # partial pressure (fraction)
+  mO = 16amu                            # kg
+  mO2 = 32amu                           # kg
+  mO3 = 48amu                           # kg
+  mO4 = 64amu                           # kg
+  mAr = 40amu                           # kg
+  gamma_O = 0.1                         # sticking coefficient
+  gamma_O_metastable = 1.0              # sticking coefficient 
+  gamma_O2 = 0.007                      # sticking coefficient 
+  gamma_O3 = 0.0                        # sticking coefficient 
+  gamma_Ar = 1.0                        # sticking coefficient 
+end:constants
+
+begin:system
+  radius = 0.2                          # m  
+  L = 0.2                               # m
+  P = 500                               # Watts, W
+  h_factor = gudmundsson
+  vsheath_solve_method = flux_interpolation
+  t_end = 1.0                           # seconds, s
+  dt_start = 1.e-12                     # s
+  prerun = true
+  total_pressure = 5.0                  # Pa
+  plasma_potential_guess = 100          # V
+
+  #power_duty_ratio = 0.1
+  #P_shape = square
+  #f = 13.56e6                           # Hz
+  #P_t_start = 0.0002                    # s
+  #T_e_min_eV = 1.5                      # eV
+end:system
+
+begin:species
+  name = e
+  charge = -1
+  mass = me 
+  solve_dens = true 
+  solve_temp = true
+  T_eV = T_electrons
+  density = ne
+end:species
+
+begin:species
+  name = O2 
+  charge = 0
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false 
+  T = T_gas 
+  p = pO2
+  gamma = gamma_O2
+  #flow_rate_sccm = 20
+end:species
+
+begin:species
+  name = O2+ 
+  charge = 1
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = nO2
+end:species
+
+begin:species
+  name = O2- 
+  charge = -1
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+end:species
+
+begin:species
+  name = O2_a1Ag
+  charge = 0
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O2
+end:species
+
+begin:species
+  name = O2_b1Su
+  charge = 0
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O2
+end:species
+
+begin:species
+  name = O2_a1Ag_v
+  charge = 0
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O2
+end:species
+
+begin:species
+  name = O2_b1Su_v
+  charge = 0
+  mass = mO2 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O2
+end:species
+
+begin:species
+  name = O 
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O
+end:species
+
+begin:species
+  name = O+ 
+  charge = 1 
+  mass = mO
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+end:species
+
+begin:species
+  name = O- 
+  charge = -1
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+end:species
+
+begin:species
+  name = O_1d 
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O_metastable
+end:species
+
+begin:species
+  name = O_1s 
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O_metastable
+end:species
+
+begin:species
+  name = O_3s
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O_metastable
+end:species
+
+begin:species
+  name = O_5s
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O_metastable
+end:species
+
+begin:species
+  name = O_3p
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O_metastable
+end:species
+
+begin:species
+  name = O_5p
+  charge = 0 
+  mass = mO 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  density = 0
+  gamma = gamma_O_metastable
+end:species
+
+begin:species
+  name = O3
+  charge = 0
+  mass = mO3 
+  solve_dens = true
+  solve_temp = false
+  T = T_gas 
+  density = 0
+  gamma = gamma_O3
+end:species
+
+begin:species
+  name = O3_v
+  charge = 0
+  mass = mO3 
+  solve_dens = true
+  solve_temp = false
+  T = T_gas 
+  density = 0
+  gamma = gamma_O3
+end:species
+
+begin:species
+  name = O3+
+  charge = 1
+  mass = mO3 
+  solve_dens = true
+  solve_temp = false
+  T = T_gas 
+  density = 0
+end:species
+
+begin:species
+  name = O3-
+  charge = -1
+  mass = mO3 
+  solve_dens = true
+  solve_temp = false
+  T = T_gas 
+  density = 0
+end:species
+
+begin:species
+  name = O4
+  charge = 0
+  mass = mO4 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas 
+  density = 0
+end:species
+
+begin:species
+  name = O4+
+  charge = 1
+  mass = mO4 
+  solve_dens = true
+  solve_temp = false
+  T = T_gas 
+  density = 0
+end:species
+
+begin:species
+  name = O4-
+  charge = -1
+  mass = mO4 
+  solve_dens = true
+  solve_temp = false
+  T = T_gas 
+  density = 0
+end:species
+
+begin:species
+  name = Ar 
+  charge = 0
+  mass = mAr 
+  solve_dens = false
+  solve_temp = false
+  T = T_gas
+  p = pAr 
+  gamma = gamma_Ar
+  #flow_rate_sccm = 100
+end:species
+
+begin:species
+  name = Ar+ 
+  charge = 1
+  mass = mAr 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  dens = nAr 
+end:species
+
+begin:species
+  name = Ar_m # m for metastables 1s3 and 1s5
+  charge = 0
+  mass = mAr 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  dens = 0
+  gamma = gamma_Ar
+end:species
+
+begin:species
+  name = Ar_r # r for raiatively coupled, 1s2 1s4
+  charge = 0
+  mass = mAr 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  dens = 0
+  gamma = gamma_Ar
+end:species
+
+begin:species
+  name = Ar_4p 
+  charge = 0
+  mass = mAr 
+  solve_dens = true 
+  solve_temp = false
+  T = T_gas
+  dens = 0
+  gamma = gamma_Ar
+end:species
+
+begin:reactions
+  # reaction process;         # threshold E;                   # rate coefficient;                     # description
+  ##################################################################################################################
+  # Oxygen reactions (Turner 2015)
+  e + O -> 2e + O+;             13.6_eeV; 4.93e-15 * T_e_eV^ 0.723 * exp(-13.20/T_e_eV); # reaction number 12
+  e + O -> e + O_1d;            1.96_eeV; 8.45e-15 * T_e_eV^-0.306 * exp( -3.13/T_e_eV); # 13
+  e + O -> e + O_1s;            4.18_eeV; 1.04e-15 * T_e_eV^-0.134 * exp( -4.19/T_e_eV); # 14
+  e + O_1d -> 2e + O+;         11.65_eeV; 4.93e-15 * T_e_eV^ 0.723 * exp(-11.64/T_e_eV); # 15
+  e + O_1d -> e + O;           -1.96_eeV; 8.45e-15 * T_e_eV^ 0.306 * exp( -1.17/T_e_eV); # 16 
+  e + O_1s -> 2e + O+;          9.43_eeV; 4.93e-15 * T_e_eV^ 0.723 * exp( -9.42/T_e_eV); # 17
+  e + O_1s -> e + O;           -4.18_eeV; 1.04e-15 * T_e_eV^-0.134 * exp( -0.73/T_e_eV); # 18
+  e + O- -> 2e + O;             3.44_eeV; 9.33e-14 * T_e_eV^ 0.178 * exp( -3.13/T_e_eV); # 19
+  e + O2 -> 2e + O + O+;       18.73_eeV; 8.60e-16 * T_e_eV^ 1.110 * exp(-19.84/T_e_eV); # 20
+  e + O2 -> 2e + O2+;          12.06_eeV; 2.32e-15 * T_e_eV^ 0.990 * exp(-12.51/T_e_eV); # 21
+  e + O2 -> e + O + O_1d;        8.5_eeV; 3.12e-14 * T_e_eV^ 0.017 * exp( -8.05/T_e_eV); # 22
+  e + O2 -> e + O + O_1d;       9.97_eeV; 1.56e-17 * T_e_eV^ 1.500 * exp( -4.68/T_e_eV); # 23 
+  e + O2 -> e + O2;             0.02_eeV; 3.88e-17 * T_e_eV^-1.220 * exp( -0.55/T_e_eV); # 25
+  e + O2 -> e + O2;             0.19_eeV; 4.32e-16 * T_e_eV^-1.570 * exp(-0.586/T_e_eV); # 26
+  e + O2 -> e + O2;             0.19_eeV; 2.76e-14 * T_e_eV^-1.030 * exp( -6.96/T_e_eV); # 27
+  e + O2 -> e + O2;             0.57_eeV; 5.40e-15 * T_e_eV^-0.916 * exp(  -6.6/T_e_eV); # 28
+  e + O2 -> e + O2;             0.38_eeV; 1.64e-16 * T_e_eV^-1.410 * exp(-0.723/T_e_eV); # 29
+  e + O2 -> e + O2;             0.38_eeV; 1.20e-14 * T_e_eV^-1.015 * exp(  -6.9/T_e_eV); # 30
+  e + O2 -> e + O2;             0.75_eeV; 5.27e-15 * T_e_eV^-1.130 * exp( -7.57/T_e_eV); # 31
+  e + O2 -> e + O2_a1Ag;       0.977_eeV; 2.10e-15 * T_e_eV^-0.232 * exp( -2.87/T_e_eV); # 32
+  e + O2 -> e + O2_b1Su;       1.627_eeV; 3.97e-16 * T_e_eV^-0.089 * exp( -2.67/T_e_eV); # 33
+  e + O2 -> e + O2_b1Su;         4.5_eeV; 1.28e-14 * T_e_eV^-1.160 * exp( -7.00/T_e_eV); # 34
+  e + O2 -> e + O2_b1Su;         6.0_eeV; 1.98e-14 * T_e_eV^-0.779 * exp( -7.36/T_e_eV); # 35
+  e + O2 -> O + O-;              0.0_eeV; 1.32e-15 * T_e_eV^-1.400 * exp( -1.40/T_e_eV); # 36
+  e + O2_a1Ag -> 2e + O + O+;  17.75_eeV; 8.60e-16 * T_e_eV^ 1.110 * exp(-18.86/T_e_eV); # 37
+  e + O2_a1Ag -> 2e + O2+;     11.08_eeV; 2.32e-15 * T_e_eV^ 0.990 * exp(-11.53/T_e_eV); # 38
+  e + O2_a1Ag -> e + O + O_1d;  7.52_eeV; 3.12e-14 * T_e_eV^ 0.017 * exp( -7.07/T_e_eV); # 39
+  e + O2_a1Ag -> e + O + O_1d;   9.0_eeV; 1.56e-17 * T_e_eV^ 1.500 * exp( -3.70/T_e_eV); # 40
+  e + O2_a1Ag -> e + O2;       0.977_eeV; 2.10e-15 * T_e_eV^-0.232 * exp( -1.89/T_e_eV); # 41
+  e + O2_a1Ag -> e + O2_a1Ag;   0.02_eeV; 3.88e-17 * T_e_eV^-1.220 * exp( -0.55/T_e_eV); # 43
+  e + O2_a1Ag -> e + O2_a1Ag_v; 0.19_eeV; 4.32e-16 * T_e_eV^-1.570 * exp(-0.586/T_e_eV); # 44
+  e + O2_a1Ag -> e + O2_a1Ag_v; 0.19_eeV; 2.76e-14 * T_e_eV^-1.030 * exp( -6.96/T_e_eV); # 45
+  e + O2_a1Ag -> e + O2_a1Ag_v; 0.38_eeV; 1.64e-16 * T_e_eV^-1.410 * exp(-0.723/T_e_eV); # 46
+  e + O2_a1Ag -> e + O2_a1Ag_v; 0.38_eeV; 1.20e-15 * T_e_eV^-1.015 * exp(  -6.9/T_e_eV); # 47, different to reaction 30
+  e + O2_a1Ag -> e + O2_a1Ag_v; 0.57_eeV; 5.40e-15 * T_e_eV^-0.916 * exp(  -6.6/T_e_eV); # 48
+  e + O2_a1Ag -> e + O2_a1Ag_v; 0.75_eeV; 5.27e-15 * T_e_eV^-1.130 * exp( -7.57/T_e_eV); # 49
+  e + O2_a1Ag -> e + O2_b1Su;  0.657_eeV; 5.25e-15 * T_e_eV^-0.440 * exp( -1.49/T_e_eV); # 50
+  e + O2_a1Ag -> e + O2_b1Su;   3.52_eeV; 1.28e-14 * T_e_eV^-1.160 * exp( -6.02/T_e_eV); # 51
+  e + O2_a1Ag -> e + O2_b1Su;   5.02_eeV; 1.98e-14 * T_e_eV^-0.779 * exp( -6.38/T_e_eV); # 52
+  e + O2_a1Ag -> O + O-;         3.0_eeV; 4.14e-15 * T_e_eV^-1.340 * exp( -5.15/T_e_eV); # 53
+  e + O2_a1Ag -> O_1d + O-;      3.0_eeV; 9.20e-16 * T_e_eV^-1.260 * exp( -6.55/T_e_eV); # 54
+  e + O2_b1Su -> 2e + O + O+;   17.1_eeV; 8.60e-16 * T_e_eV^ 1.110 * exp(-18.21/T_e_eV); # 55
+  e + O2_b1Su -> 2e + O2+;     10.43_eeV; 2.32e-15 * T_e_eV^ 0.990 * exp(-10.88/T_e_eV); # 56
+  e + O2_b1Su -> e + O + O_1d;  6.87_eeV; 3.12e-14 * T_e_eV^ 0.017 * exp( -6.42/T_e_eV); # 57
+  e + O2_b1Su -> e + O + O_1d;  8.34_eeV; 1.56e-17 * T_e_eV^ 1.500 * exp( -3.05/T_e_eV); # 58
+  e + O2_b1Su -> e + O2;       1.627_eeV; 3.97e-16 * T_e_eV^-0.089 * exp( -1.04/T_e_eV); # 59
+  e + O2_b1Su -> e + O2_a1Ag; -0.657_eeV; 5.25e-15 * T_e_eV^-0.440 * exp(-0.833/T_e_eV); # 60
+  e + O2_b1Su -> e + O2_b1Su;   0.02_eeV; 3.88e-17 * T_e_eV^-1.220 * exp( -0.55/T_e_eV); # 62
+  e + O2_b1Su -> e + O2_b1Su_v; 0.19_eeV; 4.32e-16 * T_e_eV^-1.570 * exp(-0.586/T_e_eV); # 63
+  e + O2_b1Su -> e + O2_b1Su_v; 0.19_eeV; 2.76e-14 * T_e_eV^-1.030 * exp( -6.96/T_e_eV); # 64
+  e + O2_b1Su -> e + O2_b1Su_v; 0.38_eeV; 1.64e-16 * T_e_eV^-1.410 * exp(-0.723/T_e_eV); # 65
+  e + O2_b1Su -> e + O2_b1Su_v; 0.38_eeV; 1.20e-15 * T_e_eV^-1.015 * exp(  -6.9/T_e_eV); # 66, ! different to reaction 30
+  e + O2_b1Su -> e + O2_b1Su_v; 0.57_eeV; 5.40e-15 * T_e_eV^-0.916 * exp(  -6.6/T_e_eV); # 67
+  e + O2_b1Su -> e + O2_b1Su_v; 0.75_eeV; 5.27e-15 * T_e_eV^-1.130 * exp( -7.57/T_e_eV); # 68
+  e + O2_b1Su -> e + O2_b1Su;   2.87_eeV; 1.28e-14 * T_e_eV^-1.160 * exp( -5.37/T_e_eV); # 69
+  e + O2_b1Su -> e + O2_b1Su;   4.37_eeV; 1.98e-14 * T_e_eV^-0.779 * exp( -5.73/T_e_eV); # 70
+  e + O2_b1Su -> O + O-;         0.0_eeV; 7.11e-16 * T_e_eV^-1.040 * exp( -0.23/T_e_eV); # 71
+  e + O2- -> 2e + O2;           4.68_eeV; 1.57e-14 * T_e_eV^ 1.010 * exp( -1.77/T_e_eV); # 72
+  e + O3 -> e + O + O2;          2.6_eeV; 1.70e-14 * T_e_eV^-0.570 * exp( -2.48/T_e_eV); # 73
+  e + O3 -> e + O_1d + O2_a1Ag; 5.72_eeV; 3.22e-13 * T_e_eV^-1.180 * exp( -9.17/T_e_eV); # 74
+  e + O3 -> O + O2-;             0.0_eeV; 1.02e-15 * T_e_eV^-1.300 * exp( -1.03/T_e_eV); # 75
+  e + O3 -> O- + O2;             0.0_eeV; 3.45e-15 * T_e_eV^-0.960 * exp( -1.00/T_e_eV); # 76
+  e + O3 -> 2e + O3+;          12.43_eeV; 5.96e-15 * T_e_eV^ 0.978 * exp(-12.55/T_e_eV); # 77
+  e + O3+ -> 3O;               -6.27_eeV; 2.07e-13 * T_e_eV^-0.550;                      # 78
+  e + O3+ -> 2O + O_1d;         -4.3_eeV; 6.69e-13 * T_e_eV^-0.550;                      # 79
+  e + O3+ -> O + 2O_1d;        -2.33_eeV; 1.55e-13 * T_e_eV^-0.550;                      # 80
+  e + O3- -> 2e + O3;            2.1_eeV; 2.12e-14 * T_e_eV^ 0.510 * exp( -5.87/T_e_eV); # 81
+  e + O3- -> 2e + O + O2;        3.2_eeV; 7.12e-14 * T_e_eV^-0.132 * exp( -5.94/T_e_eV); # 82
+  e + O3- -> 2e + 3O;            8.4_eeV; 1.42e-14 * T_e_eV^-0.520 * exp(  -9.3/T_e_eV); # 83
+  3O -> O + O2;                  0.0; 3.80e-44 * (300/T_O) * exp(-170/ T_O);         # 92
+  3O -> O + O2_b1Su;             0.0; 1.40e-42 * exp(-650/T_O);                      # 93
+  2O + O2 -> O + O3;             0.0; 4.20e-47 * exp(1056/T_O);                      # 94
+  2O + O2 -> O + O3_v;           0.0; 9.80e-47 * exp(1056/T_O);                      # 95
+  2O + O2 -> O2_a1Ag + O2;       0.0; 6.50e-45 * (300/T_O2) * exp(-170/T_O2);        # 96
+  2O + O2 -> O2_b1Su + O2;       0.0; 6.50e-45 * (300/T_O2) * exp(-170/T_O2);        # 97
+  O + O_1d -> 2O;                0.0; 2.00e-18;                                      # 98
+  O + O_1s -> 2O;                0.0; 2.50e-17 * exp(-300/T_O);                      # 99
+  O + O_1s -> O + O_1d;          0.0; 2.50e-17 * exp(-300/T_O);                      # 100
+  O + 2O2 -> O2 + O3;            0.0; 1.80e-46 * (300/T_O2)^2.6;                     # 101
+  O + 2O2 -> O2 + O3_v;          0.0; 4.20e-46 * (300/T_O2)^2.6;                     # 102
+  O + O2 + O2_a1Ag -> O + 2O2;   0.0; 1.10e-44;                                      # 103
+  O + O2 + O3 -> 2O3;            0.0; 1.40e-47 * exp(-1050/T_O2);                    # 104
+  O + O2 + O3 -> O3 + O3_v;      0.0; 3.27e-47 * exp(-1050/T_O2);                    # 105
+  O + O2_a1Ag -> O + O2;       -2.14_eeV; 1.00e-22;                                      # 106
+  O + O2_b1Su -> O + O2_a1Ag;  -0.65_eeV; 8.00e-20;                                      # 107
+  O + O3 -> 2O + O2;             0.0; 1.20e-15 * exp(-11400/T_O);                    # 108
+  O + O3 -> 2O2;                 0.0; 8.00e-18 * exp( -2060/T_O);                    # 109
+  O + O3_v -> 2O2;               0.0; 4.50e-18;                                      # 110
+  O + O3_v -> O3 + O;            0.0; 1.05e-17;                                      # 111
+  O_1d + O2 -> O + O2_b1Su;      0.0; 2.64e-17 * exp(55/T_O2);                       # 112
+  O_1d + O2 -> O + O2_a1Ag;      0.0; 6.60e-18 * exp(55/T_O2);                       # 113
+  O_1d + O3 -> 2O + O2;          0.0; 1.20e-16;                                      # 114
+  O_1d + O3 -> 2O2;              0.0; 1.20e-16;                                      # 115
+  O_1s + O2 -> O + O2;           0.0; 3.00e-18 * exp(-850/T_O2);                     # 116
+  O_1s + O2 -> O_1d + O2;        0.0; 1.30e-18 * exp(-850/T_O2);                     # 117
+  O_1s + O2_a1Ag -> 3O;          0.0; 3.20e-17;                                      # 118
+  O_1s + O2_a1Ag -> O + O2_b1Su; 0.0; 1.30e-16;                                      # 119
+  O_1s + O2_a1Ag -> O_1d + O2;   0.0; 3.60e-17;                                      # 120
+  O_1s + O3 -> O + O_1d + O2;    0.0; 1.93e-16;                                      # 121
+  O_1s + O3 -> 2O2;              0.0; 1.93e-16;                                      # 122
+  O_1s + O3 -> 2O + O2;          0.0; 1.93e-16;                                      # 123
+  2O2 -> 2O + O2;                0.0; 6.60e-15 * (300/T_O2)^1.5 * exp(-59000/T_O2);  # 124
+  #O2 + O2_v -> 2O2;           -0.19_eeV; 2.00e-20;                                      # 125
+  O2 + O2_a1Ag -> 2O2;           0.0; 3.60e-24 * exp(-220/T_O2);                     # 126
+  O2 + O2_a1Ag_v -> O2 + O2_a1Ag; -0.19_eeV; 5.00e-17;                                 # 127
+  O2 + O2_b1Su -> O2 + O2_a1Ag;  0.0; 3.90e-23;                                      # 128
+  O2 + O2_b1Su_v -> O2 + O2_b1Su; -0.19_eeV; 1.50e-17;                                 # 129
+  O2 + O3 -> O + 2O2;            0.0; 7.26e-16 * exp(-11435/T_O2);                   # 130
+  O2 + O3_v -> O2 + O3;          0.0; 4.00e-20;                                      # 131
+  2O2_a1Ag -> O2 + O2_b1Su;      0.0; 2.70e-23;                                      # 132
+  O2_a1Ag + O2_b1Su -> O2 + O2_b1Su;  0.0; 2.70e-23;                                 # 133
+  2O2_b1Su -> O2 + O2_b1Su;      0.0; 2.70e-23;                                      # 134
+  O2_a1Ag + O3 -> O + 2O2;       0.0; 5.20e-17 * exp(-2840/T_O2);                    # 135
+  O2_a1Ag + O3_v -> O2 + O3;     0.0; 5.00e-17;                                      # 136
+  O2_b1Su + O3 -> O + 2O2;       0.0; 2.40e-17 * exp(-135/T_O2);                     # 137
+  O2_b1Su + O3 -> O2 + O3;       0.0; 5.50e-18 * exp(-135/T_O2);                     # 138
+  O2_b1Su + O3 -> O2_a1Ag + O3;  0.0; 5.50e-18 * exp(-135/T_O2);                     # 139
+  2O3 -> O + O2 + O3;            0.0; 1.65e-15 * exp(-11435/T_O2);                   # 140
+  O3 + O3_v -> 2O3;              0.0; 1.00e-19;                                      # 141
+  2e + O+ -> e + O;              0.0; 2.00e-39 * T_e_eV^-4.500;                      # 142
+  2e + O2+ -> e + O2;            0.0; 2.00e-39 * T_e_eV^-4.500;                      # 143
+  2e + O4+ -> e + 2O2;           0.0; 2.00e-39 * T_e_eV^-4.500;                      # 144
+  e + O + O2 -> O + O2-;         0.0; 1.00e-43;                                      # 145
+  e + O+ -> O_1d;                0.0; 2.70e-19 * T_e_eV^-0.700;                      # 146
+  e + O+ + O2 -> O + O2;         0.0; 3.30e-44 * T_e_eV^-2.500;                      # 147
+  e + 2O2 -> O2 + O2-;           0.0; 3.62e-43 * T_e_eV^-1.000 * exp(-0.052/T_e_eV); # 148
+  e + O2 + O2+ -> 2O2;           0.0; 3.30e-44 * T_e_eV^-2.500;                      # 149
+  e + O2 + O3 -> O2 + O3-;       0.0; 3.62e-43 * T_e_eV^-1.000 * exp(-0.052/T_e_eV); # 150
+  e + O2+ -> O + O_1d;           0.0; 9.10e-15 * T_e_eV^-0.700;                      # 151
+  e + O2+ -> O_1d + O_1s;        0.0; 6.00e-15 * T_e_eV^-0.700;                      # 152
+  e + O4+ -> O + O_1d + O2;      0.0; 2.02e-14 * T_e_eV^-0.480;                      # 153
+  e + O4+ -> O_1d + O_1s + O2;   0.0; 1.35e-14 * T_e_eV^-0.480;                      # 154
+  O + O- -> e + O2;              0.0; 2.30e-16 * (300/T_O)^1.3;                      # 155
+  O + O2- -> O- + O2;            0.0; 8.50e-17 * (300/T_O)^1.8;                      # 156
+  O + O2- -> e + O3;             0.0; 8.50e-17 * (300/T_O)^1.8;                      # 157
+  O + O3- -> e + 2O2;            0.0; 1.00e-17;                                      # 158
+  O + O3- -> O2 + O2-;           0.0; 2.50e-16;                                      # 159
+  O + O4+ -> O3 + O2+;           0.0; 3.00e-16;                                      # 160
+  O + O4- -> O2 + O3-;           0.0; 4.00e-16;                                      # 161
+  O_1d + O- -> e + 2O;           0.0; 7.40e-16;                                      # 162
+  O_1d + O2- -> e + O3;          0.0; 8.50e-17 * (300/T_O)^1.8;                      # 163
+  O_1d + O2- -> O- + O2;         0.0; 8.50e-17 * (300/T_O)^1.8;                      # 164
+  O_1d + O3+ -> 2O + O2+;        0.0; 3.00e-16;                                      # 165
+  O_1d + O3- -> O + O2 + O-;     0.0; 3.00e-16;                                      # 166
+  O_1d + O3- -> O + O3 + e;      0.0; 3.00e-16;                                      # 167
+  O_1d + O4+ -> O + O2 + O2+;    0.0; 3.00e-16;                                      # 168
+  O_1d + O4+ -> O3 + O2+;        0.0; 3.00e-16;                                      # 169
+  O_1d + O4- -> e + O + 2O2;     0.0; 2.00e-16;                                      # 170
+  O_1d + O4- -> O + O2 + O2-;    0.0; 2.00e-16;                                      # 171
+  O_1d + O4- -> 2O2 + O-;        0.0; 2.00e-16;                                      # 172
+  O_1d + O4- -> O + O2 + O2-;    0.0; 7.40e-16;                                      # 173
+  O_1s + O2- -> O- + O2;         0.0; 8.50e-17 * (300/T_O)^1.8;                      # 174
+  O_1s + O2- -> e + O3;          0.0; 8.50e-17 * (300/T_O)^1.8;                      # 175
+  O_1s + O3+ -> 2O + O2+;        0.0; 2.00e-16;                                      # 176
+  O_1s + O3- -> e + O + O3;      0.0; 2.00e-16;                                      # 177
+  O_1s + O3- -> 2O + O2-;        0.0; 2.00e-16;                                      # 178
+  O_1s + O3- -> O + O- + O2;     0.0; 2.00e-16;                                      # 179
+  O_1s + O4+ -> O + O2 + O2+;    0.0; 3.00e-16;                                      # 180
+  O_1s + O4+ -> O2+ + O3;        0.0; 3.00e-16;                                      # 181
+  O_1s + O4- -> e + O + 2O2;     0.0; 2.00e-16;                                      # 182
+  O_1s + O4- -> O + O2 + O2-;    0.0; 2.00e-16;                                      # 183
+  O_1s + O4- -> O- + 2O2;        0.0; 2.00e-16;                                      # 184
+  O+ + O + O2 -> O2 + O2+;       0.0; 4.00e-42 * (300/T_O2)^2.93;                    # 185
+  O+ + O- -> 2O;                 0.0; 3.10e-14 * (300/T_O)^1.1;                      # 186
+  O+ + O- + O2 -> 2O + O2;       0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 187
+  O+ + O- + O2 -> 2O2;           0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 188
+  O+ + O2 -> O + O2+;            0.0; 2.10e-17 * (300/T_O2)^0.4;                     # 189
+  O+ + O2- -> O + O2;            0.0; 3.22e-14 * (300/T_O2)^1.1;                     # 190
+  O+ + O2- + O2 -> O + 2O2;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 191
+  O+ + O2- + O2 -> O2 + O3;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 192
+  O+ + O3 -> O2 + O2+;           0.0; 1.20e-15;                                      # 193
+  O+ + O3- -> O + O3;            0.0; 7.33e-14 * (300/T_O)^0.9;                      # 194
+  O+ + O3- + O2 -> O + O2 + O3;  0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 195
+  O+ + O4- -> O + 2O2;           0.0; 7.87e-14 * (300/T_O)^0.9;                      # 196
+  O+ + O4- + O2 -> O + 3O2;      0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 197
+  O- + O2 -> O3 + e;             0.0; 1.00e-18;                                      # 198
+  O- + O2 -> O2- + O;            0.0; 1.00e-18;                                      # 199
+  O- + 2O2 -> O2 + O3-;          0.0; 1.10e-42;                                      # 200
+  O- + O2 + O3+ -> O + O2 + O3;  0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 201
+  O- + O2 + O4+ -> O + 3O2;      0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 202
+  O- + O2_a1Ag -> O + O2-;       0.0; 7.90e-16 * exp(-890/T_O2);                     # 203
+  O- + O2_a1Ag -> O3 + e;        0.0; 6.10e-17;                                      # 204
+  O- + O2_b1Su -> O + O2-;       0.0; 7.90e-16 * exp(-890/T_O2);                     # 205
+  O- + O2_b1Su -> O3 + e;        0.0; 6.10e-17;                                      # 206
+  O- + O2+ -> 3O;                0.0; 1.61e-14 * (300/T_O2)^1.1;                     # 207
+  O- + O2+ -> O + O2;            0.0; 1.61e-14 * (300/T_O2)^1.1;                     # 208
+  O- + O3 -> e + 2O2;            0.0; 3.00e-16;                                      # 209
+  O- + O3 -> O + O3-;            0.0; 2.00e-16;                                      # 210
+  O- + O3 -> O2 + O2-;           0.0; 1.00e-17;                                      # 211
+  O- + O3+ -> O + O3;            0.0; 3.07e-14 * (300/T_O)^1.1;                      # 212, corrected
+  O- + O4+ -> O + 2O2;           0.0; 1.54e-14 * (300/T_O)^0.9;                      # 213
+  O- + O4+ -> O2 + O3;           0.0; 1.54e-14 * (300/T_O)^0.9;                      # 214
+  2O2 + O2+ -> O2 + O4+;         0.0; 4.00e-42 * (300/T_O2)^2.93;                    # 215
+  2O2 + O2- -> O2 + O4-;         0.0; 3.50e-43 * (300/T_O2);                         # 216
+  O2 + O2- -> e + 2O2;           0.0; 2.70e-16 * (T_O2/300)^0.5 * exp(-5590/T_O2);   # 217
+  O2 + O2- -> O + O3-;           0.0; 3.50e-21;                                      # 218
+  O2 + O2- + O3+ -> 2O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 219
+  O2 + O2- + O4+ -> 4O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 220
+  O2 + O3+ -> O2+ + O3;          0.0; 6.70e-16;                                      # 221
+  O2 + O4+ -> 2O2 + O2+;         0.0; 1.00e-11 * (300/T_O2)^4.2 * exp(-5400/T_O2);   # 222
+  O2 + O3+ + O3- -> O2 + 2O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 223
+  O2 + O3+ + O4- -> 3O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 224
+  O2 + O3- + O4+ -> 3O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 225
+  O2 + O4+ + O4- -> 5O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 226
+  O2 + O4- -> 2O2 + O2-;         0.0; 2.20e-11 * (300/T_O2) * exp(-6300/T_O2);       # 227
+  O2_a1Ag + O2- -> e + 2O2;      0.0; 7.00e-16;                                      # 228
+  O2_a1Ag + O4+ -> 2O2 + O2+;    0.0; 6.00e-16;                                      # 229
+  O2_a1Ag + O4- -> 3O2 + e;      0.0; 3.00e-16;                                      # 230
+  O2_a1Ag + O4- -> 2O2 + O2-;    0.0; 3.00e-16;                                      # 231
+  O2_b1Su + O2- -> e + 2O2;      0.0; 7.00e-16;                                      # 232
+  O2_b1Su + O3- -> O- + 2O2;     0.0; 6.70e-16 * exp(-1300/T_O2);                    # 233
+  O2_b1Su + O4+ -> 2O2 + O2+;    0.0; 6.00e-16;                                      # 234
+  O2_b1Su + O4- -> e + 3O2;      0.0; 3.00e-16;                                      # 235
+  O2_b1Su + O4- -> 2O2 + O2-;    0.0; 3.00e-16;                                      # 236
+  O2+ + O- + O2 -> O + 2O2;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 237
+  O2+ + O- + O2 -> O2 + O3;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 238
+  O2+ + O2- + O2 -> 3O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 239
+  O2+ + O3- + O2 -> 2O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 240
+  O2+ + O4- + O2 -> 4O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 241
+  O2+ + O2- -> O2 + 2O;          0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 242
+  O2+ + O2- -> 2O2;              0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 243
+  O2+ + O3- -> 2O + O3;          0.0; 2.90e-14 * (300/T_O2)^0.9;                     # 244
+  O2+ + O3- -> O2 + O3;          0.0; 2.90e-14 * (300/T_O2)^0.9;                     # 245
+  O2+ + O4- -> 3O2;              0.0; 6.07e-14 * (300/T_O2)^0.9;                     # 246
+  O2- + O3 -> O2 + O3-;          0.0; 6.00e-16;                                      # 247
+  O2- + O3+ -> O2 + O3;          0.0; 3.29e-14 * (300/T_O2)^1.1;                     # 248
+  O2- + O4+ -> 2O + 2O2;         0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 249
+  O2- + O4+ -> 3O2;              0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 250
+  O3 + O4- -> 2O2 + O3-;         0.0; 8.00e-16;                                      # 251
+  O3+ + O3- -> 2O3;              0.0; 5.19e-14 * (300/T_O2)^0.9;                     # 252
+  O3+ + O4- -> 2O2 + O3;         0.0; 5.37e-14 * (300/T_O2)^0.9;                     # 253
+  O3- + O3 -> e + 3O2;           0.0; 8.50e-16;                                      # 254
+  O3- + O4+ -> O + 3O2;          0.0; 2.43e-14 * (300/T_O2)^0.9;                     # 255
+  O3- + O4+ -> 2O2 + O3;         0.0; 2.43e-14 * (300/T_O2)^0.9;                     # 256
+  O4+ + O4- -> 4O2;              0.0; 4.97e-14 * (300/T_O2)^0.9;                     # 257
+
+  ##################################################################################################################
+  # Ar/O2 reactions
+  # Table 7 (Gudmundsson 2007)
+  #O_1d + Ar -> O + Ar;                   0.0; 3.0e-19;## # Same reaction is found in table 6 of Fiebrandt (2020)
+  O + Ar_m -> O + Ar;                    0.0; 4.1e-17; 
+  #O2 + Ar_m -> O + O + Ar;               0.0; 1.01e-16;##
+  #O2 + Ar_m -> O + O_1d + Ar;            0.0; 1.14e-16;##
+  O2 + Ar_4p -> O + O + Ar;              0.0; 2.96e-16;
+  O2 + Ar_4p -> O + O_1d + Ar;           0.0; 3.34e-16;
+  O2 + Ar+ -> O2+ + Ar;                  0.0; 4.90e-17 * (300 / T_O2)^0.78;
+  O + Ar+ -> O+ + Ar;                    0.0; 6.40e-18;
+  O- + Ar+ -> O + Ar;                    0.0; 4.0e-14 * (300 / T_O2)^0.43;
+  #O2 + Ar_4p -> O + O_1s + Ar;           0.0; 1.287e-17;
+
+  # Table 6 (Fiebrandt 2020)
+  O2 + Ar_m -> O + O + Ar;               0.0; 1.035e-16;
+  O2 + Ar_m -> O + O_1d + Ar;            0.0; 1.17e-16;
+  O2 + Ar_m -> O + O_1s + Ar;            0.0; 4.5e-18;
+  O2 + Ar_r -> O + O + Ar;               0.0; 1.288e-16;
+  O2 + Ar_r -> O + O_1d + Ar;            0.0; 1.456e-16;
+  O2 + Ar_r -> O + O_1s + Ar;            0.0; 5.6e-18;
+  
+  O_1d + Ar -> Ar + O;                   0.0; 3.e-19;
+  O_1s + Ar -> Ar + O;                   0.0; 4.8e-24;
+  
+  O + Ar_m -> Ar + O_3p;                 0.0; 7.6e-17;
+  O_3p + Ar -> Ar + O_5p;                0.0; 2.80e-18;
+
+  ##################################################################################################################
+  # Ar reactions (Gudmundsson 2007, table 1)
+  e + Ar -> Ar+ + 2e ;           15.7596119_eeV ; 2.3e-14 * T_e_eV^0.59 * exp(-17.44/T_e_eV);  # ionization
+  e + Ar -> Ar_m + e;           11.54835442_eeV ; 5.0e-15 * exp(-12.64 / T_e_eV);              # excitation: Pashen(1s5); Racah(3s2 3p5(2P°3/2)4s, 2[3/2] 2)
+  e + Ar -> Ar_m + e;           11.72316039_eeV ; 1.4e-15 * exp(-12.42 / T_e_eV);              # excitation: Pashen(1s3); Racah(3s2 3p5(2P°1/2)4s, 2[1/2] 0)
+  e + Ar -> Ar_r + e;           11.62359272_eeV ; 1.9e-15 * exp(-12.60 / T_e_eV);              # excitation: Pashen(1s2); Racah(3s2 3p5(2P°3/2)4s, 2[3/2] 1)
+  e + Ar -> Ar_r + e;           11.82807116_eeV ; 2.7e-16 * exp(-12.14 / T_e_eV);              # excitation: Pashen(1s4); Racah()
+  e + Ar -> Ar_4p + e;          13.20681736_eeV ; 2.1e-14 * exp(-13.13 / T_e_eV);
+  e + Ar_m -> Ar + e;                   0.0_eeV ; 4.3e-16 * T_e_eV ^ 0.74;
+  e + Ar_m -> Ar+ + 2e;         4.123854495_eeV ; 6.8e-15 * T_e_eV ^0.67 * exp(-4.2 / T_e_eV);
+  e + Ar_m -> Ar_r + e;                0.09_eeV ; 3.7e-13;
+  e + Ar_m -> Ar_4p + e;            1.57106_eeV ; 8.9e-13 * T_e_eV^0.51 * exp(-1.59 / T_e_eV);
+  2Ar_m -> 2Ar;                         0.0_eeV ; 2.e-13;
+  Ar + Ar+ -> Ar + Ar+;                 0.0_eeV ; 2.2e-16;
+  Ar_m + Ar_r -> Ar + Ar+ + e;          0.0_eeV ; 2.1e-15;
+  Ar_4p + Ar_4p -> Ar + Ar+ + e;        0.0_eeV ; 5.e-16;
+  2Ar_m -> Ar + Ar+ + e;                0.0_eeV ; 6.4e-16;
+  e + Ar_4p -> Ar+ + 2e;          2.5527945_eeV ; 1.8e-13 * T_e_eV^0.61 * exp(-2.61 / T_e_eV);
+  e + Ar_4p -> Ar_r + e;                0.0_eeV ; 3.0e-13 * T_e_eV^0.51;
+  e + Ar_4p -> Ar_m + e;                0.0_eeV ; 3.0e-13 * T_e_eV^0.51;
+  e + Ar_4p -> Ar + e;                  0.0_eeV ; 3.9e-16 * T_e_eV^0.71;
+  Ar + Ar_m -> 2Ar;                     0.0_eeV ; 2.1e-21;
+  e + Ar_r -> Ar + e;                   0.0_eeV ; 4.3e-16 * T_e_eV^0.74;
+  e + Ar_r -> Ar_m + e;                 0.0_eeV ; 9.1e-13;
+  e + Ar_r -> Ar_4p + e;         1.48098542_eeV ; 8.9e-13 * T_e_eV^0.51 * exp(-1.59/T_e_eV);  # s^-1
+
+  ##################################################################################################################
+  # Fiebrandt (2020) and/or Fiebrandt thesis (2018)
+  # Table 4  ## VALUES IN THIS TABLE HAVE BEEN MULTIPLIED BY 1.E-6
+  e + O -> e + O_5s;             9.15_eeV; -9.0e-17 + 5.4e-17 * exp(T_e_eV/2.4); lower_threshold # k3
+  e + O -> e + O_3s;             9.52_eeV; -9.4e-17 + 3.9e-17 * exp(T_e_eV/1.5); lower_threshold # k4
+  e + O -> e + O_5p;            10.74_eeV; -2.8e-17 + 1.2e-17 * exp(T_e_eV/1.5); lower_threshold # k5                                          
+  e + O -> e + O_3p;            10.99_eeV; -4.6e-17 + 1.6e-17 * exp(T_e_eV/1.3); lower_threshold # k6 
+  e + O -> e + O_3p;            10.74_eeV; -6.53e-18 + 2.408e-18 * exp(T_e_eV); lower_threshold # k7
+  e + O -> e + O_3p;             13.0_eeV; -5.684037650925524e-17 + 1.300275436672606e-17 * exp(T_e_eV/1.0); lower_threshold # k8
+  e + O_1d -> e + O_1s;          2.22_eeV; 1.4e-15 - 1.7e-15 * exp(-T_e_eV/2.7); lower_threshold # k10
+  e + O_1d -> e + O_3s;          9.52_eeV; -1.1e-18 + 5.8e-19 * exp(T_e_eV/2.0); lower_threshold # k11
+  e + O_1d -> e + O_3p;          9.02_eeV; -4.0e-18 + 1.9e-18 * exp(T_e_eV/1.8); lower_threshold # k12
+  e + O_1d -> e + O_3p;         10.01_eeV; -4.0e-17 + 1.5e-17 * exp(T_e_eV/1.4); lower_threshold # k13
+  e + O_1s -> e + O_3p;           6.8_eeV; -1.5e-17 + 1.2e-17 * exp(T_e_eV/4.7); lower_threshold # k15
+  e + O_1s -> e + O_3p;         10.99_eeV; -1.6445e-17 +4.5274e-17*T_e_eV -4.7377e-17*T_e_eV^2 +2.3414e-17*T_e_eV^3 -5.3018e-18*T_e_eV^4 +4.5651e-19*T_e_eV^5; lower_threshold # k16 
+  e + O_5s -> e + O_3s;          0.37_eeV; 3.1663e-14 +1.9133e-14*T_e_eV -1.6834e-14*T_e_eV^2 +4.3614e-15*T_e_eV^3 -3.853e-16*T_e_eV^4; lower_threshold # k17
+  e + O_5s -> e + O_5p;          1.59_eeV; -1.6369e-13 +3.5636e-13*T_e_eV -8.7183e-14*T_e_eV^2 +9.8816e-15*T_e_eV^3 -3.8759e-16*T_e_eV^4; lower_threshold # k18
+  #e + O_5s -> e + O_3p;         1.84_eeV; -1.8e-14 + 4.2e-14*T_e_eV - 1.9e-14*T_e_eV^2 + 3.7e-15*T_e_eV^3 - 2.8e-16*T_e_eV^4; lower_threshold # k19
+  e + O_5s -> e + O_3p;          1.84_eeV; -1.8405e-14 + 4.1875e-14*T_e_eV - 1.8784e-14*T_e_eV^2 + 3.7213e-15*T_e_eV^3 - 2.8142e-16*T_e_eV^4; lower_threshold # k19
+  e + O_3s -> e + O_5p;          1.22_eeV; -2.939e-14 +1.3452e-13*T_e_eV -7.0656e-14*T_e_eV^2 +1.5451e-14*T_e_eV^3 -1.2519e-15*T_e_eV^4; lower_threshold # k20
+  e + O_3s -> e + O_3p;          1.47_eeV; -1.1e-13 + 3.6e-13*T_e_eV - 1.5e-13*T_e_eV^2 + 3.0e-14*T_e_eV^3 - 2.2e-15*T_e_eV^4; lower_threshold # k21 
+  e + O_5p -> e + O_3p;          0.25_eeV;  4.5e-14 + 4.9e-14*T_e_eV - 3.5e-14*T_e_eV^2 + 8.5e-15*T_e_eV^3 - 7.3e-16*T_e_eV^4; lower_threshold # k22
+  e + O2 -> e + 2O;               0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
+  #e + O2_v -> e + 2O;            0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
+  e + O2_a1Ag -> e + 2O;          0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
+  e + O2_b1Su -> e + 2O;          0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
+  e + O2_a1Ag_v -> e + 2O;        0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
+  e + O2_b1Su_v -> e + 2O;        0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
+  e + O2 -> e + O + O_1d;         0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
+  #e + O2_v -> e + O + O_1d;      0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
+  e + O2_a1Ag_v -> e + O + O_1d;  0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
+  e + O2_b1Su_v -> e + O + O_1d;  0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
+  e + O2 -> e + O + O_1s;         0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+  #e + O2_v -> e + O + O_1s;      0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+  e + O2_a1Ag -> e + O + O_1s;    0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+  e + O2_b1Su -> e + O + O_1s;    0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+  e + O2_a1Ag_v -> e + O + O_1s;  0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+  e + O2_b1Su_v -> e + O + O_1s;  0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+
+  # Table 5 ## VALUES IN THIS TABLE HAVE BEEN MULTIPLIED BY 1.E-6
+  e + O -> e + O_5s;              0.0; -1.3135e-17 + 5.2447e-17*T_e_eV - 6.5406e-17*T_e_eV^2 + 2.9302e-17*T_e_eV^3 - 3.0192e-18*T_e_eV^4; lower_threshold # k23
+  
+  e + O2 -> e + 2O;               0.0; -3.8e-18 + 8.6e-18*T_e_eV - 6.5e-18*T_e_eV^2 + 1.9e-18*T_e_eV^3 - 1.2e-19*T_e_eV^4; lower_threshold # k27
+  #e + O2_v -> e + 2O;             0.0; -3.8e-18 + 8.6e-18*T_e_eV - 6.5e-18*T_e_eV^2 + 1.9e-18*T_e_eV^3 - 1.2e-19*T_e_eV^4; # k27
+  e + O2_a1Ag -> e + 2O;          0.0; -3.8e-18 + 8.6e-18*T_e_eV - 6.5e-18*T_e_eV^2 + 1.9e-18*T_e_eV^3 - 1.2e-19*T_e_eV^4; lower_threshold # k27
+  e + O2_b1Su -> e + 2O;          0.0; -3.8e-18 + 8.6e-18*T_e_eV - 6.5e-18*T_e_eV^2 + 1.9e-18*T_e_eV^3 - 1.2e-19*T_e_eV^4; lower_threshold # k27
+  e + O2_a1Ag_v -> e + 2O;        0.0; -3.8e-18 + 8.6e-18*T_e_eV - 6.5e-18*T_e_eV^2 + 1.9e-18*T_e_eV^3 - 1.2e-19*T_e_eV^4; lower_threshold # k27
+  e + O2_b1Su_v -> e + 2O;        0.0; -3.8e-18 + 8.6e-18*T_e_eV - 6.5e-18*T_e_eV^2 + 1.9e-18*T_e_eV^3 - 1.2e-19*T_e_eV^4; lower_threshold # k27
+
+  e + O2 -> e + 2O;               0.0; -9.204699835363572e-18 + 2.119101727114896e-17*T_e_eV - 1.654737415375709e-17*T_e_eV^2 + 4.874268947956114e-18*T_e_eV^3 - 3.313201718245847e-19*T_e_eV^4; lower_threshold # k28
+  #e + O2_v -> e + 2O;             0.0; -9.204699835363572e-18 + 2.119101727114896e-17*T_e_eV - 1.654737415375709e-17*T_e_eV^2 + 4.874268947956114e-18*T_e_eV^3 - 3.313201718245847e-19*T_e_eV^4; lower_threshold # k28
+  e + O2_a1Ag -> e + 2O;          0.0; -9.204699835363572e-18 + 2.119101727114896e-17*T_e_eV - 1.654737415375709e-17*T_e_eV^2 + 4.874268947956114e-18*T_e_eV^3 - 3.313201718245847e-19*T_e_eV^4; lower_threshold # k28
+  e + O2_b1Su -> e + 2O;          0.0; -9.204699835363572e-18 + 2.119101727114896e-17*T_e_eV - 1.654737415375709e-17*T_e_eV^2 + 4.874268947956114e-18*T_e_eV^3 - 3.313201718245847e-19*T_e_eV^4; lower_threshold # k28
+  e + O2_a1Ag_v -> e + 2O;        0.0; -9.204699835363572e-18 + 2.119101727114896e-17*T_e_eV - 1.654737415375709e-17*T_e_eV^2 + 4.874268947956114e-18*T_e_eV^3 - 3.313201718245847e-19*T_e_eV^4; lower_threshold # k28
+  e + O2_b1Su_v -> e + 2O;        0.0; -9.204699835363572e-18 + 2.119101727114896e-17*T_e_eV - 1.654737415375709e-17*T_e_eV^2 + 4.874268947956114e-18*T_e_eV^3 - 3.313201718245847e-19*T_e_eV^4; lower_threshold # k28
+
+  e + O2 -> e + O + O_5s;         0.0; -2.905779612870890e-18 + 6.398523685226571e-18*T_e_eV - 4.673801646255406e-18*T_e_eV^2 + 1.224588782622425e-18*T_e_eV^3 - 5.236885179712368e-20*T_e_eV^4; lower_threshold # k29
+  #e + O2_v -> e + O + O_5s;       0.0; -2.905779612870890e-18 + 6.398523685226571e-18*T_e_eV - 4.673801646255406e-18*T_e_eV^2 + 1.224588782622425e-18*T_e_eV^3 - 5.236885179712368e-20*T_e_eV^4; lower_threshold # k29
+  e + O2_a1Ag -> e + O + O_5s;    0.0; -2.905779612870890e-18 + 6.398523685226571e-18*T_e_eV - 4.673801646255406e-18*T_e_eV^2 + 1.224588782622425e-18*T_e_eV^3 - 5.236885179712368e-20*T_e_eV^4; lower_threshold # k29
+  e + O2_b1Su -> e + O + O_5s;    0.0; -2.905779612870890e-18 + 6.398523685226571e-18*T_e_eV - 4.673801646255406e-18*T_e_eV^2 + 1.224588782622425e-18*T_e_eV^3 - 5.236885179712368e-20*T_e_eV^4; lower_threshold # k29
+  e + O2_a1Ag_v -> e + O + O_5s;  0.0; -2.905779612870890e-18 + 6.398523685226571e-18*T_e_eV - 4.673801646255406e-18*T_e_eV^2 + 1.224588782622425e-18*T_e_eV^3 - 5.236885179712368e-20*T_e_eV^4; lower_threshold # k29
+  e + O2_b1Su_v -> e + O + O_5s;  0.0; -2.905779612870890e-18 + 6.398523685226571e-18*T_e_eV - 4.673801646255406e-18*T_e_eV^2 + 1.224588782622425e-18*T_e_eV^3 - 5.236885179712368e-20*T_e_eV^4; lower_threshold # k29
+  
+  e + O2 -> e + O + O_3s;         0.0; -1.553237815105687e-18 + 3.424460498289806e-18*T_e_eV - 2.505768612209253e-18*T_e_eV^2 + 6.582596517614670e-19*T_e_eV^3 - 2.839176697975778e-20*T_e_eV^4; lower_threshold # k30
+  #e + O2_v -> e + O + O_3s;       0.0; -1.553237815105687e-18 + 3.424460498289806e-18*T_e_eV - 2.505768612209253e-18*T_e_eV^2 + 6.582596517614670e-19*T_e_eV^3 - 2.839176697975778e-20*T_e_eV^4; lower_threshold # k30
+  e + O2_a1Ag -> e + O + O_3s;    0.0; -1.553237815105687e-18 + 3.424460498289806e-18*T_e_eV - 2.505768612209253e-18*T_e_eV^2 + 6.582596517614670e-19*T_e_eV^3 - 2.839176697975778e-20*T_e_eV^4; lower_threshold # k30
+  e + O2_b1Su -> e + O + O_3s;    0.0; -1.553237815105687e-18 + 3.424460498289806e-18*T_e_eV - 2.505768612209253e-18*T_e_eV^2 + 6.582596517614670e-19*T_e_eV^3 - 2.839176697975778e-20*T_e_eV^4; lower_threshold # k30
+  e + O2_a1Ag_v -> e + O + O_3s;  0.0; -1.553237815105687e-18 + 3.424460498289806e-18*T_e_eV - 2.505768612209253e-18*T_e_eV^2 + 6.582596517614670e-19*T_e_eV^3 - 2.839176697975778e-20*T_e_eV^4; lower_threshold # k30
+  e + O2_b1Su_v -> e + O + O_3s;  0.0; -1.553237815105687e-18 + 3.424460498289806e-18*T_e_eV - 2.505768612209253e-18*T_e_eV^2 + 6.582596517614670e-19*T_e_eV^3 - 2.839176697975778e-20*T_e_eV^4; lower_threshold # k30
+end:reactions
+
+
+begin:reactions
+  reaction_type = elastic
+  # Elastic collisions (Turner 2015)
+  e + O2 -> e + O2;              0.0; 4.15e-14 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 24
+  e + O2_a1Ag -> e + O2_a1Ag;    0.0; 4.15e-15 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 42
+  e + O2_b1Su -> e + O2_b1Su;    0.0; 4.15e-14 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 61
+end:reactions
+
+
+begin:reactions
+  reaction_type = emission_rate 
+  # Ar reactions (Gudmundsson 2007, table 1)
+  Ar_r -> Ar;                           0.0 ; 1.e5;   # s^-1 Ar_r -> Ar + hν 
+  Ar_4p -> Ar;                          0.0 ; 3.2e7;  # s^-1 Ar_4p -> Ar + hν
+  Ar_4p -> Ar_m;                        0.0 ; 3.e7;   # s^-1 Ar_4p -> Ar_m + hν
+  Ar_4p -> Ar_r;                        0.0 ; 3.e7;   # s^-1 Ar_4p -> Ar_r + hν
+
+  # Fiebrandt (2020) table 2 and/or Fiebrandt thesis (2018)
+  # reaction;   [g_p, g_k, g_p_tot, g_k_tot, wavelength];      A_pk;
+  O_1s -> O_1d; [1.0, 5.0,     1.0,     5.0,   557.7_nm];      1.26;
+  
+  O_5s -> O;    [5.0, 5.0,     5.0,     8.0,   135.6_nm];     4.2e3;
+  O_5s -> O;    [5.0, 3.0,     5.0,     8.0,   135.9_nm];     1.4e3;
+  
+  O_3s -> O;    [3.0, 5.0,     3.0,     9.0,   130.2_nm];     3.4e8;
+  O_3s -> O;    [3.0, 3.0,     3.0,     9.0,   130.5_nm];     2.0e8;
+  O_3s -> O;    [3.0, 1.0,     3.0,     9.0,   130.6_nm];     6.8e7;
+  
+  O_5p -> O_5s; [7.0, 5.0,     15.0,    5.0,   777.2_nm];     3.7e7;
+  O_5p -> O_5s; [5.0, 5.0,     15.0,    5.0,   777.4_nm];     3.7e7;
+  O_5p -> O_5s; [3.0, 5.0,     15.0,    5.0,   777.5_nm];     3.7e7;
+  
+  O_3p -> O_3s; [1.0, 3.0,      9.0,    3.0,   844.6_nm];     9.2e7;
+  O_3p -> O_3s; [5.0, 3.0,      9.0,    3.0,   844.6_nm];     9.2e7;
+  O_3p -> O_3s; [3.0, 3.0,      9.0,    3.0,   844.7_nm];     9.2e7;
+end:reactions
+
+
+begin:reactions
+  reaction_type = diffusion 
+  # Gudmundsson 2007
+  2O -> O2;                   0.0; 1/(Lambda^2 / D_O  + 2 * V * (2 - gamma_O ) / A / vth_O  / gamma_O);
+  O_1d -> O;                  0.0; 1/(Lambda^2 / D_O_1d  + 2 * V * (2 - gamma_O_1d ) / A / vth_O_1d  / gamma_O_1d);
+  O_1s -> O;                  0.0; 1/(Lambda^2 / D_O_1s  + 2 * V * (2 - gamma_O_1s ) / A / vth_O_1s  / gamma_O_1s);
+  O_3s -> O;                  0.0; 1/(Lambda^2 / D_O_3s  + 2 * V * (2 - gamma_O_3s ) / A / vth_O_3s  / gamma_O_3s);
+  O_5s -> O;                  0.0; 1/(Lambda^2 / D_O_5s  + 2 * V * (2 - gamma_O_5s ) / A / vth_O_5s  / gamma_O_5s);
+  O_3p -> O;                  0.0; 1/(Lambda^2 / D_O_3p  + 2 * V * (2 - gamma_O_3p ) / A / vth_O_3p  / gamma_O_3p);
+  O_5p -> O;                  0.0; 1/(Lambda^2 / D_O_5p  + 2 * V * (2 - gamma_O_5p ) / A / vth_O_5p  / gamma_O_5p);
+  #O2_v -> O2;                 0.0; 1/(Lambda^2 / D_O2_v + 2 * V * (2 - gamma_O2_v) / A / vth_O2_v / gamma_O2_v);
+  O2_a1Ag -> O2;              0.0; 1/(Lambda^2 / D_O2_a1Ag + 2 * V * (2 - gamma_O2_a1Ag) / A / vth_O2_a1Ag / gamma_O2_a1Ag);
+  O2_b1Su -> O2;              0.0; 1/(Lambda^2 / D_O2_b1Su + 2 * V * (2 - gamma_O2_b1Su) / A / vth_O2_b1Su / gamma_O2_b1Su);
+  O2_a1Ag_v -> O2;            0.0; 1/(Lambda^2 / D_O2_a1Ag_v + 2 * V * (2 - gamma_O2_a1Ag_v) / A / vth_O2_a1Ag_v / gamma_O2_a1Ag_v);
+  O2_b1Su_v -> O2;            0.0; 1/(Lambda^2 / D_O2_b1Su_v + 2 * V * (2 - gamma_O2_b1Su_v) / A / vth_O2_b1Su_v / gamma_O2_b1Su_v);
+  Ar_m -> Ar;                 0.0; 1/(Lambda^2 / D_Ar_m + 2 * V * (2 - gamma_Ar_m) / A / vth_Ar_m / gamma_Ar_m);
+  Ar_r -> Ar;                 0.0; 1/(Lambda^2 / D_Ar_r + 2 * V * (2 - gamma_Ar_r) / A / vth_Ar_r / gamma_Ar_r);
+  Ar_4p -> Ar;                0.0; 1/(Lambda^2 / D_Ar_4p + 2 * V * (2 - gamma_Ar_4p) / A / vth_Ar_4p / gamma_Ar_4p);
+end:reactions
+  
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 500
+  x_max = 500
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0
+  x_max = 0
+  steps = 1
+  scale = linear
+  
+end:output
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 622
+  x_max = 622
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0.02439
+  x_max = 0.02439
+  steps = 1
+  scale = linear
+  
+end:output
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 683
+  x_max = 683
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0.04762
+  x_max = 0.04762
+  steps = 1
+  scale = linear
+  
+end:output
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 717
+  x_max = 717
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0.06977
+  x_max = 0.06977
+  steps = 1
+  scale = linear
+  
+end:output
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 739
+  x_max = 739
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0.09091
+  x_max = 0.09091
+  steps = 1
+  scale = linear
+  
+end:output
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 787
+  x_max = 787
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0.16667
+  x_max = 0.16667
+  steps = 1
+  scale = linear
+  
+end:output
+
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 800
+  x_max = 800
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 1.0
+  x_max = 1.0
+  steps = 1
+  scale = linear
+  
+  x = density
+  species = Ar+
+  x_min = 0.0
+  x_max = 0.0
+  steps = 1
+  scale = linear
+
+  x = density
+  species = O2+
+  x_min = 1.e12
+  x_max = 1.e12
+  steps = 1
+  scale = linear
+end:output

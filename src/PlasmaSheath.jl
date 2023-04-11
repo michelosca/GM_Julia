@@ -23,6 +23,7 @@ using SharedData: me, K_to_eV, amu, e, eps0
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
 using SharedData: c_io_error
 using Roots: find_zeros
+using PrintModule: PrintErrorMessage
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -36,9 +37,6 @@ function GetSheathVoltage!(system::System, species_list::Vector{Species},
     sID::SpeciesID, time::Float64)
 
     errcode = 0
-    if system.errcode == c_io_error
-        return errcode 
-    end
 
     # Obtain the positive charged particles flux and solve for the potential
     solve_method = system.Vsheath_solving_method
@@ -89,7 +87,7 @@ function SheathVoltage_FluxBalanceEquation(species_list::Vector{Species},
     end
     #print("Positive flux ", positive_flux,"\n")
     system.plasma_potential = -log(positive_flux / v_th / n_e * 4.0) * Te_eV
-
+    
     return errcode 
 end
 
@@ -134,21 +132,38 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
 
     # Solve for plasma potential 
     interp_flag = true
-    fact = 1.5
-    V_guess = copy(system.plasma_potential)
+    # Depending on the current plasma potential the interpolation boundaries are set different
+    V_guess_min = 0.0 
+    V_guess_max = 1000.0
+
+    iteration = 1
     while interp_flag
-        V_guess *= fact 
-        V_sheath = find_zeros(negative_flux_funct, (0,V_guess))
-        if length(V_sheath) == 1
+        zeros_list = find_zeros(negative_flux_funct, (V_guess_min,V_guess_max))
+        n_zeros = length(zeros_list)
+        if n_zeros == 1
             interp_flag = false
-            V_guess = V_sheath[1]
-        elseif length(V_sheath) < 1 
-            fact = 1.5
-        elseif length(V_sheath) > 1 
-            fact = 0.5
+            system.plasma_potential = zeros_list[1]
+        else
+            if iteration == 1
+                V_guess_min = -10.0
+                V_guess_max = 10.0
+            elseif iteration > 10
+                message = "Plasma potential interpolation: iteration limit"
+                PrintErrorMessage(system, message)
+                return c_io_error
+            else
+                if n_zeros == 0
+                    V_guess_min *= 2
+                    V_guess_max *= 2
+                else
+                    message = "Plasma potential interpolation: too many roots found"
+                    PrintErrorMessage(system, message)
+                    return c_io_error
+                end
+            end
+            iteration += 1 
         end
     end
-    system.plasma_potential = V_guess
     return errcode 
 end
 

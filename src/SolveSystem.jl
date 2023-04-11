@@ -49,9 +49,8 @@ function ExecuteProblem(species_list::Vector{Species},
         cb_duty_ratio = VectorContinuousCallback(condition_pulsed_power,
             affect_pulsed_power!, 2, affect_neg! = nothing, save_positions=(true,true))
         cb_error = DiscreteCallback(condition_error, affect_error!)
-        cb = CallbackSet(cb_duty_ratio, cb_error)
-        #cb_Te_lower_bound = DiscreteCallback(condition_Te_lower_bound, affect_Te_lower_bound!)
-        #cb = CallbackSet(cb_Te_lower_bound, cb_duty_ratio, cb_error)
+        cb_neg_Te = DiscreteCallback(condition_negative_Te, affect_error!)
+        cb = CallbackSet(cb_duty_ratio, cb_neg_Te, cb_error)
     else
         cb_error = DiscreteCallback(condition_error, affect_error!)
         cb = CallbackSet(cb_error)
@@ -70,8 +69,9 @@ function ExecuteProblem(species_list::Vector{Species},
     sol = solve(prob,
         Rosenbrock23(autodiff=false),
         dt = system.dt_start,
-        #abstol = 1.e-8,
-        #reltol = 1.e-6,
+        #dtmin = system.dt_start *1.e-4,
+        #abstol = 1.e-4,
+        #reltol = 1.e-2,
         maxiters = 1.e7,
         callback = cb,
         save_everystep = save_flag
@@ -179,10 +179,6 @@ function condition_pulsed_power(out, u, t, integrator)
         out[1] = -dr
         out[2] = 0.0
     end
-
-    #T_e_min = system.T_e_min
-    #T_e = integrator.u[1]
-    #out[3] = T_e_min - T_e
 end
 
 
@@ -201,49 +197,43 @@ function affect_pulsed_power!(integrator, cb_index)
         system.P_absorbed = system.drivP / system.V 
         #message = @sprintf(" Power switch on.  Time = %10g s; dt = %10g s\n", integrator.t, dt)
         #PrintMessage(system, message)
-    #elseif cb_index == 3
-    #    T_e = integrator.u[1]
-    #    T_e_min = system.T_e_min
-    #    if T_e < T_e_min
-    #        integrator.u[1] = system.T_e_min
-    #    end
     end
     set_proposed_dt!(integrator, dt) 
 end
 
 
 function condition_error(u, t, integrator)
-    # Event when time has past duty cycle 
+    # Event when error flag on 
     p = integrator.p
     system = p[1]
+    
     return system.errcode == c_io_error
+end
+
+
+function condition_negative_Te(u, t, integrator)
+    # Event when electron temperature is negative 
+    Te = u[1]
+    
+    return Te < 0.0 
 end
 
 
 function affect_error!(integrator)
     p = integrator.p
     system = p[1]
+    Te = integrator.u[1]
+
+
+    message = ""
+    if Te < 0.0
+        message = "Negative electron temperature"
+    else
+        message = "Abort simulation"
+end
+
     PrintErrorMessage(system, "Abort simulation")
     terminate!(integrator)
-end
-
-
-function condition_Te_lower_bound(u, t, integrator)
-    u = integrator.u
-    system = integrator.p[1]
-
-    if u[1] < system.T_e_min
-        return true 
-    end
-
-    return false 
-end
-
-
-function affect_Te_lower_bound!(integrator)
-    p = integrator.p
-    system = p[1]
-    integrator.u[1] = system.T_e_min
 end
 
 end

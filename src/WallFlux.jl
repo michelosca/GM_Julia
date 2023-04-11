@@ -113,6 +113,9 @@ function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
                     T_eV = s.temp * K_to_eV
                     s.flux = 0.25 * s.dens * s.v_thermal *
                         exp(-system.plasma_potential/ T_eV)
+                    if s.id != sID.electron
+                        species_list[s.species_id].flux += -s.flux
+                    end
                 end
             end
         end
