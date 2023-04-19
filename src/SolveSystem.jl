@@ -187,7 +187,7 @@ function affect_pulsed_power!(integrator, cb_index)
     dt = system.dt_start
     if cb_index == 1
         # Power off
-        system.P_absorbed = 0.0 
+        system.P_absorbed = system.P_off / system.V 
         #message = @sprintf(" Power switch off. Time = %10g s; dt = %10g s\n", integrator.t, dt)
         #PrintMessage(system, message)
     elseif cb_index == 2
@@ -217,20 +217,33 @@ function condition_negative_Te(u, t, integrator)
 end
 
 
+function condition_negative_ne(u, t, integrator)
+    # Event when electron temperature is negative 
+    sID = integrator.p[2]
+    ne = u[1 + sID.electron]
+    
+    return ne <= 0.0 
+end
+
+
 function affect_error!(integrator)
     p = integrator.p
     system = p[1]
+    sID = p[2]
     Te = integrator.u[1]
+    ne = integrator.u[1 + sID.electron]
 
 
     message = ""
     if Te < 0.0
-        message = "Negative electron temperature"
+        message = "Abort system: Negative electron temperature"
+    elseif ne < 0.0
+        message = "Abort system: Negative electron dens"
     else
         message = "Abort simulation"
 end
 
-    PrintErrorMessage(system, "Abort simulation")
+    PrintErrorMessage(system, message)
     terminate!(integrator)
 end
 

@@ -548,6 +548,7 @@ function copy_system(system::System)
     s.dt_start = copy(system.dt_start)
     s.on_slope = copy(system.on_slope)
     s.off_slope = copy(system.off_slope)
+    s.P_off = copy(system.P_off)
 
 
     s.plasma_potential = copy(system.plasma_potential)

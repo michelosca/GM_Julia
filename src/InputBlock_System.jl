@@ -69,6 +69,7 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.dt_start = 1.e-12
         system.on_slope = 0.0
         system.off_slope = 0.0
+        system.P_off = 0.0
         system.t_end = 0.0
         system.total_pressure = 0.0
         system.T_e_min = 1.5 / K_to_eV
@@ -137,6 +138,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
         elseif (name=="P_t_start" || lname=="power_t_start" ||
             name=="P_time_start" || lname=="power_time_start")
             system.P_start = parse(Float64, var)
+            errcode = 0
+        elseif (name=="P_off" || lname=="power_off") 
+            system.P_off = parse(Float64, var)
             errcode = 0
         elseif (lname=="dt_start")
             system.dt_start = parse(Float64, var)
@@ -247,6 +251,8 @@ function EndSystemBlock!(read_step::Int64, system::System)
         end
         if (system.drivP == 0)
             print("***ERROR*** System input power has not been defined\n")
+        elseif system.drivP < 0
+            print("***ERROR*** System input power must be positive\n")
         end
 
         if (system.P_duty_ratio < 0.0 || system.P_duty_ratio > 1.0)

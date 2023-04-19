@@ -176,11 +176,14 @@ mutable struct System
     drivP::Float64                          # driving power, W 
     P_absorbed::Float64                     # power absorbed per unit volume, W / m^3
     P_shape::Int64
-    P_duty_ratio::Float64
-    P_start::Float64
     dt_start::Float64
-    on_slope::Float64
-    off_slope::Float64
+
+    # Pulsed power parameters (P_shape == p_square)
+    P_duty_ratio::Float64
+    P_start::Float64    # time where the pulsed power starts
+    on_slope::Float64   # power ramping up when pulse starts
+    off_slope::Float64  # power ramping down when pulse ends
+    P_off::Float64      # power when pulse is off, default is zero
 
     plasma_potential::Float64
     total_pressure::Float64

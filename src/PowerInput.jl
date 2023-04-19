@@ -18,33 +18,45 @@
 module PowerInput
 
 using SharedData: System, Species, SpeciesID
+using SharedData: p_square
 
 function PowerInputFunction(species::Species, system::System,
     sID::SpeciesID, t_sim::Float64)
 
+    S_abs = 0.0 
     if (species.id == sID.electron)
-        t_start = system.P_start
-        t_offset = t_sim - t_start
-        freq = system.drivf
-        period_fraction = t_offset * freq
-        period_fraction = period_fraction - round(period_fraction)
-        dr = system.P_duty_ratio
-        power_rate = 0.0
-        dr_ratio = period_fraction / dr
-        if dr_ratio <= 1.0 && dr_ratio >= 0.0
-            on_slope = system.on_slope
-            off_slope = system.off_slope
-            if dr_ratio < on_slope
-                power_rate = dr_ratio/on_slope
-            elseif dr_ratio > 1.0 - off_slope
-                power_rate = (1.0-dr_ratio)/off_slope
-            else
-                power_rate = 1.0
+        if system.P_shape == p_square
+            # Time period fraction
+            t_start = system.P_start
+            t_offset = t_sim - t_start
+            freq = system.drivf
+            period_fraction = t_offset * freq
+            period_fraction = period_fraction - round(period_fraction)
+
+            # Time fraction whithin the on-period
+            dr = system.P_duty_ratio
+            dr_ratio = period_fraction / dr
+            
+            # Depending at which dr_ratio there may be a power ramping up/down
+            power_rate = 0.0
+            if dr_ratio <= 1.0 && dr_ratio >= 0.0
+                on_slope = system.on_slope
+                off_slope = system.off_slope
+                if dr_ratio < on_slope
+                    # Ramp up at start of pulse-on
+                    power_rate = dr_ratio/on_slope
+                elseif dr_ratio > 1.0 - off_slope
+                    # Ramp down at end of pulse-on
+                    power_rate = (1.0-dr_ratio)/off_slope
+                else
+                    # Constant power between start and end on-pulse
+                    power_rate = 1.0
+                end
             end
+            S_abs = system.P_absorbed * power_rate
+        else
+            S_abs = system.P_absorbed
         end
-        S_abs = system.P_absorbed * power_rate
-    else
-        S_abs = 0.0
     end
 
     return S_abs

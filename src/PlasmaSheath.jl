@@ -153,7 +153,7 @@ function SheathVoltage_InterpolateFluxEquation(species_list::Vector{Species},
                 return c_io_error
             else
                 if n_zeros == 0
-                    V_guess_min *= 2
+                    #V_guess_min *= 2
                     V_guess_max *= 2
                 else
                     message = "Plasma potential interpolation: too many roots found"
