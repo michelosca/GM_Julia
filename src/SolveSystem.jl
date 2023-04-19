@@ -18,19 +18,17 @@
 module SolveSystem
 
 using SharedData: System, Species, Reaction, SpeciesID
-using SharedData: e, K_to_eV
 using SharedData: o_single_run, c_io_error
-using SharedData: p_constant, p_square
+using SharedData: p_square
 using PlasmaParameters: UpdateParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using FunctionTerms: GetDensRateFunction, GetTempRateFunction
-using DifferentialEquations: ODEProblem, solve, Trapezoid, Rosenbrock23, ImplicitEuler
+using DifferentialEquations: ODEProblem, solve, Rosenbrock23
 using DifferentialEquations: DiscreteCallback, VectorContinuousCallback
 using DifferentialEquations: CallbackSet
-using DifferentialEquations: terminate!, set_proposed_dt!, get_proposed_dt 
-using Printf
-using PrintModule: PrintErrorMessage, PrintWarningMessage, PrintMessage
+using DifferentialEquations: terminate!, set_proposed_dt!
+using PrintModule: PrintErrorMessage, PrintMessage
 #using PrintModule: PrintSimulationState
 
 function ExecuteProblem(species_list::Vector{Species},
