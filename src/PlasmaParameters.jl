@@ -54,6 +54,7 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
                 err_message = @sprintf("%s density is negative: %15g m^-3",
                     s.name, s.dens)
                 PrintErrorMessage(system, err_message) 
+                return c_io_error
             end
         end
 
@@ -179,7 +180,7 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
                 errcode = K_low_bound_threshold_check(r, system)
                 if errcode == c_io_error
                     special_coll_str = ""
-                    if species_coll
+                    if special_coll
                         special_coll_str = "special collisions"
                     end
                     message = @sprintf("Interrupt in UpdateRateCoefficientValues! %s", special_coll_str)
@@ -511,7 +512,8 @@ function GetEscapeFactor(reaction::Reaction, species_list::Vector{Species},
 
     # Absorption coefficient
     kappa = GetAbsorptionCoefficient(reaction, species)
-    kappa_L = kappa * system.l 
+    L = 0.5 * ( system.l + 2.0 * system.radius)
+    kappa_L = kappa * L 
 
     # Escape factor
     gamma = (2.0 - exp(- kappa_L * 1.e-3)) / (1.0 + kappa_L)
@@ -527,7 +529,7 @@ function GetAbsorptionCoefficient(reaction::Reaction, species::Species)
     g_rate = reaction.g_high / reaction.g_low
     P_pk = GetSpectralLineProfile_DopplerBroadening(reaction, species, 0.0)
     A_pk = reaction.K_value 
-    dens = species.dens * reaction.g_low / reaction.g_low_total
+    dens = maximum([0.0,species.dens]) * reaction.g_low / reaction.g_low_total
     kappa = wavelen2 / (8.0 * pi) * P_pk * g_rate * dens * A_pk 
     return kappa
 end

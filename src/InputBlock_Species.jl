@@ -373,7 +373,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
             end
 
             # Create reaction list associated to species s
-            # This is ONLY used in calculating the MFG, therefore
+            # This is ONLY used in calculating the MFP, therefore
             # - for ION SPECIES (positive and negative) only ion-neutral
             #  reactions are included
             # - for NEUTRAL SPECIES only ion-neutral reactions are included
