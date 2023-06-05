@@ -233,6 +233,15 @@ function ReplaceSymbolValues!(expr::Expr, temp::Vector{Float64},
         ReplaceSymbol!(expr, :D_O3,     species_list[sID.O3].D)
         ReplaceSymbol!(expr, :gamma_O3, species_list[sID.O3].gamma)
     end
+    if sID.O3_v != 0
+        ReplaceSymbol!(expr, :T_O3_v,     temp[sID.O3_v])
+        ReplaceSymbol!(expr, :uB_O3_v,    species_list[sID.O3_v].v_Bohm)
+        ReplaceSymbol!(expr, :vth_O3_v,   species_list[sID.O3_v].v_thermal)
+        ReplaceSymbol!(expr, :h_R_O3_v,   species_list[sID.O3_v].h_R)
+        ReplaceSymbol!(expr, :h_L_O3_v,   species_list[sID.O3_v].h_L)
+        ReplaceSymbol!(expr, :D_O3_v,     species_list[sID.O3_v].D)
+        ReplaceSymbol!(expr, :gamma_O3_v, species_list[sID.O3_v].gamma)
+    end
 
     # System values
     ReplaceSymbol!(expr, :R,         system.radius)
@@ -349,6 +358,13 @@ function ReplaceSpeciesSymbols!(expr::Expr)
     ReplaceSymbol!(expr, :h_L_O3,      :(species_list[sID.O3].h_L) )
     ReplaceSymbol!(expr, :D_O3,        :(species_list[sID.O3].D) )
     ReplaceSymbol!(expr, :gamma_O3,    :(species_list[sID.O3].gamma) )
+
+    ReplaceSymbol!(expr, :uB_O3_v,       :(species_list[sID.O3_v].v_Bohm) )
+    ReplaceSymbol!(expr, :vth_O3_v,      :(species_list[sID.O3_v].v_thermal) )
+    ReplaceSymbol!(expr, :h_R_O3_v,      :(species_list[sID.O3_v].h_R) )
+    ReplaceSymbol!(expr, :h_L_O3_v,      :(species_list[sID.O3_v].h_L) )
+    ReplaceSymbol!(expr, :D_O3_v,        :(species_list[sID.O3_v].D) )
+    ReplaceSymbol!(expr, :gamma_O3_v,    :(species_list[sID.O3_v].gamma) )
 
     ReplaceSymbol!(expr, :uB_Ar,       :(species_list[sID.Ar].v_Bohm) )
     ReplaceSymbol!(expr, :vth_Ar,      :(species_list[sID.Ar].v_thermal) )
