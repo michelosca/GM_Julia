@@ -260,12 +260,8 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
             global reaction_block_type = r_elastic
         elseif var == "diffusion"
             global reaction_block_type = r_diffusion
-        elseif var == "lower_threshold"
-            global reaction_block_type = r_lower_threshold
         elseif var == "emission_rate" || var == "emission"
             global reaction_block_type = r_emission_rate
-        elseif var == "extended_function_parameters"
-            global reaction_block_type = r_extended
         else
             errcode = c_io_error
             err_str = "Reaction block type not recognized" 
@@ -317,6 +313,11 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
     # Fourth part, if existing: reaction description string
     if (str_track)
         description_str = strip(var)
+
+        # Case where the description string is empty
+        if description_str == ""
+            description_str = nothing 
+        end
     else
         description_str = nothing 
     end
@@ -379,11 +380,11 @@ function ParseDescription!(str::SubString{String}, reaction::Reaction)
 
     str = lowercase(str)
 
-    if str == "elastic"
-        reaction.case = r_elastic
-    elseif str == "diffusion"
-        reaction.case = r_diffusion
-    elseif str == "lower_threshold"
+    if (reaction.case != 0)
+        @printf("Reaction is already case %i but will be switched to %s\n", reaction.case, str)
+    end
+
+    if str == "lower_threshold"
         reaction.case = r_lower_threshold
     elseif str == "extended_function_parameters"
         reaction.case = r_extended
