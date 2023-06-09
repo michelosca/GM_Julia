@@ -23,7 +23,7 @@ using SharedData: c_io_error, r_diffusion, r_lower_threshold, r_emission_rate
 using SharedData: h_classical, h_Gudmundsson, h_Monahan 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf: @sprintf
-using PrintModule: PrintErrorMessage 
+using PrintModule: PrintErrorMessage, PrintWarningMessage 
 
 ###############################################################################
 ################################  FUNCTIONS  ##################################
@@ -53,7 +53,7 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             if s.dens < 0.0
                 err_message = @sprintf("%s density is negative: %15g m^-3",
                     s.name, s.dens)
-                PrintErrorMessage(system, err_message) 
+                PrintWarningMessage(system, err_message) 
                 return c_io_error
             end
         end
