@@ -54,7 +54,6 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
                 err_message = @sprintf("%s density is negative: %15g m^-3",
                     s.name, s.dens)
                 PrintWarningMessage(system, err_message) 
-                return c_io_error
             end
         end
 
