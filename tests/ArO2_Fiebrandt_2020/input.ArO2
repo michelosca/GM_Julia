@@ -640,14 +640,6 @@ begin:reactions
   O + Ar_m -> Ar + O_3p;                 0.0; 7.6e-17;
   O_3p + Ar -> Ar + O_5p;                0.0; 2.80e-18;
 
-  # Table 6 (Lee and Lieberman 1995)
-  O2 + Ar_m -> O2 + Ar;                  0.0; 1.12e-15;
-  O2_a1Ag + Ar_m -> O2 + Ar;             0.0; 1.12e-15;
-  O2_b1Su + Ar_m -> O2 + Ar;             0.0; 1.12e-15;
-  O2 + Ar_r -> O2 + Ar;                  0.0; 1.12e-15;
-  O2_a1Ag + Ar_r -> O2 + Ar;             0.0; 1.12e-15;
-  O2_b1Su + Ar_r -> O2 + Ar;             0.0; 1.12e-15;
-
   ##################################################################################################################
   # Ar reactions (Gudmundsson 2007, table 1)
   e + Ar -> Ar+ + 2e ;           15.7596119_eeV ; 2.3e-14 * T_e_eV^0.59 * exp(-17.44/T_e_eV);  # ionization
@@ -744,6 +736,8 @@ begin:reactions
   e + O2 -> e + O2;              0.0; 4.15e-14 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 24
   e + O2_a1Ag -> e + O2_a1Ag;    0.0; 4.15e-15 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 42
   e + O2_b1Su -> e + O2_b1Su;    0.0; 4.15e-14 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 61
+
+  # Hurlbatt (20017)
   e + Ar -> e + Ar;              0.0; 2.336e-14 * T_e_eV^1.609 * exp(0.0618 * (log(T_e_eV))^2 - 0.1171 * (log(T_e_eV))^3 );  
 end:reactions
 
