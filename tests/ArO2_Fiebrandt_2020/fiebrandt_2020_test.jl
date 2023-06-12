@@ -442,62 +442,60 @@ end
 
 function Get777nmEmission(K_data::DataFrame)
     
-    I_777nm = K_data."r339: O_5p -> O_5s"
-    I_777nm += K_data."r340: O_5p -> O_5s"
-    I_777nm += K_data."r341: O_5p -> O_5s"
-    I_777nm += K_data."r305: e + O -> e + O_5s"
-    I_777nm += K_data."r316: e + O2 -> e + O + O_5s"
-    I_777nm += K_data."r317: e + O2_a1Ag -> e + O + O_5s"
-    I_777nm += K_data."r318: e + O2_b1Su -> e + O + O_5s"
-    I_777nm += K_data."r319: e + O2_a1Ag_v -> e + O + O_5s"
-    I_777nm += K_data."r320: e + O2_b1Su_v -> e + O + O_5s"
+    I_777nm = K_data."r359: O_5p -> O_5s"
+    I_777nm += K_data."r360: O_5p -> O_5s"
+    I_777nm += K_data."r361: O_5p -> O_5s"
+    I_777nm += K_data."r324: e + O -> e + O_5s"
+    I_777nm += K_data."r335: e + O2 -> e + O + O_5s"
+    I_777nm += K_data."r336: e + O2_a1Ag -> e + O + O_5s"
+    I_777nm += K_data."r337: e + O2_b1Su -> e + O + O_5s"
+    I_777nm += K_data."r338: e + O2_a1Ag_v -> e + O + O_5s"
+    I_777nm += K_data."r339: e + O2_b1Su_v -> e + O + O_5s"
     return I_777nm
 end
 
 function Get844nmEmission(K_data::DataFrame, all::Bool)
     
-    I_844nm = K_data."r368: O_3p -> O_3s"
-    I_844nm += K_data."r369: O_3p -> O_3s"
-    I_844nm += K_data."r370: O_3p -> O_3s"
-    if all
-        I_844nm += K_data."r346: e + O2 -> e + O + O_3s"
-        #I_844nm += K_data."r354: e + O2_v -> e + O + O_3s"
-        I_844nm += K_data."r347: e + O2_a1Ag -> e + O + O_3s"
-        I_844nm += K_data."r348: e + O2_b1Su -> e + O + O_3s"
-        I_844nm += K_data."r349: e + O2_a1Ag_v -> e + O + O_3s"
-        I_844nm += K_data."r350: e + O2_b1Su_v -> e + O + O_3s"
-    end
+    I_844nm = K_data."r362: O_3p -> O_3s"
+    I_844nm += K_data."r363: O_3p -> O_3s"
+    I_844nm += K_data."r364: O_3p -> O_3s"
+    I_844nm += K_data."r340: e + O2 -> e + O + O_3s"
+    I_844nm += K_data."r341: e + O2_a1Ag -> e + O + O_3s"
+    I_844nm += K_data."r342: e + O2_b1Su -> e + O + O_3s"
+    I_844nm += K_data."r343: e + O2_a1Ag_v -> e + O + O_3s"
+    I_844nm += K_data."r344: e + O2_b1Su_v -> e + O + O_3s"
+
     return I_844nm
 end
 
 function Get577nmEmission(K_data::DataFrame)
     
-    I_544nm = K_data."r359: O_1s -> O_1d"
+    I_544nm = K_data."r353: O_1s -> O_1d"
     return I_544nm
 end
 
 function Get130nmEmission(K_data::DataFrame)
     
-    I_130nm = K_data."r336: O_3s -> O"
-    I_130nm += K_data."r337: O_3s -> O"
-    I_130nm += K_data."r338: O_3s -> O"
-    I_130nm += K_data."r306: e + O2 -> e + 2O"
-    I_130nm += K_data."r307: e + O2_a1Ag -> e + 2O"
-    I_130nm += K_data."r308: e + O2_b1Su -> e + 2O"
-    I_130nm += K_data."r309: e + O2_a1Ag_v -> e + 2O"
-    I_130nm += K_data."r310: e + O2_b1Su_v -> e + 2O"
+    I_130nm = K_data."r356: O_3s -> O"
+    I_130nm += K_data."r357: O_3s -> O"
+    I_130nm += K_data."r358: O_3s -> O"
+    I_130nm += K_data."r325: e + O2 -> e + 2O"
+    I_130nm += K_data."r326: e + O2_a1Ag -> e + 2O"
+    I_130nm += K_data."r327: e + O2_b1Su -> e + 2O"
+    I_130nm += K_data."r328: e + O2_a1Ag_v -> e + 2O"
+    I_130nm += K_data."r329: e + O2_b1Su_v -> e + 2O"
     return I_130nm
 end
 
 function Get135nmEmission(K_data::DataFrame)
     
-    I_135nm = K_data."r334: O_5s -> O"
-    I_135nm += K_data."r335: O_5s -> O"
-    I_135nm += K_data."r311: e + O2 -> e + 2O"
-    I_135nm += K_data."r312: e + O2_a1Ag -> e + 2O"
-    I_135nm += K_data."r313: e + O2_b1Su -> e + 2O"
-    I_135nm += K_data."r314: e + O2_a1Ag_v -> e + 2O"
-    I_135nm += K_data."r315: e + O2_b1Su_v -> e + 2O"
+    I_135nm = K_data."r354: O_5s -> O"
+    I_135nm += K_data."r355: O_5s -> O"
+    I_135nm += K_data."r330: e + O2 -> e + 2O"
+    I_135nm += K_data."r331: e + O2_a1Ag -> e + 2O"
+    I_135nm += K_data."r332: e + O2_b1Su -> e + 2O"
+    I_135nm += K_data."r333: e + O2_a1Ag_v -> e + 2O"
+    I_135nm += K_data."r334: e + O2_b1Su_v -> e + 2O"
     return I_135nm
 end
 
