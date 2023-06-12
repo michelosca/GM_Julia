@@ -511,7 +511,7 @@ begin:reactions
   O_1d + O4- -> e + O + 2O2;     0.0; 2.00e-16;                                      # 170
   O_1d + O4- -> O + O2 + O2-;    0.0; 2.00e-16;                                      # 171
   O_1d + O4- -> 2O2 + O-;        0.0; 2.00e-16;                                      # 172
-  O_1d + O4- -> O + O2 + O2-;    0.0; 7.40e-16;                                      # 173
+  O_1s + O- -> e + 2O;           0.0; 7.40e-16;                                      # 173
   O_1s + O2- -> O- + O2;         0.0; 8.50e-17 * (300/T_O)^1.8;                      # 174
   O_1s + O2- -> e + O3;          0.0; 8.50e-17 * (300/T_O)^1.8;                      # 175
   O_1s + O3+ -> 2O + O2+;        0.0; 2.00e-16;                                      # 176
@@ -692,7 +692,6 @@ begin:reactions
   e + O2_b1Su -> e + 2O;          0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
   e + O2_a1Ag_v -> e + 2O;        0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
   e + O2_b1Su_v -> e + 2O;        0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
-  e + O2 -> e + O + O_1d;         0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
   e + O2_a1Ag_v -> e + O + O_1d;  0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
   e + O2_b1Su_v -> e + O + O_1d;  0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
   e + O2 -> e + O + O_1s;         0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
@@ -789,7 +788,7 @@ begin:reactions
   Ar_r -> Ar;                 0.0; 1/(Lambda^2 / D_Ar_r + 2 * V * (2 - gamma_Ar_r) / A / vth_Ar_r / gamma_Ar_r);
   Ar_4p -> Ar;                0.0; 1/(Lambda^2 / D_Ar_4p + 2 * V * (2 - gamma_Ar_4p) / A / vth_Ar_4p / gamma_Ar_4p);
 end:reactions
-  
+
 begin:output
   x = temperature
   species = neutral_gas
