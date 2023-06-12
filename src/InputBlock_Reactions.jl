@@ -23,7 +23,7 @@ using SharedData: r_emission_rate
 using SharedData: K_to_eV, me, e 
 using ParseReactions: LoadReaction!
 using ParseReactions_PreRun: WriteRateCoefficientFunctions!
-using PrintModule: PrintErrorMessage
+using PrintModule: PrintErrorMessage, PrintMessage
 using Printf: @printf, @sprintf
 
 
@@ -222,6 +222,117 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             end
         end
 
+        # Check repeated reactions
+        r_id_repeated = []
+        for r in reaction_list
+
+            # Skip reaction that were found repeated before
+            already_checked = false
+            for (id1,id2) in r_id_repeated
+                if id1 == r.id || id2 == r.id
+                    already_checked = true
+                    break 
+                end
+            end
+            if already_checked
+                continue
+            end
+
+            r_species = r.involved_species
+            r_balance = r.species_balance
+            n_rs = length(r_species)
+
+            reactants = r.reactant_species
+            n_reactants = length(reactants)
+            products = r.product_species
+            n_products = length(products)
+
+            for r2 in reaction_list
+
+                # Skip the r-reaction itself
+                if r.id == r2.id
+                    continue
+                end
+
+                # Same reactions must have the same amount of species
+                r_species2 = r2.involved_species
+                n_rs2 = length(r_species2)
+                if n_rs2 != n_rs
+                    # If not equal move on to next reaction
+                    continue
+                end
+
+                # Check involved species
+                i = 1
+                species_flag_list = falses(n_rs)
+                for (s_id,b) in zip(r_species, r_balance)
+                    for (s_id2,b2) in zip(r2.involved_species, r2.species_balance)
+                        if ((s_id == s_id2) && (b == b2))
+                            species_flag_list[i] = true
+                            break
+                        end
+                    end
+                    i += 1
+                end
+                if !all(species_flag_list)
+                    # If involved species are different -> not the same reaction
+                    continue
+                end
+                
+                # Check reactants and products
+                reactants2 = r2.reactant_species
+                n_reactants2 = length(reactants2)
+                products2 = r2.product_species
+                n_products2 = length(products2)
+                if n_reactants != n_reactants2 || n_products != n_products2
+                    # Products or reactants are different
+                    continue
+                end
+
+                # Check reactants
+                reac_flag = falses(n_reactants)
+                for (i,reac) in enumerate(reactants)
+                    for reac2 in reactants2
+                        if reac == reac2
+                            reac_flag[i] = true
+                            break
+                        end
+                    end
+                end
+                # Check reactants
+                prod_flag = falses(n_products)
+                for (i,prod) in enumerate(products)
+                    for prod2 in products2
+                        if prod == prod2
+                            prod_flag[i] = true
+                            break
+                        end
+                    end
+                end
+
+                if all(reac_flag) && all(prod_flag)
+                    push!(r_id_repeated, (r.id, r2.id))
+                end
+            end
+        end
+
+        if length(r_id_repeated) > 0
+            message = @sprintf("Reactions that are repeated\n")
+            PrintMessage(system, message)
+            id_switch = 0
+            for (r_id, r_id2) in r_id_repeated
+                r = reaction_list[r_id]
+                r2 = reaction_list[r_id2]
+                if r_id != id_switch
+                    id_switch = r_id
+                    message = @sprintf("\n%03i: %30s   ->   %03i: %s\n", r.id, r.name, r2.id, r2.name )
+                    PrintMessage(system, message)
+                else
+                    message = @sprintf("                                      ->   %03i: %s\n", r2.id, r2.name )
+                    PrintMessage(system, message)
+                end
+            end
+        end
     elseif read_step == 0
         #  PRERUN
         write_flag = false 
