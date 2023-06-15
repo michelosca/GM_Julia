@@ -29,7 +29,7 @@ using PlasmaParameters: UpdateParameters!
 using PlasmaSheath: GetSheathVoltage!
 using WallFlux: UpdatePositiveFlux!, UpdateNegativeFlux!
 using SolveSystem: ExecuteProblem
-using PrintModule: PrintErrorMessage, PrintMessage
+using PrintModule: PrintErrorMessage, PrintWarningMessage, PrintMessage
 
 using CSV
 using Printf
@@ -415,25 +415,32 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             #### Update plasma parameters
             errcode = UpdateParameters!(temp, dens, species_list, reaction_list, system, sID)
             if errcode == c_io_error
-                PrintErrorMessage(system, "UpdateSpeciesParameters  at OutputModule failed")
-                return errcode
+                PrintWarningMessage(system, "OUTPUT UpdateSpeciesParameters  at OutputModule failed")
             end
 
             #### Update flux and potential values 
             errcode = UpdatePositiveFlux!(species_list)
             if errcode == c_io_error
-                PrintErrorMessage(system, "UpdatePositiveFlux failed")
-                return errcode
+                PrintWarningMessage(system, "OUTPUT UpdatePositiveFlux failed")
+                for s in species_list
+                    if s.charge > 0
+                        s.flux = 0.0
+                    end
+                end
             end
             errcode = GetSheathVoltage!(system, species_list, sID, time)
             if errcode == c_io_error
-                PrintErrorMessage(system, "GetSheathVoltage failed")
-                return errcode
+                PrintWarningMessage(system, "OUTPUT GetSheathVoltage failed")
+                system.plasma_potential = 0.0
             end
             errcode = UpdateNegativeFlux!(species_list, system, sID)
             if errcode == c_io_error
-                PrintErrorMessage(system, "UpdateNegativeFlux failed")
-                return errcode
+                PrintWarningMessage(system, "OUTPUT UpdateNegativeFlux failed")
+                for s in species_list
+                    if s.charge < 0
+                        s.flux = 0.0
+                    end
+                end
             end
             
             # Get K values for the curren time step
