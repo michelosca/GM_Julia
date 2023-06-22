@@ -417,9 +417,22 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         gamma = Te / Ti
         alpha = system.alpha
         lambda = species.mfp
+        D = species.D
+        u_B = species.v_Bohm
 
-        h_L = 0.86 * (1.0 + 3.0 * alpha/gamma)/(1+gamma)/sqrt(3.0+0.5*L/lambda)
-        h_R = 0.8 * (1.0 + 3.0 * alpha/gamma)/(1+gamma)/sqrt(4.0+0.5*R/lambda)
+        low_press_term  = 3.0
+        int_press_term = 0.5*L/lambda
+        high_press_term = 0.86 * L * u_B / (pi * D)
+        fL = 1.0/ sqrt(low_press_term + int_press_term + high_press_term^2)
+        h_L = 0.86 * (1.0 + 3.0 * alpha/gamma)/(1+gamma) * fL
+
+        low_press_term  = 4.0
+        int_press_term = R/lambda
+        chi01 = 2.405
+        J1_chi01 = 0.52
+        high_press_term = 0.8 * R * u_B / (chi01 * J1_chi01 * D)
+        fR = 1.0 / sqrt(low_press_term + int_press_term + high_press_term^2)
+        h_R = 0.80 * (1.0 + 3.0 * alpha/gamma)/(1+gamma) * fR
 
         h = (R^2 * h_L + R*L*h_R) / (R^2 + R*L)
 
