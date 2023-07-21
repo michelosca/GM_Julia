@@ -18,7 +18,7 @@
 module OutputModule
 
 using SharedData: Species, Reaction, System, SpeciesID, OutputBlock
-using SharedData: kb
+using SharedData: kb, r_diffusion
 using SharedData: c_io_error, r_emission_rate
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
@@ -446,7 +446,11 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             # Get K values for the curren time step
             K_list = Float64[time]
             for r in reaction_list
-                push!(K_list, prod(dens[r.reactant_species])*r.K_value )
+                if r.case == r_diffusion
+                    push!(K_list, dens[r.reactant_species[1]]*r.K_value )
+                else
+                    push!(K_list, prod(dens[r.reactant_species])*r.K_value )
+                end
             end
             # Push K data into rate coefficient data_frame
             push!(output.K_data_frame, K_list)
@@ -516,7 +520,11 @@ function LoadOutputBlock!(sol, output::OutputBlock,
 
         # Dump K values into buffer 
         for r in reaction_list
-            push!(K_list, prod(dens[r.reactant_species])*r.K_value )
+            if r.case == r_diffusion
+                push!(K_list, dens[r.reactant_species[1]]*r.K_value )
+            else
+                push!(K_list, prod(dens[r.reactant_species])*r.K_value )
+            end
         end
         # Push K buffer list into rate coefficient data_frame
         push!(output.K_data_frame, K_list)

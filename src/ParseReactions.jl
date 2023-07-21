@@ -293,8 +293,8 @@ function GetReactionSpeciesLists!(reac::Vector{Int64}, prod::Vector{Int64},
             end
             if !already_in
                 push!(reaction.involved_species, r)
-                push!(reaction.reactant_species, r)
             end
+            push!(reaction.reactant_species, r)
         end
         
         # Loop for product species

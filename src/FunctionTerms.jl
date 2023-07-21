@@ -19,7 +19,7 @@ module FunctionTerms
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: kb 
-using SharedData: r_elastic
+using SharedData: r_elastic, r_diffusion
 using EvaluateExpressions: ReplaceExpressionValues
 using WallFlux: DensWallFluxFunction, TempWallFluxFunction
 using PowerInput: PowerInputFunction
@@ -63,7 +63,11 @@ function GetDensRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
             # Terms due to particle gain/loss, e.g. recombination, ionization
             sign = r.species_balance[s_index]
             if (sign != 0) 
-                value = sign * prod(dens[r.reactant_species]) * r.K_value
+                if r.case == r_diffusion
+                    value = sign * dens[r.reactant_species[1]] * r.K_value
+                else
+                    value = sign * prod(dens[r.reactant_species]) * r.K_value
+                end
                 dens_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
             end
@@ -96,6 +100,11 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
         s_id = s.id
 
         # Loop over the reaction set
+        #S_abs = 0.0
+        #S_elast = 0.0
+        #S_inelast = 0.0
+        #S_mass = 0.0
+        #S_flux = 0.0
         for r in reaction_list
 
             # Check whether species is involved in current reaction 
@@ -113,6 +122,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                 value = sign * prod(dens[r.reactant_species]) * r.K_value * Q1 / Q0
                 temp_funct += value
                 #print("   - Gain loss: ", r.id," - ", value, "\n")
+                #S_mass += value
             else
                 # Add energy term due to elastic collisions
                 if (r.case == r_elastic)
@@ -126,6 +136,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                         r.K_value * (temp[s_id] - t_neutral) / Q0
                     temp_funct += value
                     #print("   - Elastic:   ", r.id," - ", value, "\n")
+                    #S_elast += value
                 end
 
             end
@@ -144,6 +155,7 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                 value = -Er * prod(dens[r.reactant_species]) * r.K_value / Q0
                 temp_funct += value
                 #print("   - Ethreshold: ", r.id," - ", value, "\n")
+                #S_inelast += value
             end
         end
 
@@ -152,13 +164,17 @@ function GetTempRateFunction(temp::Vector{Float64}, dens::Vector{Float64},
                 system.plasma_potential, sID) / Q0
             temp_funct += value
             #print("   - Flux loss: ", value, "\n")
+            #S_flux += value
         end
 
         if s.has_heating_mechanism
             value = PowerInputFunction(s, system, sID, t_sim) / Q0
             temp_funct += value
             #print("   - Heating :  ", value, "\n")
+            #S_abs += value
         end
+        #S_tot = S_abs + S_elast + S_inelast + S_mass + S_flux
+        #print(S_tot,"; S_abs: ",S_abs,"; S_elast: ",S_elast,"; S_inelast: ", S_inelast,"; S_mass: ",S_mass,"; S_flux: ",S_flux,"\n")
     end
     return temp_funct
 end

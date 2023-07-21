@@ -38,9 +38,11 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     # FIRST: Update dens, temperature and pressure. Set flux values to zero.
     for s in species_list
 
+        #print("ne: ", species_list[sID.electron].dens,"; ")
+        #print("Te: ", species_list[sID.electron].temp*K_to_eV,"\n")
         # Temperature
         s.temp = temp[s.id]
-        if s.temp < 0.0
+        if s.temp < 0.0 || isnan(s.temp)
             err_message = @sprintf("%s temperature is negative: %15g eV",
                 s.name, s.temp*K_to_eV)
             PrintErrorMessage(system, err_message) 
@@ -50,7 +52,7 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         # Density
         s.dens = dens[s.id]
         if s.id == sID.electron
-            if s.dens < 0.0
+            if s.dens < 0.0 || isnan(s.dens)
                 err_message = @sprintf("%s density is negative: %15g m^-3",
                     s.name, s.dens)
                 PrintWarningMessage(system, err_message) 
@@ -79,15 +81,6 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         return c_io_error
     end
 
-    if system.h_id == h_Gudmundsson || system.h_id == h_Monahan 
-        errcode = UpdateElectronegativity!(system, dens, species_list,
-            sID.electron)
-        if errcode == c_io_error
-            PrintErrorMessage(system, "UpdateElectronegativity failed")
-            return c_io_error
-        end
-    end
-
     # FOURTH: Update species parameters
     errcode = UpdateSpeciesParameters!(temp, dens, species_list, system, sID)
     if errcode == c_io_error
@@ -110,6 +103,16 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
     
     errcode = 0
+
+    if system.h_id == h_Gudmundsson || system.h_id == h_Monahan 
+        errcode = UpdateElectronegativity!(system, dens, species_list,
+            sID.electron)
+        if errcode == c_io_error
+            PrintErrorMessage(system, "UpdateElectronegativity failed")
+            return c_io_error
+        end
+    end
+
 
     for s in species_list
         errcode = GetThermalSpeed!(s)
