@@ -136,7 +136,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             return c_io_error
         end
 
-        #errcode = GetStickingCoefficient!(s, species_list, sID)
+        errcode = GetStickingCoefficient!(s, species_list, sID)
         errcode = GetNeutralDiffusionCoeff!(s)
         if errcode == c_io_error
             err_message = @sprintf("GetNeutralDiffusionCoeff for %s failed",
