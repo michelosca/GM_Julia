@@ -389,7 +389,7 @@ begin:reactions
   e + O2_a1Ag -> 2e + O2+;     11.08_eeV; 2.32e-15 * T_e_eV^ 0.990 * exp(-11.53/T_e_eV); # 38
   e + O2_a1Ag -> e + O + O_1d;  7.52_eeV; 3.12e-14 * T_e_eV^ 0.017 * exp( -7.07/T_e_eV); # 39
   e + O2_a1Ag -> e + O + O_1d;   9.0_eeV; 1.56e-17 * T_e_eV^ 1.500 * exp( -3.70/T_e_eV); # 40
-  e + O2_a1Ag -> e + O2;       0.977_eeV; 2.10e-15 * T_e_eV^-0.232 * exp( -1.89/T_e_eV); # 41
+  e + O2_a1Ag -> e + O2;       -0.977_eeV; 2.10e-15 * T_e_eV^-0.232 * exp( -1.89/T_e_eV); # 41
   e + O2_a1Ag -> e + O2_a1Ag;   0.02_eeV; 3.88e-17 * T_e_eV^-1.220 * exp( -0.55/T_e_eV); # 43
   e + O2_a1Ag -> e + O2_a1Ag_v; 0.19_eeV; 4.32e-16 * T_e_eV^-1.570 * exp(-0.586/T_e_eV); # 44
   e + O2_a1Ag -> e + O2_a1Ag_v; 0.19_eeV; 2.76e-14 * T_e_eV^-1.030 * exp( -6.96/T_e_eV); # 45
@@ -406,7 +406,7 @@ begin:reactions
   e + O2_b1Su -> 2e + O2+;     10.43_eeV; 2.32e-15 * T_e_eV^ 0.990 * exp(-10.88/T_e_eV); # 56
   e + O2_b1Su -> e + O + O_1d;  6.87_eeV; 3.12e-14 * T_e_eV^ 0.017 * exp( -6.42/T_e_eV); # 57
   e + O2_b1Su -> e + O + O_1d;  8.34_eeV; 1.56e-17 * T_e_eV^ 1.500 * exp( -3.05/T_e_eV); # 58
-  e + O2_b1Su -> e + O2;       1.627_eeV; 3.97e-16 * T_e_eV^-0.089 * exp( -1.04/T_e_eV); # 59
+  e + O2_b1Su -> e + O2;      -1.627_eeV; 3.97e-16 * T_e_eV^-0.089 * exp( -1.04/T_e_eV); # 59
   e + O2_b1Su -> e + O2_a1Ag; -0.657_eeV; 5.25e-15 * T_e_eV^-0.440 * exp(-0.833/T_e_eV); # 60
   e + O2_b1Su -> e + O2_b1Su;   0.02_eeV; 3.88e-17 * T_e_eV^-1.220 * exp( -0.55/T_e_eV); # 62
   e + O2_b1Su -> e + O2_b1Su_v; 0.19_eeV; 4.32e-16 * T_e_eV^-1.570 * exp(-0.586/T_e_eV); # 63
