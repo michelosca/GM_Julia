@@ -49,7 +49,11 @@ function TempWallFluxFunction(temp::Vector{Float64}, species::Species,
 
     if s_id == sID.electron
         Te = temp[s_id]
-        temp_flux -= 2.0*kb*Te * species.flux
+        # - The energy loss term because the electron flux is 2*kb*Te*flux_e,
+        # however,when expanding the d(n_e T_e)/dt there is an additional
+        # 3/2*kb*Te*flux_e term from the continuity equation that needs to be
+        # substracted, and thus 0.5*kb*Te*flux_e
+        temp_flux -= 0.5*kb*Te * species.flux
         # Add ion flux terms
         for s in species_list
             charge = s.charge
