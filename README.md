@@ -20,7 +20,12 @@ or clone the git repository
 git clone https://github.com/michelosca/GM_Julia.git
 ```
 
-2. Open the Julia REPL and type the following commands
+2. Install the following libraries
+```
+pkg> add CSV, DataFrames, Printf, Dates, TimerOutputs, Roots, DifferentialEquations
+```
+
+3. Open the Julia REPL and type the following commands
 ```Julia
 push!(LOAD_PATH, "path/to/GM-Julia/src")
 using GM_main: run_GM
