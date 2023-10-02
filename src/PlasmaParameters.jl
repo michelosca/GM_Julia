@@ -366,7 +366,7 @@ function GetNeutralDiffusionCoeff!(species::Species)
     # Neutral Diffusion Coefficient
 
     mfp = species.mfp
-    species.D = e * species.temp * mfp / (species.v_thermal * species.mass)
+    species.D = kb * species.temp * mfp / (species.v_thermal * species.mass)
 
     return 0 
 end
