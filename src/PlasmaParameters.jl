@@ -137,7 +137,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         end
 
         errcode = GetStickingCoefficient!(s, species_list, sID)
-        errcode = GetNeutralDiffusionCoeff!(s)
+        errcode = GetNeutralDiffusionCoeff!(s, species_list, sID)
         if errcode == c_io_error
             err_message = @sprintf("GetNeutralDiffusionCoeff for %s failed",
                 s.name)
@@ -362,11 +362,60 @@ function GetLambda(system::System)
 end
 
 
-function GetNeutralDiffusionCoeff!(species::Species)
+function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Species}, sID::SpeciesID)
     # Neutral Diffusion Coefficient
 
-    mfp = species.mfp
-    species.D = kb * species.temp * mfp / (species.v_thermal * species.mass)
+    if species.id == sID.electron
+        mfp = species.mfp
+        species.D = kb * species.temp * mfp / (species.v_thermal * species.mass)
+    else
+
+        # From Lieberman 2005. Chapt. 9, pag 311
+        iD = 0.0  # inverse diffusion coefficient
+
+        v_th = species.v_thermal
+        T = species.temp
+        id = species.id
+
+        for r in species.reaction_list
+
+            # Because species.reaction_list only includes neutral-ion and neutral-neutral
+            # collisions, and the temperature of all ions and neutrals is the same, the
+            # thermal speed is constant. However, if this changes the thermal speed and
+            # temperature used for calculating D would change! 
+            
+            # Exclude the species for which D is calculated
+            r_species = copy(r.reactant_species)
+            index = findall( x -> x == id, r_species )
+            deleteat!(r_species, index)
+            
+            # Set collision cross section
+            cross_section = r.K_value / v_th
+
+            # Density of colliding partners
+            n = prod(dens[r_species])
+            if n < 0.0
+                n = 0.0
+            end
+
+            # Reduced mass
+            imu = 0.0
+            for rs_id in r_species
+                rs_mass = species_list[rs_id].mass
+                imu += 1.0/rs_mass
+            end
+            mu = 1.0 / imu
+
+            # Add to mfp-buffer
+            iD += mu * n * cross_section
+        end
+
+        if iD == 0
+            iD = 1.e-100
+        end
+
+        species.D= kb*T/v_th/iD
+    end
 
     return 0 
 end
