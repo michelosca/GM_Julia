@@ -411,8 +411,9 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
            uTh = species.v_thermal 
            h = pi * (uB / uTh) * (mfp / L)
         end
+        
     elseif system.h_id == h_Gudmundsson
-        # ICP Ar/O2
+        # h factors as described in Gudmundsson (2007) https://doi.org/10.1088/0963-0252/16/2/025 
         R = system.radius
         L = system.l
         Te = species_list[sID.electron].temp
@@ -420,60 +421,67 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         gamma = Te / Ti
         alpha = system.alpha
         lambda = species.mfp
-        D = species.D
-        u_B = species.v_Bohm
 
         low_press_term  = 3.0
         int_press_term = 0.5*L/lambda
-        high_press_term = 0.86 * L * u_B / (pi * D)
-        fL = 1.0/ sqrt(low_press_term + int_press_term + high_press_term^2)
+        fL = 1.0/ sqrt(low_press_term + int_press_term)
         h_L = 0.86 * (1.0 + 3.0 * alpha/gamma)/(1+gamma) * fL
 
         low_press_term  = 4.0
         int_press_term = R/lambda
-        chi01 = 2.405
-        J1_chi01 = 0.52
-        high_press_term = 0.8 * R * u_B / (chi01 * J1_chi01 * D)
-        fR = 1.0 / sqrt(low_press_term + int_press_term + high_press_term^2)
+        fR = 1.0 / sqrt(low_press_term + int_press_term)
         h_R = 0.80 * (1.0 + 3.0 * alpha/gamma)/(1+gamma) * fR
 
         h = (R^2 * h_L + R*L*h_R) / (R^2 + R*L)
 
     elseif system.h_id == h_Monahan
-        #print("NAME: ", species.name,"\n")
-        #print("n_0 " ,n_0,"\n")
-        if n_0 > 0.0
-            # Electronegative plasmas
-            L = system.l
-            alpha = system.alpha
-            Te = species_list[sID.electron].temp
-            Ti = species.temp
-            sqrt_Te_Ti = sqrt(Te/Ti)
-            mfp = species.mfp
-            uTh = species.v_thermal 
-            K_recombination = GetRecombinationRate(species)
-            ni_star = 15.0/56.0 * uTh / K_recombination / mfp
-            n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
+        # h factor as described in Monahan (2008) https://doi.org/10.1088/0963-0252/17/4/045003 
+        # Electronegative plasmas
+        L = system.l
+        alpha = system.alpha
+        Te = species_list[sID.electron].temp
+        Ti = species.temp
+        sqrt_Te_Ti = sqrt(Te/Ti)
+        mfp = species.mfp
+        uTh = species.v_thermal 
+        K_recombination = GetRecombinationRate(species)
+        ni_star = 15.0/56.0 * uTh / K_recombination / mfp
+        n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
 
-            h_a = 0.86 / sqrt(3.0 + L/mfp) / (1.0 + alpha) 
-            h_b = alpha / (1.0 + alpha) / ( sqrt_Te_Ti * (1.0+1.0/sqrt(2.0*pi)/mfp) )
-            h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_0/n_n0_p3_2) ) 
-            h = sqrt(h_a^2 + h_b^2 + h_c^2)
+        h_a = 0.86 / sqrt(3.0 + L/mfp) / (1.0 + alpha) 
+        h_b = alpha / (1.0 + alpha) / ( sqrt_Te_Ti * (1.0+1.0/sqrt(2.0*pi)/mfp) )
+        h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_0/n_n0_p3_2) ) 
+        h = sqrt(h_a^2 + h_b^2 + h_c^2)
 
-        #    print("sqrt_Te_Ti " ,sqrt_Te_Ti,"\n")
-        #    print("mfp " ,mfp ,"\n")
-        #    print("K_rec " ,K_recombination ,"\n")
-        #    print("ni_star " ,ni_star ,"\n")
-        #    print("n_n0_p3_2 " ,n_n0_p3_2 ,"\n")
-        #    print("h_a " , h_a,"\n")
-        #    print("h_b " , h_b,"\n")
-        #    print("h_c " , h_c,"\n")
-        #    print("h " , h,"\n\n")
-        else
-            h = 0.0
-            errcode = c_io_error
-            PrintErrorMessage(system, "No sheath model found") 
-        end
+    elseif system.h_id == h_Thorsteinsson
+        # h factor as described in  Thorsteinsson (2010) https://doi.org/10.1088/0963-0252/19/5/055008
+        
+        #L = system.l
+        #alpha = system.alpha
+        #Te = species_list[sID.electron].temp
+        #Ti = species.temp
+        #sqrt_Te_Ti = sqrt(Te/Ti)
+        #mfp = species.mfp
+        #uTh = species.v_thermal 
+        #K_recombination = GetRecombinationRate(species)
+        #ni_star = 15.0/56.0 * uTh / K_recombination / mfp
+        #n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
+        #chi01 = 2.405
+        #J1_chi01 = 0.52
+        #D = species.D
+        #u_B = species.v_Bohm
+        #high_press_term = 0.86 * L * u_B / (pi * D)
+        #high_press_term = 0.8 * R * u_B / (chi01 * J1_chi01 * D)
+
+        #h_a = 0.86 / sqrt(3.0 + L/mfp) / (1.0 + alpha) 
+        #h_b = alpha / (1.0 + alpha) / ( sqrt_Te_Ti * (1.0+1.0/sqrt(2.0*pi)/mfp) )
+        #h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_0/n_n0_p3_2) ) 
+        #h = sqrt(h_a^2 + h_b^2 + h_c^2)
+
+    else
+        h = 0.0
+        errcode = c_io_error
+        PrintErrorMessage(system, "No sheath model found") 
     end
     species.n_sheath = n_0 * h
 
