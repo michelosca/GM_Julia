@@ -535,7 +535,7 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
 
             # h_c factor
             K_rec = GetRecombinationRate(species)
-            n_star_sqrt = sqrt(15.0/56.0 * uTh / K_rec / lambda)
+            n_star_sqrt = sqrt(15.0/56.0 * uTh * eta * eta / K_rec / lambda)
             n_min = n_min^1.5
             h_c = 1.0 / (sqrt(gamma_min) + sqrt(gamma_plus)*(n_star_sqrt*n_0/n_min) )
         end
