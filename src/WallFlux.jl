@@ -79,7 +79,7 @@ function UpdatePositiveFlux!(species_list::Vector{Species})
             s.flux = flux
             # Charged species flux recombines, and it's corresponding
             # neutral species gains this mass
-            species_list[s.species_id].flux += -flux
+            species_list[s.neutral_species_id].flux += -flux
         end
     end
     return errcode
@@ -118,7 +118,7 @@ function UpdateNegativeFlux!(species_list::Vector{Species}, system::System,
                     s.flux = 0.25 * s.dens * s.v_thermal *
                         exp(-system.plasma_potential/ T_eV)
                     if s.id != sID.electron
-                        species_list[s.species_id].flux += -s.flux
+                        species_list[s.neutral_species_id].flux += -s.flux
                     end
                 end
             end

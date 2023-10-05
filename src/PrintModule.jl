@@ -43,7 +43,7 @@ function PrintSpeciesList(species_list::Vector{Species}, system::System)
         for s in species_list
 
             # s.neutral_id -> species name
-            sn_name = species_list[s.species_id].name
+            sn_name = species_list[s.neutral_species_id].name
 
             # Density equations
             if (s.has_dens_eq)

@@ -60,7 +60,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
     if (read_step == 1)
         current_species = Species()
         current_species.id = speciesID.current_id 
-        current_species.species_id = 0
+        current_species.neutral_species_id = 0
         current_species.mass = 0.0
         current_species.charge = 0.0
         current_species.has_dens_eq = false
@@ -355,19 +355,19 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
             # Set the "characteristic" species ID
             var = s.name
             if (var=="e" || var=="electrons" || var=="electron")
-                s.species_id = sID.electron 
+                s.neutral_species_id = sID.electron 
             elseif (occursin("Ar",var))
-                s.species_id = sID.Ar
+                s.neutral_species_id = sID.Ar
             elseif (occursin("O4",var))
-                s.species_id = sID.O4
+                s.neutral_species_id = sID.O4
             elseif (occursin("O3",var))
-                s.species_id = sID.O3
+                s.neutral_species_id = sID.O3
             elseif (occursin("O2",var))
-                s.species_id = sID.O2
+                s.neutral_species_id = sID.O2
             elseif (occursin("O",var))
-                s.species_id = sID.O
+                s.neutral_species_id = sID.O
             end
-            if s.species_id == 0 
+            if s.neutral_species_id == 0 
                 print("***ERROR*** Neutral species id has not been found\n")
                 errcode = c_io_error 
             end
@@ -407,7 +407,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
             #therefore for each ion (X+) touching the wall a neutral
             #species (X) is created
             if s.charge > 0
-                s_neutral = species_list[s.species_id]
+                s_neutral = species_list[s.neutral_species_id]
                 s_neutral.has_wall_loss = true
             end
 

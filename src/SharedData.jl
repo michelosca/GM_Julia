@@ -114,8 +114,8 @@ end
 mutable struct Species
     # Species identification flags
     id::Int64          # ID for this specific species. Links to the dens, temp vectors
-    species_id::Int64  # In case of ions or excited states, the ID of the
-                       # neutral species. If it does not apply then = 0
+    neutral_species_id::Int64  # In case of ions or excited states, the ID of the
+                               # neutral species. If it does not apply then = 0
 
     # Physical constants
     mass::Float64

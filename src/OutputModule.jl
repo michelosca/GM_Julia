@@ -590,7 +590,7 @@ function copy_species(s::Species)
     new_s = Species()
 
     new_s.id = copy(s.id)
-    new_s.species_id = copy(s.species_id)
+    new_s.neutral_species_id = copy(s.neutral_species_id)
 
     new_s.mass = copy(s.mass)
     new_s.charge = copy(s.charge)
