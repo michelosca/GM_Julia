@@ -19,8 +19,8 @@ module PlasmaParameters
 
 using SharedData: Species, Reaction, System, SpeciesID
 using SharedData: kb, K_to_eV, e, r_extended
-using SharedData: c_io_error, r_diffusion, r_lower_threshold, r_emission_rate 
-using SharedData: h_classical, h_Gudmundsson, h_Monahan 
+using SharedData: c_io_error, r_diffusion, r_lower_threshold, r_emission_rate, r_recombination
+using SharedData: h_classical, h_Gudmundsson, h_Monahan, h_Thorsteinsson 
 using EvaluateExpressions: ReplaceExpressionValues
 using Printf: @sprintf
 using PrintModule: PrintErrorMessage, PrintWarningMessage 
@@ -395,7 +395,7 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
     n_0 = species.dens
 
     if system.h_id == h_classical
-        # Electropositive plasmas
+        # Electropositive plasmas.https://onlinelibrary.wiley.com/doi/pdf/10.1002/ppap.201600138
         L = system.l
         mfp = species.mfp
 
@@ -411,7 +411,7 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
            uTh = species.v_thermal 
            h = pi * (uB / uTh) * (mfp / L)
         end
-        
+
     elseif system.h_id == h_Gudmundsson
         # h factors as described in Gudmundsson (2007) https://doi.org/10.1088/0963-0252/16/2/025 
         R = system.radius
@@ -456,27 +456,57 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
     elseif system.h_id == h_Thorsteinsson
         # h factor as described in  Thorsteinsson (2010) https://doi.org/10.1088/0963-0252/19/5/055008
         
-        #L = system.l
-        #alpha = system.alpha
-        #Te = species_list[sID.electron].temp
-        #Ti = species.temp
-        #sqrt_Te_Ti = sqrt(Te/Ti)
-        #mfp = species.mfp
-        #uTh = species.v_thermal 
-        #K_recombination = GetRecombinationRate(species)
-        #ni_star = 15.0/56.0 * uTh / K_recombination / mfp
-        #n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
-        #chi01 = 2.405
-        #J1_chi01 = 0.52
-        #D = species.D
-        #u_B = species.v_Bohm
-        #high_press_term = 0.86 * L * u_B / (pi * D)
-        #high_press_term = 0.8 * R * u_B / (chi01 * J1_chi01 * D)
 
-        #h_a = 0.86 / sqrt(3.0 + L/mfp) / (1.0 + alpha) 
-        #h_b = alpha / (1.0 + alpha) / ( sqrt_Te_Ti * (1.0+1.0/sqrt(2.0*pi)/mfp) )
-        #h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_0/n_n0_p3_2) ) 
-        #h = sqrt(h_a^2 + h_b^2 + h_c^2)
+        R = system.radius
+        L = system.l
+        Te = species_list[sID.electron].temp
+        T_plus = species.temp
+        gamma_plus = Te / T_plus
+        alpha = syste.alpha
+        alpha0 = 1.5*alpha
+        lambda = species.mfp
+        chi01 = 2.405
+        J1_chi01 = 0.52
+        u_B = species.v_Bohm
+        uTh = species.v_thermal 
+        D = species.D
+        D_a = D * (1 + gamma_plus + alpha * gamma_plus) / (1 + alpha * gamma_plus)
+
+        # Parameters related to negative ions
+        neg_ion_id = species.opposite_ion_id
+        eta = 1.0
+        h_c = 0.0
+    
+        if neg_ion_id > 0
+            neg_ion = species_list[neg_ion_id]
+            n_min = neg_ion.dens
+            T_min = neg_ion.temp
+            gamma_min = Te / T_neg
+            eta = 2*T_plus / (T_plus + T_min)
+
+            # h_c factor
+            K_rec = GetRecombinationRate(species)
+            n_star_sqrt = sqrt(15.0/56.0 * uTh / K_rec / lambda)
+            n_min = n_min^1.5
+            h_c = 1.0 / (sqrt(gamma_min) + sqrt(gamma_plus)*(n_star_sqrt*n_0/n_min) )
+        end
+
+        # h_L0 factor
+        low_press_term  = 3.0
+        int_press_term = eta*0.5*L/lambda
+        high_press_term = 0.86 * L * u_B / (pi * D_a)
+        h_L0 = 0.86/ sqrt(low_press_term + int_press_term + high_press_term^2)
+
+        # h_R0 factor
+        low_press_term  = 4.0
+        int_press_term = eta*R/lambda
+        high_press_term = 0.8 * R * u_B / (chi01 * J1_chi01 * D_a)
+        h_R0 = 0.8 / sqrt(low_press_term + int_press_term + high_press_term^2)
+
+
+        h_R = sqrt((h_R0/(1+alpha0))^2 + h_c^2)
+        h_L = sqrt((h_L0/(1+alpha0))^2 + h_c^2)
+        h = (R^2 * h_L + R*L*h_R) / (R^2 + R*L)
 
     else
         h = 0.0
@@ -491,13 +521,10 @@ end
 
 function GetRecombinationRate(species::Species) 
 
-    s_id = species.id
-
+    # Identify recombination reactions
     K_recomb= 0.0
     for r in species.reaction_list
-        s_index = findall( x -> x == s_id, r.involved_species )[1]
-        sign = r.species_balance[s_index]
-        if sign < 0
+        if r.id == r_recombination
             K_recomb += r.K_value
         end
     end
