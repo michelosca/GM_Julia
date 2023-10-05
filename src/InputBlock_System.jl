@@ -19,7 +19,7 @@ module InputBlock_System
 
 using SharedData: c_io_error
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
-using SharedData: h_classical, h_Gudmundsson, h_Monahan 
+using SharedData: h_classical, h_Gudmundsson, h_Monahan, h_Thorsteinsson 
 using SharedData: p_constant, p_square
 using SharedData: System
 using SharedData: K_to_eV, e
@@ -161,6 +161,9 @@ function ReadSystemEntry!(name::SubString{String}, var::SubString{String},
                 errcode = 0 
             elseif (lvar == "monahan")
                 h_id = h_Monahan
+                errcode = 0 
+            elseif (lvar == "thorsteinsson")
+                h_id = h_Thorsteinsson
                 errcode = 0 
             else
                 h_id = 0

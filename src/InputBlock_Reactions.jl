@@ -18,7 +18,7 @@ module InputBlock_Reactions
 
 using SharedData: Reaction, Species, SpeciesID, System
 using SharedData: c_io_error
-using SharedData: r_elastic, r_lower_threshold, r_diffusion, r_extended
+using SharedData: r_elastic, r_lower_threshold, r_diffusion, r_extended, r_recombination
 using SharedData: r_emission_rate
 using SharedData: K_to_eV, me, e 
 using ParseReactions: LoadReaction!
@@ -373,6 +373,8 @@ function ReadReactionsEntry!(name::SubString{String}, var::SubString{String},
             global reaction_block_type = r_diffusion
         elseif var == "emission_rate" || var == "emission"
             global reaction_block_type = r_emission_rate
+        elseif var == "recombination_rate" || var == "recombination"
+            global reaction_block_type = r_recombination
         else
             errcode = c_io_error
             err_str = "Reaction block type not recognized" 

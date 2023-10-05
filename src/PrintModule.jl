@@ -19,9 +19,9 @@ module PrintModule
 
 using SharedData: System, Species, Reaction, SpeciesID
 using SharedData: e, K_to_eV
-using SharedData: h_classical, h_Gudmundsson, h_Monahan 
+using SharedData: h_classical, h_Gudmundsson, h_Monahan, h_Thorsteinsson
 using SharedData: s_ohmic_power, s_flux_balance, s_flux_interpolation
-using SharedData: r_diffusion, r_elastic, r_emission_rate
+using SharedData: r_diffusion, r_elastic, r_emission_rate, r_recombination
 using SharedData: p_constant, p_square
 using Printf
 
@@ -37,9 +37,9 @@ function PrintSpeciesList(species_list::Vector{Species}, system::System)
 
     open(system.log_file,"a") do file
         @printf(file,"Loaded species\n")
-        @printf(file, "%15s %15s %15s %15s %10s %10s %10s %10s %15s %15s %15s\n","Name",
+        @printf(file, "%15s %15s %15s %15s %10s %10s %10s %10s %15s %15s %15s %15s\n","Name",
             "Species", "Mass [kg]", "Charge [C]","n-eq.",
-            "T-eq.", "WL", "P-input","Dens0 [m^-3]","Temp0 [eV]","Press [Pa]")
+            "T-eq.", "WL", "P-input","Dens0 [m^-3]","Temp0 [eV]","Press [Pa]","Opposite ion")
         for s in species_list
 
             # s.neutral_id -> species name
@@ -73,10 +73,19 @@ function PrintSpeciesList(species_list::Vector{Species}, system::System)
                 has_heating = "No"
             end
 
-            @printf(file, "%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g %15g\n",
+            # Opposite ion
+            if s.opposite_ion_id == 0
+                opposite_ion_name = "N/A"
+            elseif s.opposite_ion_id == -1
+                opposite_ion_name = "No opposite ion"
+            else
+                opposite_ion_name = species_list[s.opposite_ion_id].name 
+            end
+
+            @printf(file, "%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g %15g %15g\n",
                 s.name, sn_name, s.mass, s.charge, 
                 has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
-                s.dens, s.temp*K_to_eV, s.pressure)
+                s.dens, s.temp*K_to_eV, s.pressure, opposite_ion_name)
         end
         @printf(file, "\n")
     end
@@ -101,6 +110,8 @@ function PrintReactionList(reaction_list::Vector{Reaction},
                 r_id = string(r_id, "-Elastic")
             elseif (r.case == r_diffusion)
                 r_id = string(r_id, "-Diffusion")
+            elseif (r.case == r_recombination)
+                r_id = string(r_id, "-Recomb.")
             elseif (r.case == r_emission_rate)
                 if r.self_absorption
                     r_id = string(r_id, "-Self-absorption")
@@ -209,6 +220,8 @@ function PrintSystemList(s::System)
             h_str = "Gudmundsson"
         elseif (s.h_id == h_Monahan)
             h_str = "Monahan"
+        elseif (s.h_id == h_Thorsteinsson)
+            h_str = "Thorsteinsson"
         else
             h_str = "Not defined"
         end

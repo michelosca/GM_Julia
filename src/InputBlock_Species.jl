@@ -61,6 +61,7 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species = Species()
         current_species.id = speciesID.current_id 
         current_species.neutral_species_id = 0
+        current_species.opposite_ion_id = 0
         current_species.mass = 0.0
         current_species.charge = 0.0
         current_species.has_dens_eq = false
@@ -352,7 +353,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
         for s in species_list
             s_id = s.id
 
-            # Set the "characteristic" species ID
+            # Set the related neutral species ID
             var = s.name
             if (var=="e" || var=="electrons" || var=="electron")
                 s.neutral_species_id = sID.electron 
@@ -372,11 +373,40 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                 errcode = c_io_error 
             end
 
+            # Set the opposite ion species, if any
+            s_charge = abs(s.charge)
+            if s_charge != 0
+                s_sign = sign(s.charge)
+                opposite_charge = s_charge * s_sign * -1
+                s_mass = s.mass
+
+                for s_ion in species_list
+                    # Skip neutral species
+                    if s_ion.charge == 0
+                        continue
+                    end
+                    # Skip the same species
+                    if s_ion.id == s_id
+                        continue
+                    end
+
+                    # Identify opposite ion
+                    if (s_ion.charge == opposite_charge) && (s_ion.mass == s_mass)
+                        s.opposite_ion_id = s_ion.id
+                    end
+                end
+
+                # In case no opposite ion asign -1 id
+                if s.opposite_ion_id == 0
+                    s.opposite_ion_id = -1
+                end
+            end
+
+
             # Create reaction list associated to species s
-            # This is ONLY used in calculating the MFP, therefore
-            # - for ION SPECIES (positive and negative) only ion-neutral
-            #  reactions are included
-            # - for NEUTRAL SPECIES only ion-neutral reactions are included
+            # This is ONLY used for calculating the MFP, therefore
+            # - for ION (positive and negative) and NEUTRAL SPECIES ion-neutral
+            # and neutral-neutral reactions are included
             # - for ELECTRONS any reaction is included
             for r in reaction_list
                 if r.case == r_diffusion || r.case == r_emission_rate
@@ -395,17 +425,18 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                     s_involved = findall(x->x==s_id, r.reactant_species)
                     if s_involved!=Int64[]
                         e_involved = findall(x->x==id_electrons, r.reactant_species)
+                        # Only add reactions where electrons are not involved
                         if e_involved==Int64[]
-                            # Add only if electron is not involved
                             push!(s.reaction_list, r)
                         end
                     end
                 end
             end
 
-            # Flux terms can be considered as a reaction X+ -> X,
-            #therefore for each ion (X+) touching the wall a neutral
-            #species (X) is created
+            # - Flux terms are considered as a reaction X+ -> X,
+            # therefore for each ion (X+) touching the wall a neutral
+            # species (X) is created and thus this must be accounted 
+            # in the mass balance
             if s.charge > 0
                 s_neutral = species_list[s.neutral_species_id]
                 s_neutral.has_wall_loss = true
@@ -416,6 +447,7 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                 pressure_check += s.pressure
             end
         end
+
         if system.total_pressure > 0
             diff = abs(pressure_check - system.total_pressure)
             if diff > 1.e-10

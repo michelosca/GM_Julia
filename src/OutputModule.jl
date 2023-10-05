@@ -591,6 +591,7 @@ function copy_species(s::Species)
 
     new_s.id = copy(s.id)
     new_s.neutral_species_id = copy(s.neutral_species_id)
+    new_s.opposite_ion_id = copy(s.opposite_ion_id)
 
     new_s.mass = copy(s.mass)
     new_s.charge = copy(s.charge)

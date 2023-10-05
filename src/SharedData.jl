@@ -36,6 +36,7 @@ const r_diffusion = 101
 const r_lower_threshold = 103
 const r_emission_rate = 104
 const r_extended = 105
+const r_recombination = 106
 
 # OUTPUT constants
 const o_scale_lin = 200
@@ -63,8 +64,9 @@ const b_constants = 305
 
 # h factor ID 
 const h_classical = 401     # https://onlinelibrary.wiley.com/doi/pdf/10.1002/ppap.201600138
-const h_Gudmundsson = 402  # https://doi.org/10.1088/0022-3727/33/11/311 , https://doi.org/10.1088/0963-0252/16/2/025
-const h_Monahan = 403      # https://doi.org/10.1088/0963-0252/17/4/045003
+const h_Gudmundsson = 402   # https://doi.org/10.1088/0022-3727/33/11/311 , https://doi.org/10.1088/0963-0252/16/2/025
+const h_Monahan = 403       # https://doi.org/10.1088/0963-0252/17/4/045003
+const h_Thorsteinsson = 404 # https://doi.org/10.1088/0963-0252/19/5/055008
 
 # Solving sheath potential methods
 const s_ohmic_power = 501
@@ -116,6 +118,7 @@ mutable struct Species
     id::Int64          # ID for this specific species. Links to the dens, temp vectors
     neutral_species_id::Int64  # In case of ions or excited states, the ID of the
                                # neutral species. If it does not apply then = 0
+    opposite_ion_id::Int64     # This points to an ion with opposite charge
 
     # Physical constants
     mass::Float64
