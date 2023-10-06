@@ -363,7 +363,7 @@ end
 
 
 function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Species}, sID::SpeciesID)
-    # Neutral Diffusion Coefficient
+    # Computation of the Neutral Diffusion Coefficient for a given species (A)
 
     if species.id == sID.electron
         mfp = species.mfp
@@ -371,9 +371,30 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
     else
 
         # From Lieberman 2005. Chapt. 9, pag 311
-        iD = 0.0  # inverse diffusion coefficient
+        # Notation
+        # A/B: species
+        # D_A: total diffsion coefficient for species A
+        # mu_AB: reduced mass
+        # v_AB = sqrt(8kb T/pi/mu_AB): mean speed of relative motion
+        # nu_AB = n_B * sigma_AB_T * v_AB: collision frequency
+        # T: temperature
+        # n_B: density species B
+        # sigma_AB_T= sum_i(sigma_AB_i): total cross-section between species A and B
+        # sigma_AB_i = K_AB_i / v_AB: cross-section of the i-th collision between species A and B
+        # sum_B: summation over all B species
+        # sum_i: summation over all i collisions
+        #
+        # - assumed that T is independent of the species T_AB = T_BA = T
+        # - becaus T_AB = T_BA = T, v_AB is only species dependent because of mu_AB
+        # Neutral Diffusion summation:
+        # 1/D_A = sum_B(mu_AB * nu_AB / kb / T)
+        #       = sum_B(mu_AB * n_B * sigma_AB_T * v_AB / kb / T)
+        #       = sum_B(mu_AB * n_B * sum_i(K_AB_i/v_AB) * v_AB / kb / T)
+        #       = sum_B(mu_AB * n_B * sum_i(K_AB_i) / kb / T)
+        #       = 1 / kb / T * sum_B(mu_AB * n_B * sum(K_AB_i))
 
-        v_th = species.v_thermal
+        iD = 0.0  # will add up "mu_AB * n_B * K_AB_i" for each i-th reaction 
+
         T = species.temp
         id = species.id
 
@@ -389,11 +410,11 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             index = findall( x -> x == id, r_species )
             deleteat!(r_species, index)
             
-            # Set collision cross section
-            cross_section = r.K_value / v_th
-
             # Density of colliding partners
-            n = prod(dens[r_species])
+            n = 1.0 #prod(dens[r_species])
+            for r_s_id in r_species
+                n *= species_list[r_s_id].dens
+            end
             if n < 0.0
                 n = 0.0
             end
@@ -406,15 +427,15 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             end
             mu = 1.0 / imu
 
-            # Add to mfp-buffer
-            iD += mu * n * cross_section
+            # Add to inverse D related to the current reaction
+            iD += mu * n * r.K_value 
         end
 
         if iD == 0
             iD = 1.e-100
         end
 
-        species.D= kb*T/v_th/iD
+        species.D= kb * T / iD
     end
 
     return 0 
