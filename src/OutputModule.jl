@@ -578,6 +578,7 @@ function copy_system(system::System)
 
     s.alpha = copy(system.alpha)
     s.Lambda = copy(system.Lambda)
+    s.K_recombination = copy(system.K_recombination)
 
     s.prerun = copy(system.prerun)
     s.folder = system.folder

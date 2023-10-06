@@ -165,6 +165,14 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
 
     errcode = 0
 
+    # Recombination coefficient
+    if !special_coll
+        if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+            nK_recomb = 0.0
+            n_recomb = 0.0
+        end
+    end
+
     for r in reaction_list
         # Updates wall-loss reactions
         if r.case == r_diffusion || r.case == r_emission_rate
@@ -208,6 +216,21 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
                 r.K_value = ReplaceExpressionValues(r.rate_coefficient, temp,
                     species_list, system, sID)
             end
+            
+            # Averaged recombination coefficient
+            if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+                if r.case == r_recombination
+                    n_prod = 1.0
+                    for s_id in r.reactant_species
+                        rs = species_list[s_id]
+                        if rs.charge != 0.0
+                            n_prod *= rs.dens
+                        end
+                    end
+                    nK_recomb += n_prod * r.K_value
+                    n_recomb += n_prod
+                end
+            end
         end
 
         # Check that rate coeff. is positive
@@ -222,6 +245,18 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
             return errcode
         end
     end
+
+    # Averaged recombination rate coefficient
+    if !special_coll
+        if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+            if n_recomb == 0.0
+                PrintErrorMessage(system, "Error while averaging K_recombination")
+                return c_error
+            end
+            system.K_recombination = nK_recomb / n_recomb
+        end
+    end
+
     return errcode
 end
 
@@ -514,7 +549,7 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         sqrt_Te_Ti = sqrt(Te/Ti)
         mfp = species.mfp
         uTh = species.v_thermal 
-        K_recombination = GetRecombinationRate(species)
+        K_recombination = system.K_recombination 
         ni_star = 15.0/56.0 * uTh / K_recombination / mfp
         n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
 
@@ -555,7 +590,7 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
             eta = 2*T_plus / (T_plus + T_min)
 
             # h_c factor
-            K_rec = GetRecombinationRate(species)
+        K_rec = system.K_recombination 
             n_star_sqrt = sqrt(15.0/56.0 * uTh * eta * eta / K_rec / lambda)
             n_min = n_min^1.5
             h_c = 1.0 / (sqrt(gamma_min) + sqrt(gamma_plus)*(n_star_sqrt*n_0/n_min) )
@@ -586,19 +621,6 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
     species.n_sheath = n_0 * h
 
     return errcode 
-end
-
-
-function GetRecombinationRate(species::Species) 
-
-    # Identify recombination reactions
-    K_recomb= 0.0
-    for r in species.reaction_list
-        if r.id == r_recombination
-            K_recomb += r.K_value
-        end
-    end
-    return K_recomb
 end
 
 
