@@ -76,8 +76,6 @@ function StartSpeciesBlock!(read_step::Int64, species_list::Vector{Species},
         current_species.v_thermal = 0.0
         current_species.v_Bohm = 0.0
         current_species.D = 0.0
-        current_species.h_R = 0.0
-        current_species.h_L = 0.0
         current_species.gamma = 0.0
         current_species.n_sheath = 0.0 
         current_species.flux = 0.0

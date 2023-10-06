@@ -613,8 +613,6 @@ function copy_species(s::Species)
     new_s.n_sheath = copy(s.n_sheath)
     new_s.flux = copy(s.flux)
     new_s.D = copy(s.D)
-    new_s.h_R = copy(s.h_R)
-    new_s.h_L = copy(s.h_L)
     new_s.gamma = copy(s.gamma)
     new_s.flow_rate = copy(s.flow_rate)
 
