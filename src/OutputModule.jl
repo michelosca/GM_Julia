@@ -465,9 +465,9 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             for s in species_list
                 if !(s.charge==0)
                     push!(param_list, s.flux)
-                    push!(param_list, s.mfp)
-                    push!(param_list, s.D)
                 end
+                push!(param_list, s.mfp)
+                push!(param_list, s.D)
             end
             push!(output.param_data_frame, param_list)
 
@@ -502,9 +502,9 @@ function LoadOutputBlock!(sol, output::OutputBlock,
 
             if !(s.charge==0)
                 push!(p_list, s.flux)
-                push!(p_list, s.mfp)
-                push!(p_list, s.D)
             end
+            push!(p_list, s.mfp)
+            push!(p_list, s.D)
         end
         # Add neutral temperature to temperature array
         push!(temp_list, neutral_temp)
