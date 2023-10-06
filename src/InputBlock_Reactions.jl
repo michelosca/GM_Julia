@@ -220,6 +220,55 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
                     end
                 end
             end
+
+            ##### Test recombination reactions
+            if r.case == r_recombination
+
+                # REACTANTS Charge balance 
+                charge_balance = 0.0
+                for rs_id in r.reactant_species
+                    rspecies = species_list[rs_id]
+
+                    # Electrons cannot be involved
+                    if rspecies.id == sID.electron
+                        error_str = @sprintf("Recombination reaction: electrons cannot be involved")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+
+                    charge_balance += rspecies.charge
+                end
+
+                # Charge balance in reactant should be zero 
+                if charge_balance != 0.0 
+                    error_str = @sprintf("Recombination reaction: charge balance in reactant is non-zero")
+                    PrintErrorMessage(system, error_str)
+                    return c_io_error
+                end
+
+                # PRODUCT Charge balance 
+                charge_balance = 0.0
+                for rs_id in r.product_species
+                    rspecies = species_list[rs_id]
+
+                    # Electrons cannot be involved
+                    if rspecies.id == sID.electron
+                        error_str = @sprintf("Recombination reaction: electrons cannot be involved")
+                        PrintErrorMessage(system, error_str)
+                        return c_io_error
+                    end
+
+                    charge_balance += rspecies.charge
+                end
+
+                # Charge balance in reactant should be zero 
+                if charge_balance != 0.0 
+                    error_str = @sprintf("Recombination reaction: charge balance in products is non-zero")
+                    PrintErrorMessage(system, error_str)
+                    return c_io_error
+                end
+
+            end
         end
 
         # Check repeated reactions
