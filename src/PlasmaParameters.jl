@@ -80,6 +80,15 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         s.flux = 0.0
     end
 
+    # Ensure that ion densities above or equal zero.
+    if system.negative_ion_dens < 0.0
+        system.negative_ion_dens = 0.0
+    end
+    if system.positive_ion_dens < 0.0
+        system.positive_ion_dens = 0.0
+    end
+
+
     # SECOND: Update rate coefficient values that only depend on temperature
     errcode = UpdateRateCoefficientValues!(reaction_list, dens, temp, species_list,
         system, sID, false)
@@ -118,14 +127,12 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
     
     errcode = 0
 
-    if system.h_id == h_Gudmundsson || system.h_id == h_Monahan 
         errcode = UpdateElectronegativity!(system, dens, species_list,
             sID.electron)
         if errcode == c_io_error
             PrintErrorMessage(system, "UpdateElectronegativity failed")
             return c_io_error
         end
-    end
 
     for s in species_list
         errcode = GetThermalSpeed!(s)
@@ -270,10 +277,10 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
     if !special_coll
         if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
             if n_recomb == 0.0
-                PrintErrorMessage(system, "Error while averaging K_recombination")
-                return c_error
+                system.K_recombination = 0.0 
+            else
+                system.K_recombination = nK_recomb / n_recomb
             end
-            system.K_recombination = nK_recomb / n_recomb
         end
     end
 
@@ -465,8 +472,8 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             index = findall( x -> x == id, r_species )
             deleteat!(r_species, index)
             
-            # Density of colliding partners
-            n = 1.0 #prod(dens[r_species])
+            # Density of colliding partners (excluding current species)
+            n = 1.0
             for r_s_id in r_species
                 n *= species_list[r_s_id].dens
             end
@@ -476,7 +483,7 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
 
             # Reduced mass
             imu = 0.0
-            for rs_id in r_species
+            for rs_id in r.reactant_species
                 rs_mass = species_list[rs_id].mass
                 imu += 1.0/rs_mass
             end
@@ -486,11 +493,14 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             iD += mu * n * r.K_value 
         end
 
-        if iD == 0
+        if iD == 0.0
             iD = 1.e-100
         end
 
-        species.D= kb * T / iD
+        species.D = kb * T / iD
+        if sID.O2 == id
+            print("D ", species.D,"\n")
+        end
     end
 
     return 0 
@@ -586,7 +596,7 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         R = system.radius
         L = system.l
         Te = species_list[sID.electron].temp
-        alpha = syste.alpha
+        alpha = system.alpha
         alpha0 = 1.5*alpha
         lambda = species.mfp
         chi01 = 2.405
