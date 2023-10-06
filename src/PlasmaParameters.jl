@@ -127,7 +127,6 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         end
     end
 
-
     for s in species_list
         errcode = GetThermalSpeed!(s)
         if errcode == c_io_error
@@ -151,6 +150,13 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
         end
 
         errcode = GetStickingCoefficient!(s, species_list, sID)
+        if errcode == c_io_error
+            err_message = @sprintf("GetStickingCoefficient for %s failed",
+                s.name)
+            PrintErrorMessage(system, err_message)
+            return c_io_error
+        end
+
         errcode = GetNeutralDiffusionCoeff!(s, species_list, sID)
         if errcode == c_io_error
             err_message = @sprintf("GetNeutralDiffusionCoeff for %s failed",
@@ -601,9 +607,9 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         eta = 1.0 #2.0*T_plus / (T_plus + T_min)
         D_a = D * (1 + gamma_plus + alpha * gamma_plus) / (1 + alpha * gamma_plus)
 
-            # h_c factor
+        # h_c factor
         K_rec = system.K_recombination 
-            n_star_sqrt = sqrt(15.0/56.0 * uTh * eta * eta / K_rec / lambda)
+        n_star_sqrt = sqrt(15.0/56.0 * uTh * eta * eta / K_rec / lambda)
         n_min_3_2 = n_min^1.5
         h_c = 1.0 / (sqrt(gamma_min) + sqrt(gamma_plus)*(n_star_sqrt*n_plus/n_min_3_2) )
 
