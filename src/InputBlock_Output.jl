@@ -385,8 +385,10 @@ function SetupOutputBlock!(output::OutputBlock,
                 if !(s.charge == 0)
                     flux_label = string(s.name * "_flux")
                     mfp_label = string(s.name * "_mfp")
+                    D_label = string(s.name * "_diffusion")
                     output.param_data_frame[!, flux_label] = Float64[]
                     output.param_data_frame[!, mfp_label] = Float64[]
+                    output.param_data_frame[!, D_label] = Float64[]
                 end
             end
         end
