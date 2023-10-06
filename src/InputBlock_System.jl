@@ -76,6 +76,8 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.T_e_max = 4.0 / K_to_eV
         system.Lambda = 0.0
         system.K_recombination = 0.0
+        system.positive_ion_dens = 0.0
+        system.negative_ion_dens = 0.0
         system.prerun = true
         system.plasma_potential = 100.0
         system.errcode = 0

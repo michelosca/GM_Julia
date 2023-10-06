@@ -35,6 +35,12 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
 
     errcode = 0
 
+    # Reset values to zero
+    if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+        system.positive_ion_dens = 0.0
+        system.negative_ion_dens = 0.0
+    end
+
     # FIRST: Update dens, temperature and pressure. Set flux values to zero.
     for s in species_list
 
@@ -56,6 +62,14 @@ function UpdateParameters!(temp::Vector{Float64}, dens::Vector{Float64},
                 err_message = @sprintf("%s density is negative: %15g m^-3",
                     s.name, s.dens)
                 PrintWarningMessage(system, err_message) 
+            end
+        else
+            if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+                if s.charge > 0.0
+                    system.positive_ion_dens += s.dens
+                elseif s.charge < 0.0
+                    system.negative_ion_dens += s.dens
+                end
             end
         end
 
@@ -551,11 +565,12 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         uTh = species.v_thermal 
         K_recombination = system.K_recombination 
         ni_star = 15.0/56.0 * uTh / K_recombination / mfp
-        n_n0_p3_2 = (alpha * species_list[sID.electron].dens)^1.5
+        n_plus = system.positive_ion_dens
+        n_min_3_2 = system.negative_ion_dens^1.5
 
         h_a = 0.86 / sqrt(3.0 + L/mfp) / (1.0 + alpha) 
         h_b = alpha / (1.0 + alpha) / ( sqrt_Te_Ti * (1.0+1.0/sqrt(2.0*pi)/mfp) )
-        h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_0/n_n0_p3_2) ) 
+        h_c = 1.0/( sqrt_Te_Ti * (1.0+sqrt(ni_star)*n_plus/n_min_3_2) ) 
         h = sqrt(h_a^2 + h_b^2 + h_c^2)
 
     elseif system.h_id == h_Thorsteinsson
@@ -565,8 +580,6 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         R = system.radius
         L = system.l
         Te = species_list[sID.electron].temp
-        T_plus = species.temp
-        gamma_plus = Te / T_plus
         alpha = syste.alpha
         alpha0 = 1.5*alpha
         lambda = species.mfp
@@ -575,26 +588,24 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         u_B = species.v_Bohm
         uTh = species.v_thermal 
         D = species.D
-        D_a = D * (1 + gamma_plus + alpha * gamma_plus) / (1 + alpha * gamma_plus)
 
-        # Parameters related to negative ions
-        neg_ion_id = species.opposite_ion_id
-        eta = 1.0
-        h_c = 0.0
     
-        if neg_ion_id > 0
-            neg_ion = species_list[neg_ion_id]
-            n_min = neg_ion.dens
-            T_min = neg_ion.temp
-            gamma_min = Te / T_neg
-            eta = 2*T_plus / (T_plus + T_min)
+        # Parameters of negative ions
+        n_min = system.negative_ion_dens 
+        n_plus = system.positive_ion_dens
+        T_min = species.temp
+        T_plus = species.temp
+
+        gamma_min = Te / T_min
+        gamma_plus = Te / T_plus
+        eta = 1.0 #2.0*T_plus / (T_plus + T_min)
+        D_a = D * (1 + gamma_plus + alpha * gamma_plus) / (1 + alpha * gamma_plus)
 
             # h_c factor
         K_rec = system.K_recombination 
             n_star_sqrt = sqrt(15.0/56.0 * uTh * eta * eta / K_rec / lambda)
-            n_min = n_min^1.5
-            h_c = 1.0 / (sqrt(gamma_min) + sqrt(gamma_plus)*(n_star_sqrt*n_0/n_min) )
-        end
+        n_min_3_2 = n_min^1.5
+        h_c = 1.0 / (sqrt(gamma_min) + sqrt(gamma_plus)*(n_star_sqrt*n_plus/n_min_3_2) )
 
         # h_L0 factor
         low_press_term  = 3.0
@@ -609,8 +620,8 @@ function GetSheathDensity!(species::Species, species_list::Vector{Species},
         h_R0 = 0.8 / sqrt(low_press_term + int_press_term + high_press_term^2)
 
 
-        h_R = sqrt((h_R0/(1+alpha0))^2 + h_c^2)
-        h_L = sqrt((h_L0/(1+alpha0))^2 + h_c^2)
+        h_R = sqrt((h_R0/(1.0+alpha0))^2 + h_c^2)
+        h_L = sqrt((h_L0/(1.0+alpha0))^2 + h_c^2)
         h = (R^2 * h_L + R*L*h_R) / (R^2 + R*L)
 
     else

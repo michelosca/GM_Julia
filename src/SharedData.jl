@@ -198,6 +198,9 @@ mutable struct System
 
     alpha::Float64
     Lambda::Float64
+    K_recombination::Float64
+    positive_ion_dens::Float64
+    negative_ion_dens::Float64
 
     prerun::Bool
     folder::String

@@ -579,6 +579,8 @@ function copy_system(system::System)
     s.alpha = copy(system.alpha)
     s.Lambda = copy(system.Lambda)
     s.K_recombination = copy(system.K_recombination)
+    s.positive_ion_dens = copy(system.positive_ion_dens)
+    s.negative_ion_dens = copy(system.negative_ion_dens)
 
     s.prerun = copy(system.prerun)
     s.folder = system.folder
