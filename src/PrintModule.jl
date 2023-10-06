@@ -82,7 +82,7 @@ function PrintSpeciesList(species_list::Vector{Species}, system::System)
                 opposite_ion_name = species_list[s.opposite_ion_id].name 
             end
 
-            @printf(file, "%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g %15g %15g\n",
+            @printf(file, "%15s %15s %15.5e %15.5e %10s %10s %10s %10s %15g %15g %15g %15s\n",
                 s.name, sn_name, s.mass, s.charge, 
                 has_dens_eq, has_temp_eq, has_wall_loss, has_heating,
                 s.dens, s.temp*K_to_eV, s.pressure, opposite_ion_name)

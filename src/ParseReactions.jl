@@ -67,14 +67,14 @@ function ParseReaction!(str::SubString{String}, reaction::Reaction,
         product_str = strip(str[idx[2]+1:end])
         
         # Get Vector{Int64} with species IDs
-        input_rea_s = GetSpeciesFromString!(reactant_str, speciesID)
+        input_rea_s = GetSpeciesFromString!(reactant_str, speciesID, system)
         if (input_rea_s == c_io_error)
             err_message = "While getting reacting species"
             PrintErrorMessage(system, err_message)
             return errcode
         end
 
-        input_pro_s = GetSpeciesFromString!(product_str, speciesID)
+        input_pro_s = GetSpeciesFromString!(product_str, speciesID, system)
         if (input_pro_s == c_io_error)
             err_message = "While getting product species"
             PrintErrorMessage(system, err_message)
@@ -259,6 +259,8 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
         id = speciesID.O3_Ion
     elseif (s == "O3-")
         id = speciesID.O3_negIon
+    elseif (s == "O4")
+        id = speciesID.O4_Ion
     elseif (s == "O4+")
         id = speciesID.O4_Ion
     elseif (s == "O4-")
@@ -376,7 +378,7 @@ function GetRateCoefficientExpr(str::SubString{String},
 end
 
 
-function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID)
+function GetSpeciesFromString!(str::SubString{String}, speciesID::SpeciesID, system::System)
     # This function links the species found in the given string (str)
     # to the species ids predefined in the code
 
