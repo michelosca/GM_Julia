@@ -260,7 +260,7 @@ function SelectSpeciesID(s::SubString{String}, speciesID::SpeciesID)
     elseif (s == "O3-")
         id = speciesID.O3_negIon
     elseif (s == "O4")
-        id = speciesID.O4_Ion
+        id = speciesID.O4
     elseif (s == "O4+")
         id = speciesID.O4_Ion
     elseif (s == "O4-")
