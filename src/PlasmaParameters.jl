@@ -498,9 +498,6 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
         end
 
         species.D = kb * T / iD
-        if sID.O2 == id
-            print("D ", species.D,"\n")
-        end
     end
 
     return 0 
