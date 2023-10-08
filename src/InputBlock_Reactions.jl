@@ -147,24 +147,24 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
             end
 
             ##### Test rate coefficient
-            for T_e in range(T_min, T_max, length=100)
-                temp[sID.electron] = T_e 
-                if system.prerun
-                    if r.case == r_extended || r.case == r_diffusion || r.case == r_emission_rate
-                        K = r.rate_coefficient(temp, dens, species_list, system, sID) 
-                    else
-                        K = r.rate_coefficient(temp, sID) 
-                    end
-                else
-                    K = ReplaceExpressionValues(r.rate_coefficient, temp,
-                        species_list, system, sID)
-                end
-                if K < 0.0
-                    error_str = @sprintf("Reaction %i: %s with negative rate coeffciient at %.2f eV",r.id, r.name, T_e*K_to_eV)
-                    PrintErrorMessage(system, error_str)
-                    return c_io_error
-                end
-            end
+            #for T_e in range(T_min, T_max, length=100)
+            #    temp[sID.electron] = T_e 
+            #    if system.prerun
+            #        if r.case == r_extended || r.case == r_diffusion || r.case == r_emission_rate
+            #            K = r.rate_coefficient(temp, dens, species_list, system, sID) 
+            #        else
+            #            K = r.rate_coefficient(temp, sID) 
+            #        end
+            #    else
+            #        K = ReplaceExpressionValues(r.rate_coefficient, temp,
+            #            species_list, system, sID)
+            #    end
+            #    if K < 0.0
+            #        error_str = @sprintf("Reaction %i: %s with negative rate coeffciient at %.2f eV",r.id, r.name, T_e*K_to_eV)
+            #        PrintErrorMessage(system, error_str)
+            #        return c_io_error
+            #    end
+            #end
 
             ##### Test energy threshold
             # - It is assumed that there is no E-threshold above +/-100 eV
@@ -176,104 +176,24 @@ function EndFile_Reactions!(read_step::Int64, reaction_list::Vector{Reaction},
 
             ##### Test emission reactions and self-absorption
             if r.case == r_emission_rate
-                if length(r.reactant_species) > 1 || length(r.product_species) > 1
-                    error_str = @sprintf("Radiation processes should only have one species at each side of the reaction")
-                    PrintErrorMessage(system, error_str)
+                errcode = TestEmissionReaction(r)
+                if errcode == c_io_error
                     return c_io_error
                 end
 
-                if r.self_absorption
-                    if r.g_high <= 0.0
-                        error_str = @sprintf("Self absorption: statistical weight of higher state is not valid")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                    if r.g_low <= 0.0
-                        error_str = @sprintf("Self absorption: statistical weight of lower state is not valid")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                    if r.g_high_total >= 1.e100
-                        error_str = @sprintf("Self absorption: total statistical weight of higher states is not valid")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                    if r.g_low_total >= 1.e100
-                        error_str = @sprintf("Self absorption: total statistical weight of lower states is not valid")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                    if r.wavelength <= 0.0
-                        error_str = @sprintf("Self absorption: radiation wavelength is not valid")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                    if length(r.product_species) > 1
-                        error_str = @sprintf("Self absorption: process only allows one product species")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                    if length(r.reactant_species) > 1
-                        error_str = @sprintf("Self absorption: process only allows one reacting species")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-                end
             end
 
             ##### Test recombination reactions
             if r.case == r_recombination
-
-                # REACTANTS Charge balance 
-                charge_balance = 0.0
-                for rs_id in r.reactant_species
-                    rspecies = species_list[rs_id]
-
-                    # Electrons cannot be involved
-                    if rspecies.id == sID.electron
-                        error_str = @sprintf("Recombination reaction: electrons cannot be involved")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-
-                    charge_balance += rspecies.charge
-                end
-
-                # Charge balance in reactant should be zero 
-                if charge_balance != 0.0 
-                    error_str = @sprintf("Recombination reaction: charge balance in reactant is non-zero")
-                    PrintErrorMessage(system, error_str)
+                errcode = TestRecombinationReactions(r, species_list, sID)
+                if errcode == c_io_error
                     return c_io_error
                 end
-
-                # PRODUCT Charge balance 
-                charge_balance = 0.0
-                for rs_id in r.product_species
-                    rspecies = species_list[rs_id]
-
-                    # Electrons cannot be involved
-                    if rspecies.id == sID.electron
-                        error_str = @sprintf("Recombination reaction: electrons cannot be involved")
-                        PrintErrorMessage(system, error_str)
-                        return c_io_error
-                    end
-
-                    charge_balance += rspecies.charge
-                end
-
-                # Charge balance in reactant should be zero 
-                if charge_balance != 0.0 
-                    error_str = @sprintf("Recombination reaction: charge balance in products is non-zero")
-                    PrintErrorMessage(system, error_str)
-                    return c_io_error
-                end
-
             end
         end
 
         # Check repeated reactions
         r_id_repeated = LookForRepeatedReactions(reaction_list)
-    
 
         if length(r_id_repeated) > 0
             message = @sprintf("Reactions that are repeated\n")
@@ -589,6 +509,105 @@ function LookForRepeatedReactions(reaction_list::Vector{Reaction})
     end
 
     return r_id_repeated
+end
+
+
+function TestRecombinationReactions(r::Reaction, species_list::Vector{Species}, sID::SpeciesID)
+
+    errcode = 0
+
+    # REACTANTS Charge balance 
+    charge_balance = 0.0
+    for rs_id in r.reactant_species
+        rspecies = species_list[rs_id]
+
+        # Electrons cannot be involved
+        if rspecies.id == sID.electron
+            error_str = @sprintf("Recombination reaction: electrons cannot be involved")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+
+        charge_balance += rspecies.charge
+    end
+
+    # Charge balance in reactant should be zero 
+    if charge_balance != 0.0 
+        error_str = @sprintf("Recombination reaction: charge balance in reactant is non-zero")
+        PrintErrorMessage(system, error_str)
+        return c_io_error
+    end
+
+    # PRODUCT Charge balance 
+    charge_balance = 0.0
+    for rs_id in r.product_species
+        rspecies = species_list[rs_id]
+
+        # Electrons cannot be involved
+        if rspecies.id == sID.electron
+            error_str = @sprintf("Recombination reaction: electrons cannot be involved")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+
+        charge_balance += rspecies.charge
+    end
+
+    # Charge balance in reactant should be zero 
+    if charge_balance != 0.0 
+        error_str = @sprintf("Recombination reaction: charge balance in products is non-zero")
+        PrintErrorMessage(system, error_str)
+        return c_io_error
+    end
+
+    return errcode
+end
+
+
+function TestEmissionReaction(r::Reaction)
+    if length(r.reactant_species) > 1 || length(r.product_species) > 1
+        error_str = @sprintf("Radiation processes should only have one species at each side of the reaction")
+        PrintErrorMessage(system, error_str)
+        return c_io_error
+    end
+
+    if r.self_absorption
+        if r.g_high <= 0.0
+            error_str = @sprintf("Self absorption: statistical weight of higher state is not valid")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+        if r.g_low <= 0.0
+            error_str = @sprintf("Self absorption: statistical weight of lower state is not valid")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+        if r.g_high_total >= 1.e100
+            error_str = @sprintf("Self absorption: total statistical weight of higher states is not valid")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+        if r.g_low_total >= 1.e100
+            error_str = @sprintf("Self absorption: total statistical weight of lower states is not valid")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+        if r.wavelength <= 0.0
+            error_str = @sprintf("Self absorption: radiation wavelength is not valid")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+        if length(r.product_species) > 1
+            error_str = @sprintf("Self absorption: process only allows one product species")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+        if length(r.reactant_species) > 1
+            error_str = @sprintf("Self absorption: process only allows one reacting species")
+            PrintErrorMessage(system, error_str)
+            return c_io_error
+        end
+    end
 end
 
 end
