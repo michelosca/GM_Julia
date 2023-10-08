@@ -634,8 +634,8 @@ begin:reactions
   e + O -> e + O_3s;             9.52_eeV; -9.4e-17 + 3.9e-17 * exp(T_e_eV/1.5); lower_threshold # k4
   e + O -> e + O_5p;            10.74_eeV; -2.8e-17 + 1.2e-17 * exp(T_e_eV/1.5); lower_threshold # k5                                          
   e + O -> e + O_3p;            10.99_eeV; -4.6e-17 + 1.6e-17 * exp(T_e_eV/1.3); lower_threshold # k6 
-  e + O -> e + O_3p;            10.74_eeV; -6.53e-18 + 2.408e-18 * exp(T_e_eV); lower_threshold # k7
-  e + O -> e + O_3p;             13.0_eeV; -5.684037650925524e-17 + 1.300275436672606e-17 * exp(T_e_eV/1.0); lower_threshold # k8
+  e + O -> e + O_3p;            10.74_eeV; -6.53e-18 + 2.408e-18 * exp(T_e_eV); lower_threshold # k7, Zatsarinny 2003
+  e + O -> e + O_3p;             13.0_eeV; -6.3e-17 + 1.4e-17 * exp(T_e_eV); lower_threshold # k8 
   e + O_1d -> e + O_1s;          2.22_eeV; 1.4e-15 - 1.7e-15 * exp(-T_e_eV/2.7); lower_threshold # k10
   e + O_1d -> e + O_3s;          9.52_eeV; -1.1e-18 + 5.8e-19 * exp(T_e_eV/2.0); lower_threshold # k11
   e + O_1d -> e + O_3p;          9.02_eeV; -4.0e-18 + 1.9e-18 * exp(T_e_eV/1.8); lower_threshold # k12
@@ -655,11 +655,11 @@ begin:reactions
   e + O2_b1Su_v -> e + 2O;        0.0_eeV; 5.1e-15 * exp( -7.3/T_e_eV); # k24
   e + O2_a1Ag_v -> e + O + O_1d;  0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
   e + O2_b1Su_v -> e + O + O_1d;  0.0_eeV; 9.4e-15 * exp(-10.0/T_e_eV); # k25
-  e + O2 -> e + O + O_1s;         0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
-  e + O2_a1Ag -> e + O + O_1s;    0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
-  e + O2_b1Su -> e + O + O_1s;    0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
-  e + O2_a1Ag_v -> e + O + O_1s;  0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
-  e + O2_b1Su_v -> e + O + O_1s;  0.0_eeV; 7.868e-20 * exp(T_e_eV * 1.25) -5.1e-19; lower_threshold # k26 
+  e + O2 -> e + O + O_1s;         0.0_eeV; -7.1e-19 + 8.9e-20 * exp(T_e_eV * 1.25); lower_threshold # k26 
+  e + O2_a1Ag -> e + O + O_1s;    0.0_eeV; -7.1e-19 + 8.9e-20 * exp(T_e_eV * 1.25); lower_threshold # k26 
+  e + O2_b1Su -> e + O + O_1s;    0.0_eeV; -7.1e-19 + 8.9e-20 * exp(T_e_eV * 1.25); lower_threshold # k26 
+  e + O2_a1Ag_v -> e + O + O_1s;  0.0_eeV; -7.1e-19 + 8.9e-20 * exp(T_e_eV * 1.25); lower_threshold # k26 
+  e + O2_b1Su_v -> e + O + O_1s;  0.0_eeV; -7.1e-19 + 8.9e-20 * exp(T_e_eV * 1.25); lower_threshold # k26 
 
   # Table 5 ## VALUES IN THIS TABLE HAVE BEEN MULTIPLIED BY 1.E-6
   e + O -> e + O_5s;              0.0; -1.3135e-17 + 5.2447e-17*T_e_eV - 6.5406e-17*T_e_eV^2 + 2.9302e-17*T_e_eV^3 - 3.0192e-18*T_e_eV^4; lower_threshold # k23

@@ -209,7 +209,7 @@ function CRM_test(n_data::DataFrame, T_data::DataFrame, K_data::DataFrame, outpu
     # Dissociation rate
     dissociation_fieb2020_percent = [29.5, 30.8, 28.3, 25.1, 17.1, 3.1]
     nO_total = n_data.O + n_data.O_1d + n_data.O_1s + n_data.O_3s + n_data.O_5s + n_data.O_3p + n_data.O_5p
-    nO2 = n_data.O2
+    nO2 = n_data.O2 .+ n_data.O2_a1Ag .+ n_data.O2_b1Su .+ n_data.O2_a1Ag_v .+ n_data.O2_b1Su_v
     diss = nO_total * 0.5 ./ (0.5 * nO_total .+ nO2) * 100
     p = plot(O2_fract_GM, diss 
         , color = :black
@@ -230,7 +230,7 @@ function CRM_test(n_data::DataFrame, T_data::DataFrame, K_data::DataFrame, outpu
 
     # O2 Molecules oxygen
     nO2_fieb2020_e20 = [0.1, 0.17, 0.25, 0.33, 0.64, 5.02]
-    nO2_e20 = n_data.O2 * 1.e-20
+    nO2_e20 = nO2 * 1.e-20
     p = plot(O2_fract_GM, nO2_e20
         , color = :black
         , label = GM_label
@@ -342,7 +342,7 @@ function CRM_test(n_data::DataFrame, T_data::DataFrame, K_data::DataFrame, outpu
         , label = GM_label
         , legend = :bottomright
         , yscale=:log10
-        , ylims = (1.e0, 1.e1)
+        , ylims = (1.e0, 1.e2)
         , ylabel = L"\textrm{\mathrm{n_{O(^5S)}}\ /\ \mathrm{m^{_3}10^{13}}}"
     )
     scatter!(p, O2_fract_fieb20, nO_5s_fieb2020_e15
@@ -426,7 +426,7 @@ function CustomizePlot!(p)
     o2_max = 0.21
     plot!(p
         , frame=:box
-        , size = (500,300)
+        , size = (500*2.5,300*2.5)
         , tickfontsize=15
         , guidefontsize=15
         , legendfontsize=10
@@ -435,67 +435,67 @@ function CustomizePlot!(p)
         , xlims = (o2_min, o2_max)
         , xticks = ([0,0.05, 0.1, 0.15, 0.2],["0","0.05","0.1","0.15","0.2"])
         , bottommargin = 3mm
-        , leftmargin = 2mm
+        , leftmargin = 8mm
         , topmargin = 2mm
     )
 end
 
 function Get777nmEmission(K_data::DataFrame)
     
-    I_777nm = K_data."r358: O_5p -> O_5s"
-    I_777nm += K_data."r359: O_5p -> O_5s"
-    I_777nm += K_data."r360: O_5p -> O_5s"
-    I_777nm += K_data."r323: e + O -> e + O_5s"
-    I_777nm += K_data."r334: e + O2 -> e + O + O_5s"
-    I_777nm += K_data."r335: e + O2_a1Ag -> e + O + O_5s"
-    I_777nm += K_data."r336: e + O2_b1Su -> e + O + O_5s"
-    I_777nm += K_data."r337: e + O2_a1Ag_v -> e + O + O_5s"
-    I_777nm += K_data."r338: e + O2_b1Su_v -> e + O + O_5s"
+    I_777nm = K_data."r569: O_5p -> O_5s"
+    I_777nm += K_data."r570: O_5p -> O_5s"
+    I_777nm += K_data."r571: O_5p -> O_5s"
+    I_777nm += K_data."r284: e + O -> e + O_5s"
+    I_777nm += K_data."r295: e + O2 -> e + O + O_5s"
+    I_777nm += K_data."r296: e + O2_a1Ag -> e + O + O_5s"
+    I_777nm += K_data."r297: e + O2_b1Su -> e + O + O_5s"
+    I_777nm += K_data."r298: e + O2_a1Ag_v -> e + O + O_5s"
+    I_777nm += K_data."r299: e + O2_b1Su_v -> e + O + O_5s"
     return I_777nm
 end
 
 function Get844nmEmission(K_data::DataFrame, all::Bool)
     
-    I_844nm = K_data."r361: O_3p -> O_3s"
-    I_844nm += K_data."r362: O_3p -> O_3s"
-    I_844nm += K_data."r363: O_3p -> O_3s"
-    I_844nm += K_data."r339: e + O2 -> e + O + O_3s"
-    I_844nm += K_data."r340: e + O2_a1Ag -> e + O + O_3s"
-    I_844nm += K_data."r341: e + O2_b1Su -> e + O + O_3s"
-    I_844nm += K_data."r342: e + O2_a1Ag_v -> e + O + O_3s"
-    I_844nm += K_data."r343: e + O2_b1Su_v -> e + O + O_3s"
+    I_844nm = K_data."r575: O_3p -> O_3s"
+    I_844nm += K_data."r576: O_3p -> O_3s"
+    I_844nm += K_data."r577: O_3p -> O_3s"
+    I_844nm += K_data."r302: e + O2 -> e + O + O_3s"
+    I_844nm += K_data."r303: e + O2_a1Ag -> e + O + O_3s"
+    I_844nm += K_data."r304: e + O2_b1Su -> e + O + O_3s"
+    I_844nm += K_data."r305: e + O2_a1Ag_v -> e + O + O_3s"
+    I_844nm += K_data."r306: e + O2_b1Su_v -> e + O + O_3s"
 
     return I_844nm
 end
 
 function Get577nmEmission(K_data::DataFrame)
     
-    I_544nm = K_data."r352: O_1s -> O_1d"
+    I_544nm = K_data."r562: O_1s -> O_1d"
     return I_544nm
 end
 
 function Get130nmEmission(K_data::DataFrame)
     
-    I_130nm = K_data."r355: O_3s -> O"
-    I_130nm += K_data."r356: O_3s -> O"
-    I_130nm += K_data."r357: O_3s -> O"
-    I_130nm += K_data."r324: e + O2 -> e + 2O"
-    I_130nm += K_data."r325: e + O2_a1Ag -> e + 2O"
-    I_130nm += K_data."r326: e + O2_b1Su -> e + 2O"
-    I_130nm += K_data."r327: e + O2_a1Ag_v -> e + 2O"
-    I_130nm += K_data."r328: e + O2_b1Su_v -> e + 2O"
+    I_130nm = K_data."r566: O_3s -> O"
+    I_130nm += K_data."r567: O_3s -> O"
+    I_130nm += K_data."r568: O_3s -> O"
+    I_130nm += K_data."r285: e + O2 -> e + 2O"
+    I_130nm += K_data."r286: e + O2_a1Ag -> e + 2O"
+    I_130nm += K_data."r287: e + O2_b1Su -> e + 2O"
+    I_130nm += K_data."r288: e + O2_a1Ag_v -> e + 2O"
+    I_130nm += K_data."r289: e + O2_b1Su_v -> e + 2O"
     return I_130nm
 end
 
 function Get135nmEmission(K_data::DataFrame)
     
-    I_135nm = K_data."r353: O_5s -> O"
-    I_135nm += K_data."r354: O_5s -> O"
-    I_135nm += K_data."r329: e + O2 -> e + 2O"
-    I_135nm += K_data."r330: e + O2_a1Ag -> e + 2O"
-    I_135nm += K_data."r331: e + O2_b1Su -> e + 2O"
-    I_135nm += K_data."r332: e + O2_a1Ag_v -> e + 2O"
-    I_135nm += K_data."r333: e + O2_b1Su_v -> e + 2O"
+    I_135nm = K_data."r564: O_5s -> O"
+    I_135nm += K_data."r565: O_5s -> O"
+    I_135nm += K_data."r290: e + O2 -> e + 2O"
+    I_135nm += K_data."r291: e + O2_a1Ag -> e + 2O"
+    I_135nm += K_data."r292: e + O2_b1Su -> e + 2O"
+    I_135nm += K_data."r293: e + O2_a1Ag_v -> e + 2O"
+    I_135nm += K_data."r294: e + O2_b1Su_v -> e + 2O"
     return I_135nm
 end
 
