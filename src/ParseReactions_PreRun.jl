@@ -34,6 +34,11 @@ function WriteRateCoefficientFunctions!(current_reaction::Reaction,
     
     try
         expr = Meta.parse(reaction_str)
+        if expr == Expr(:incomplete, "incomplete: premature end of input")
+            print("***ERROR*** Rate coefficient expression is defined wrongly\n")
+            return c_io_error
+        end
+
         if !(typeof(expr)==Float64)
             ReplaceConstantValues!(expr)
             ReplaceSystemSymbols!(expr)
