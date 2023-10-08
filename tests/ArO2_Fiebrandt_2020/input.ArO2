@@ -788,8 +788,8 @@ begin:reactions
   O2_b1Su + O2+ -> O2_b1Su + O2+;      0.0; 2.600e-19 * sqrt(8.0 * kb * T_O2 / pi * 2 / m_O2); 
   O2_a1Ag_v + O2+ -> O2_a1Ag_v + O2+;  0.0; 2.600e-19 * sqrt(8.0 * kb * T_O2 / pi * 2 / m_O2); 
   O2_b1Su_v + O2+ -> O2_b1Su_v + O2+;  0.0; 2.600e-19 * sqrt(8.0 * kb * T_O2 / pi * 2 / m_O2); 
-  O3 + O3+ -> O3 + O4+;                0.0; 2.600e-19 * sqrt(8.0 * kb * T_O3 / pi * 2 / m_O3);  
-  O3_v + O3+ -> O3_v + O4+;            0.0; 2.600e-19 * sqrt(8.0 * kb * T_O3 / pi * 2 / m_O3);  
+  O3 + O3+ -> O3 + O3+;                0.0; 2.600e-19 * sqrt(8.0 * kb * T_O3 / pi * 2 / m_O3);  
+  O3_v + O3+ -> O3_v + O3+;            0.0; 2.600e-19 * sqrt(8.0 * kb * T_O3 / pi * 2 / m_O3);  
   O4 + O4+ -> O4 + O4+;                0.0; 2.600e-19 * sqrt(8.0 * kb * T_O4 / pi * 2 / m_O4);  
   Ar + Ar+ -> Ar + Ar+;                0.0; 5.500e-19 * sqrt(8.0 * kb * T_Ar / pi * 2 / m_Ar); # Smirnov 1977
 
@@ -866,27 +866,27 @@ begin:reactions
   O3_v + Ar+ -> O3_v + Ar+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_O3 / pi * (m_O3+m_Ar) / (m_O3*m_Ar)); 
   O4 + O+  -> O4 + O+;                 0.0; 3.826e-19 * sqrt(8.0 * kb * T_O4 / pi * (m_O4+m_O)  / (m_O4*m_O));  # sigma = pi * (r_O+r_O3)^2, r_O = 152 pm, r_O3 = 197 pm
   O4 + O2+ -> O4 + O2+;                0.0; 4.900e-19 * sqrt(8.0 * kb * T_O4 / pi * (m_O4+m_O2) / (m_O4*m_O2));
-  O4 + O3+ -> O4 + O3+;                0.0; 4.900e-19 * sqrt(8.0 * kb * T_O4 / pi * (m_O4+m_O3) / (m_O4*m_O3);
+  O4 + O3+ -> O4 + O3+;                0.0; 4.900e-19 * sqrt(8.0 * kb * T_O4 / pi * (m_O4+m_O3) / (m_O4*m_O3));
   O4 + O4+ -> O4 + O4+;                0.0; 4.900e-19 * sqrt(8.0 * kb * T_O4 / pi * 2 / m_O4);
   O4 + Ar+ -> O4 + Ar+;                0.0; 5.200e-19 * sqrt(8.0 * kb * T_O4 / pi * (m_O4+m_Ar) / (m_O4*m_Ar)); 
   Ar + O+  -> Ar + O+;                 0.0; 3.632e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O)  / (m_Ar*m_O));  # sigma = pi * (r_Ar+r_O)^2, r_O = 152 pm, r_Ar = 188 pm
   Ar + O2+ -> Ar + O2+;                0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O2) / (m_Ar*m_O2)); # Lieberman 2005, Chapt. 9, Table 9.3 
-  Ar + O3+ -> Ar + O3+;                0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3);
+  Ar + O3+ -> Ar + O3+;                0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3));
   Ar + O4+ -> Ar + O4+;                0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O4) / (m_Ar*m_O4));
   Ar + Ar+ -> Ar + Ar+;                0.0; 5.000e-19 * sqrt(8.0 * kb * T_Ar / pi * 2 / m_Ar);                  # Lieberman 2005, Chapt. 9, Table 9.3   
   Ar_m + O+  -> Ar_m + O+;             0.0; 3.632e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O)  / (m_Ar*m_O));  # sigma = pi * (r_Ar+r_O)^2, r_O = 152 pm, r_Ar = 188 pm
   Ar_m + O2+ -> Ar_m + O2+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O2) / (m_Ar*m_O2)); # Lieberman 2005, Chapt. 9, Table 9.3 
-  Ar_m + O3+ -> Ar_m + O3+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3);
+  Ar_m + O3+ -> Ar_m + O3+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3));
   Ar_m + O4+ -> Ar_m + O4+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O4) / (m_Ar*m_O4));
   Ar_m + Ar+ -> Ar_m + Ar+;            0.0; 5.000e-19 * sqrt(8.0 * kb * T_Ar / pi * 2 / m_Ar);                  # Lieberman 2005, Chapt. 9, Table 9.3   
   Ar_r + O+  -> Ar_m + O+;             0.0; 3.632e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O)  / (m_Ar*m_O));  # sigma = pi * (r_Ar+r_O)^2, r_O = 152 pm, r_Ar = 188 pm
   Ar_r + O2+ -> Ar_m + O2+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O2) / (m_Ar*m_O2)); # Lieberman 2005, Chapt. 9, Table 9.3 
-  Ar_r + O3+ -> Ar_m + O3+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3);
+  Ar_r + O3+ -> Ar_m + O3+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3));
   Ar_r + O4+ -> Ar_m + O4+;            0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O4) / (m_Ar*m_O4));
   Ar_r + Ar+ -> Ar_m + Ar+;            0.0; 5.000e-19 * sqrt(8.0 * kb * T_Ar / pi * 2 / m_Ar);                  # Lieberman 2005, Chapt. 9, Table 9.3   
   Ar_4p + O+  -> Ar_4p + O+;           0.0; 3.632e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O)  / (m_Ar*m_O));  # sigma = pi * (r_Ar+r_O)^2, r_O = 152 pm, r_Ar = 188 pm
   Ar_4p + O2+ -> Ar_4p + O2+;          0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O2) / (m_Ar*m_O2)); # Lieberman 2005, Chapt. 9, Table 9.3 
-  Ar_4p + O3+ -> Ar_4p + O3+;          0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3);
+  Ar_4p + O3+ -> Ar_4p + O3+;          0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O3) / (m_Ar*m_O3));
   Ar_4p + O4+ -> Ar_4p + O4+;          0.0; 5.200e-19 * sqrt(8.0 * kb * T_Ar / pi * (m_Ar+m_O4) / (m_Ar*m_O4));
   Ar_4p + Ar+ -> Ar_4p + Ar+;          0.0; 5.000e-19 * sqrt(8.0 * kb * T_Ar / pi * 2 / m_Ar);                  # Lieberman 2005, Chapt. 9, Table 9.3   
 
@@ -1014,21 +1014,21 @@ begin:reactions
   Ar_4p -> Ar;                0.0; 1/(Lambda^2 / D_Ar_4p + 2 * V * (2 - gamma_Ar_4p) / A / vth_Ar_4p / gamma_Ar_4p);
 end:reactions
 
-#begin:output
-#  x = temperature
-#  species = neutral_gas
-#  x_min = 500
-#  x_max = 500
-#  steps = 1
-#
-#  x = pressure_percent
-#  species = O2
-#  x_min = 0
-#  x_max = 0
-#  steps = 1
-#  scale = linear
-#  
-#end:output
+begin:output
+  x = temperature
+  species = neutral_gas
+  x_min = 500
+  x_max = 500
+  steps = 1
+
+  x = pressure_percent
+  species = O2
+  x_min = 0
+  x_max = 0
+  steps = 1
+  scale = linear
+  
+end:output
 
 begin:output
   x = temperature
