@@ -41,9 +41,24 @@ using Dates
 # - EndSystemBlock
 #   - AddSystemToList
 
-function StartFile_System!(read_step::Int64, system::System) 
+function StartFile_System!(read_step::Int64, system::System, filename::String) 
 
     errcode = 0
+
+    if read_step == 1
+        # Generate a log file name
+        now_stamp = Dates.now()
+        log_num = Dates.format(now_stamp, "yyyymmddHHMMSS")
+        log_file = "GM_run_" * log_num * ".log"
+
+        index = findlast("/", filename)
+        if index === nothing
+            system.folder = "./"
+        else
+            system.folder = filename[1:index[1]]
+        end
+        system.log_file = system.folder * log_file
+    end
 
     return errcode
 end
@@ -82,12 +97,6 @@ function StartSystemBlock!(read_step::Int64, system::System)
         system.plasma_potential = 100.0
         system.errcode = 0
         system.alpha = 0.0
-
-        # Generate a log file name
-        now_stamp = Dates.now()
-        log_num = Dates.format(now_stamp, "yyyymmddHHMMSS")
-        system.log_file = "GM_run_" * log_num * ".log"
-
     end
     return errcode
 end

@@ -65,7 +65,7 @@ function ReadInputData!(filename::String,
     for read_step in 1:2
         print("Reading $read_step of the input deck...\n")
         errcode = StartFile!(read_step, species_list, reaction_list,
-            system, output_list, speciesID)
+            system, output_list, speciesID, filename)
         if (errcode == c_io_error) return errcode end
 
         errcode = ReadFile!(filename, read_step, species_list,
@@ -77,7 +77,6 @@ function ReadInputData!(filename::String,
         if (errcode == c_io_error) return errcode end
         print("End of input deck reading\n\n")
     end
-    GetInputFolder!(system, filename)
 
     return errcode
 end
@@ -181,7 +180,8 @@ end
 
 function StartFile!(read_step::Int64, species_list::Vector{Species},
     reaction_list::Vector{Reaction}, system::System,
-    output_list::Vector{OutputBlock}, speciesID::SpeciesID)
+    output_list::Vector{OutputBlock}, speciesID::SpeciesID,
+    filename::String)
 
     errcode = StartFile_Species!(read_step, species_list, speciesID) 
     if (errcode == c_io_error)
@@ -193,7 +193,7 @@ function StartFile!(read_step::Int64, species_list::Vector{Species},
         print("***ERROR*** While initializing the input reaction block")
     end
     
-    errcode = StartFile_System!(read_step, system) 
+    errcode = StartFile_System!(read_step, system, filename) 
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input system block")
     end
@@ -327,17 +327,6 @@ function CheckConstantValues!(var::SubString{String}, constants::Vector{Tuple{Su
     end
 
     return var
-end
-
-function GetInputFolder!(system::System, filename::String)
-
-    index = findlast("/", filename)
-    if index === nothing
-        system.folder = "./"
-    else
-        system.folder = filename[1:index[1]]
-    end
-    system.log_file = system.folder * system.log_file
 end
 
 end

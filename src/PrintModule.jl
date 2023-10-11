@@ -92,7 +92,6 @@ function PrintSpeciesList(species_list::Vector{Species}, system::System)
 end
 
 
-
 function PrintReactionList(reaction_list::Vector{Reaction},
     species_list::Vector{Species}, system::System)
 
@@ -259,6 +258,7 @@ function PrintSystemList(s::System)
     end
 end
 
+
 function PrintSimulationState(temp::Vector{Float64}, dens::Vector{Float64},
     species_list::Vector{Species}, system::System, sID::SpeciesID)
     PrintSystemList(system)
@@ -277,6 +277,7 @@ function PrintSimulationState(temp::Vector{Float64}, dens::Vector{Float64},
     end
 end
 
+
 function PrintErrorMessage(system::System, message::String)
 
     open(system.log_file,"a") do file
@@ -285,6 +286,7 @@ function PrintErrorMessage(system::System, message::String)
     @printf("***ERROR*** %s\n", message)
 end
 
+
 function PrintWarningMessage(system::System, message::String)
 
     open(system.log_file,"a") do file
@@ -292,6 +294,7 @@ function PrintWarningMessage(system::System, message::String)
     end
     @printf("***WARNING*** %s\n", message)
 end
+
 
 function PrintMessage(system::System, message::String)
 
