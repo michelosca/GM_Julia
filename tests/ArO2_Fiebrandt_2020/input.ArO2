@@ -614,7 +614,6 @@ begin:reactions
   e + Ar_m -> Ar_r + e;                0.09_eeV ; 3.7e-13;
   e + Ar_m -> Ar_4p + e;            1.57106_eeV ; 8.9e-13 * T_e_eV^0.51 * exp(-1.59 / T_e_eV);
   2Ar_m -> 2Ar;                         0.0_eeV ; 2.e-13;
-  Ar + Ar+ -> Ar + Ar+;                 0.0_eeV ; 2.2e-16;
   Ar_m + Ar_r -> Ar + Ar+ + e;          0.0_eeV ; 2.1e-15;
   Ar_4p + Ar_4p -> Ar + Ar+ + e;        0.0_eeV ; 5.e-16;
   2Ar_m -> Ar + Ar+ + e;                0.0_eeV ; 6.4e-16;
