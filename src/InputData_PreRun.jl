@@ -62,7 +62,7 @@ function ReadInputData!(filename::String, species_list::Vector{Species},
     
     # Setup arguments before reading the input deck
     errcode = StartFile!(read_step, species_list, reaction_list, system,
-        speciesID)
+        speciesID, filename)
     if (errcode == c_io_error) return errcode end
     
     # Get input deck data
@@ -173,7 +173,8 @@ end
 
 
 function StartFile!(read_step::Int64, species_list::Vector{Species},
-    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID)
+    reaction_list::Vector{Reaction}, system::System, speciesID::SpeciesID,
+    filename::String)
 
     errcode = StartFile_Species!(read_step, species_list, speciesID) 
     if (errcode == c_io_error)
@@ -185,7 +186,7 @@ function StartFile!(read_step::Int64, species_list::Vector{Species},
         print("***ERROR*** While initializing the input reaction block")
     end
     
-    errcode = StartFile_System!(read_step, system) 
+    errcode = StartFile_System!(read_step, system, filename) 
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input system block")
     end
