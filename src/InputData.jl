@@ -232,7 +232,7 @@ function EndFile!(read_step::Int64, species_list::Vector{Species},
     end
     
     errcode = EndFile_Output!(read_step, output_list, species_list,
-        reaction_list) 
+        reaction_list, system) 
     if (errcode == c_io_error)
         print("***ERROR*** While initializing the input output block\n")
         return errcode

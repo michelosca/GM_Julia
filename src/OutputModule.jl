@@ -24,6 +24,7 @@ using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, heavy_species_id
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
+using SharedData: h_Monahan, h_Thorsteinsson 
 using EvaluateExpressions: ReplaceExpressionValues
 using PlasmaParameters: UpdateParameters!
 using PlasmaSheath: GetSheathVoltage!
@@ -461,6 +462,10 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             push!(param_list, system.total_pressure)
             # Push electronegativity 
             push!(param_list, system.alpha)
+            # Recombination rate
+            if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+                push!(param_list, system.K_recombination) 
+            end
 
             for s in species_list
                 if !(s.charge==0)
@@ -487,9 +492,16 @@ function LoadOutputBlock!(sol, output::OutputBlock,
         dens = zeros(n_species) # dens array is used later for getting rate coefficient values
 
         # Various parameter dump
+        # - Plasma potential
         push!(p_list, system.plasma_potential)
+        # - Total pressure
         push!(p_list, system.total_pressure)
+        # - Electronegativity
         push!(p_list, system.alpha)
+        # - Recombination rate
+        if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+            push!(p_list, system.K_recombination) 
+        end
 
         # Dump dens/temp and other into buffer lists 
         for s in species_list

@@ -22,6 +22,7 @@ using SharedData: c_io_error
 using SharedData: o_scale_lin, o_scale_log
 using SharedData: o_single_run, o_pL, o_dens, o_temp, o_power, o_pressure
 using SharedData: o_pressure_percent, heavy_species_id
+using SharedData: h_Monahan, h_Thorsteinsson 
 using SharedData: o_frequency, o_duty_ratio, o_total_pressure
 using InputBlock_System: GetUnits!
 using DataFrames: DataFrame
@@ -35,7 +36,8 @@ function StartFile_Output!(read_step::Int64, output_list::Vector{OutputBlock})
 end
 
 function EndFile_Output!(read_step::Int64, output_list::Vector{OutputBlock},
-    species_list::Vector{Species}, reaction_list::Vector{Reaction})
+    species_list::Vector{Species}, reaction_list::Vector{Reaction},
+    system::System)
     
     errcode = 0
 
@@ -48,13 +50,13 @@ function EndFile_Output!(read_step::Int64, output_list::Vector{OutputBlock},
             SetUpEmptyParameter!(output)
             output.case[1] = o_single_run
     
-            errcode = SetupOutputBlock!(output, species_list, reaction_list)
+            errcode = SetupOutputBlock!(output, system, species_list, reaction_list)
 
             # Add output block to output_list
             push!(output_list, output)
         else
             for output in output_list
-                errcode = SetupOutputBlock!(output, species_list, reaction_list)
+                errcode = SetupOutputBlock!(output, system, species_list, reaction_list)
             end
         end
 
@@ -313,7 +315,7 @@ function SetUpEmptyParameter!(output::OutputBlock)
 end
 
 
-function SetupOutputBlock!(output::OutputBlock,
+function SetupOutputBlock!(output::OutputBlock, system::System,
     species_list::Vector{Species}, reaction_list::Vector{Reaction})
 
     errcode = 0
@@ -381,6 +383,9 @@ function SetupOutputBlock!(output::OutputBlock,
             output.param_data_frame[!, "V_plasma"] = Float64[]
             output.param_data_frame[!, "P_total"] = Float64[]
             output.param_data_frame[!, "Electronegativity"] = Float64[]
+            if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
+                output.param_data_frame[!, "K_recombination"] = Float64[]
+            end
             for s in species_list
                 if !(s.charge == 0)
                     flux_label = string(s.name * "_flux")
