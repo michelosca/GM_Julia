@@ -325,7 +325,7 @@ begin:species
 end:species
 
 begin:species
-  name = Ar_m # m for metastables 1s3 and 1s5
+  name = Ar_m # m for meta-stables 1s3 and 1s5
   charge = 0
   mass = mAr 
   solve_dens = true 
@@ -336,7 +336,7 @@ begin:species
 end:species
 
 begin:species
-  name = Ar_r # r for raiatively coupled, 1s2 1s4
+  name = Ar_r # r for radiative states, 1s2 1s4
   charge = 0
   mass = mAr 
   solve_dens = true 
