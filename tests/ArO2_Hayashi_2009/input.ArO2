@@ -1,44 +1,42 @@
 ################################################################################
 #                                                                              #
-# - Paper reference: Marcel Fiebrandt et al 2020 Plasma Sources Sci. Technol.  #
-#     29 045018                                                                #
-# - Title: "Determination of atomic oxygen state densities in a double         #
-#     inductively coupled plasma using optical emission and absorption         #
-#     spectroscopy and probe measurements"                                     #
-# - Link: https://doi.org/10.1088/1361-6595/ab7cbe                             #
+# - Paper reference: Y. Hayashi et al,                                         #
+#  J. Phys. D: Appl. Phys. 42 (2009) 145206 (6pp)                              #
+# - Title: "Argon metastable state densities in inductively coupled plasma in  #
+# mixtures of Ar and O2"                                                       #
+# - Link: https://doi.org/10.1088/0022-3727/42/14/145206                       #
 #                                                                              # 
 ################################################################################
 begin:constants
-  T_gas = 787                           # K
-  T_electrons = 1.5                     # eV
-  nO2 = 0.0                             # m^-3
-  nAr = 1.e12                           # m^-3
-  ne = 1.e12                            # m^-3
-  pAr = 1.0                             # partial pressure (fraction) 
-  pO2 = 0.0                             # partial pressure (fraction)
-  mO = 16amu                            # kg
-  mO2 = 32amu                           # kg
-  mO3 = 48amu                           # kg
-  mO4 = 64amu                           # kg
-  mAr = 40amu                           # kg
-  gamma_O = 0.1                         # sticking coefficient
-  gamma_O_metastable = 1.0              # sticking coefficient 
-  gamma_O2 = 0.007                      # sticking coefficient 
-  gamma_O3 = 0.0                        # sticking coefficient 
-  gamma_Ar = 1.0                        # sticking coefficient 
+  T_gas = 740 
+  T_electrons = 1.5
+  nO2 = 0.0
+  nAr = 1.e12
+  ne = 1.e12
+  pAr = 1.0 
+  pO2 = 0.0
+  mO = 16amu
+  mO2 = 32amu
+  mO3 = 48amu
+  mO4 = 64amu
+  mAr = 40amu
+  gamma_O = 0.01
+  gamma_O_metastable = 1.0
+  gamma_O2 = 0.007
+  gamma_O3 = 0.0
+  gamma_Ar = 1.0
 end:constants
 
 begin:system
-  radius = 0.2                          # m  
-  L = 0.2                               # m
-  P = 500                               # Watts, W
+  radius = 0.05                           # m  
+  L = 0.2                                 # m
+  P = 50                                  # W
   h_factor = thorsteinsson 
   vsheath_solve_method = flux_interpolation
-  t_end = 1.0                           # seconds, s
-  dt_start = 1.e-12                     # s
-  prerun = true 
-  total_pressure = 5.0                  # Pa
-  plasma_potential_guess = 100          # V
+  t_end = 1.0                             # s 
+  prerun = true
+  total_pressure = 13.33                  # Pa
+  plasma_potential_guess = 100            # V
 
   #power_duty_ratio = 0.1
   #P_shape = square
@@ -68,6 +66,17 @@ begin:species
   gamma = gamma_O2
   #flow_rate_sccm = 20
 end:species
+
+#begin:species
+#  name = O2_v 
+#  charge = 0
+#  mass = mO2 
+#  solve_dens = true 
+#  solve_temp = false
+#  T = T_gas 
+#  density = 0
+#  gamma = gamma_O2
+#end:species
 
 begin:species
   name = O2+ 
@@ -356,6 +365,7 @@ begin:species
   dens = 0
   gamma = gamma_Ar
 end:species
+
 
 begin:reactions
   # reaction process;         # threshold E;                   # rate coefficient;                     # description
@@ -1013,205 +1023,17 @@ begin:reactions
   Ar_4p -> Ar;                0.0; 1/(Lambda^2 / D_Ar_4p + 2 * V * (2 - gamma_Ar_4p) / A / vth_Ar_4p / gamma_Ar_4p);
 end:reactions
 
+
 begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 500
-  x_max = 500
-  steps = 1
 
   x = pressure_percent
-  species = O2
-  x_min = 0
-  x_max = 0
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 1.0e12
-  x_max = 1.0e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
+  species = O2 
   x_min = 0.0
-  x_max = 0.0
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 622
-  x_max = 622
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.02439
-  x_max = 0.02439
-  steps = 1
-  scale = linear
+  x_max = 0.20
+  steps = 11
   
-  x = density
-  species = Ar+
-  x_min = 0.97561e12
-  x_max = 0.97561e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.02439e12
-  x_max = 0.02439e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 683
-  x_max = 683
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.04762
-  x_max = 0.04762
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.95238e12
-  x_max = 0.95238e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.04762e12
-  x_max = 0.04762e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 717
-  x_max = 717
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.06977
-  x_max = 0.06977
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.93023e12
-  x_max = 0.93023e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.06977e12
-  x_max = 0.06977e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 739
-  x_max = 739
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.09091
-  x_max = 0.09091
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.90909e12
-  x_max = 0.90909e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.09091e12
-  x_max = 0.09091e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 787
-  x_max = 787
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.16667
-  x_max = 0.16667
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.83333e12
-  x_max = 0.83333e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.16667e12
-  x_max = 0.16667e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 800
-  x_max = 800
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 1.0
-  x_max = 1.0
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.0
-  x_max = 0.0
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 1.e12
-  x_max = 1.e12
-  steps = 1
-  scale = linear
+  x = power 
+  x_min = 50 
+  x_max = 150
+  steps = 5
 end:output

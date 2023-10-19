@@ -1,44 +1,42 @@
 ################################################################################
 #                                                                              #
-# - Paper reference: Marcel Fiebrandt et al 2020 Plasma Sources Sci. Technol.  #
-#     29 045018                                                                #
-# - Title: "Determination of atomic oxygen state densities in a double         #
-#     inductively coupled plasma using optical emission and absorption         #
-#     spectroscopy and probe measurements"                                     #
-# - Link: https://doi.org/10.1088/1361-6595/ab7cbe                             #
+# - Paper reference: T. Sato et al,                                            #
+# J. Phys. D: Appl. Phys. 41 (2008) 035211 (6pp)                               #
+# - Title: "A numerical investigation of atomic oxygen density in an           #
+# inductively coupled plasma in O2/Ar mixture"                                 #
+# - Link: http://dx.doi.org/10.1088/0022-3727/41/3/035211                      #
 #                                                                              # 
 ################################################################################
 begin:constants
-  T_gas = 787                           # K
-  T_electrons = 1.5                     # eV
-  nO2 = 0.0                             # m^-3
-  nAr = 1.e12                           # m^-3
-  ne = 1.e12                            # m^-3
-  pAr = 1.0                             # partial pressure (fraction) 
-  pO2 = 0.0                             # partial pressure (fraction)
-  mO = 16amu                            # kg
-  mO2 = 32amu                           # kg
-  mO3 = 48amu                           # kg
-  mO4 = 64amu                           # kg
-  mAr = 40amu                           # kg
-  gamma_O = 0.1                         # sticking coefficient
-  gamma_O_metastable = 1.0              # sticking coefficient 
-  gamma_O2 = 0.007                      # sticking coefficient 
-  gamma_O3 = 0.0                        # sticking coefficient 
-  gamma_Ar = 1.0                        # sticking coefficient 
+  T_gas = 740 
+  T_electrons = 1.5
+  nO2 = 0.0
+  nAr = 1.e12
+  ne = 1.e12
+  pAr = 1.0 
+  pO2 = 0.0
+  mO = 16amu
+  mO2 = 32amu
+  mO3 = 48amu
+  mO4 = 64amu
+  mAr = 40amu
+  gamma_O = 0.1
+  gamma_O_metastable = 1.0
+  gamma_O2 = 0.007
+  gamma_O3 = 0.0
+  gamma_Ar = 1.0
 end:constants
 
 begin:system
-  radius = 0.2                          # m  
-  L = 0.2                               # m
-  P = 500                               # Watts, W
+  radius = 0.05                           # m  
+  L = 0.1                                 # m
+  P = 100                                 # W
   h_factor = thorsteinsson 
   vsheath_solve_method = flux_interpolation
-  t_end = 1.0                           # seconds, s
-  dt_start = 1.e-12                     # s
+  t_end = 1.0 
   prerun = true 
-  total_pressure = 5.0                  # Pa
-  plasma_potential_guess = 100          # V
+  total_pressure = 13.33                  # Pa
+  plasma_potential_guess = 100            # V
 
   #power_duty_ratio = 0.1
   #P_shape = square
@@ -68,6 +66,17 @@ begin:species
   gamma = gamma_O2
   #flow_rate_sccm = 20
 end:species
+
+#begin:species
+#  name = O2_v 
+#  charge = 0
+#  mass = mO2 
+#  solve_dens = true 
+#  solve_temp = false
+#  T = T_gas 
+#  density = 0
+#  gamma = gamma_O2
+#end:species
 
 begin:species
   name = O2+ 
@@ -325,7 +334,7 @@ begin:species
 end:species
 
 begin:species
-  name = Ar_m # m for meta-stables 1s3 and 1s5
+  name = Ar_m # m for metastables 1s3 and 1s5
   charge = 0
   mass = mAr 
   solve_dens = true 
@@ -336,7 +345,7 @@ begin:species
 end:species
 
 begin:species
-  name = Ar_r # r for radiative states, 1s2 1s4
+  name = Ar_r # r for raiatively coupled, 1s2 1s4
   charge = 0
   mass = mAr 
   solve_dens = true 
@@ -356,6 +365,7 @@ begin:species
   dens = 0
   gamma = gamma_Ar
 end:species
+
 
 begin:reactions
   # reaction process;         # threshold E;                   # rate coefficient;                     # description
@@ -906,312 +916,12 @@ begin:reactions
 end:reactions
 
 
-begin:reactions
-  reaction_type = elastic
-  # Elastic collisions (Turner 2015)
-  e + O2 -> e + O2;              0.0; 4.15e-14 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 24
-  e + O2_a1Ag -> e + O2_a1Ag;    0.0; 4.15e-15 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 42
-  e + O2_b1Su -> e + O2_b1Su;    0.0; 4.15e-14 * T_e_eV^ 0.599 * exp(-0.016/T_e_eV); # 61
-
-  # Hurlbatt (20017)
-  e + Ar -> e + Ar;              0.0; 2.336e-14 * T_e_eV^1.609 * exp(0.0618 * (log(T_e_eV))^2 - 0.1171 * (log(T_e_eV))^3 );  
-end:reactions
-
-begin:reactions
-  reaction_type = recombination 
-  # Recombination collisions (Turner 2015)
-  O+ + O- -> 2O;                 0.0; 3.10e-14 * (300/T_O)^1.1;                      # 186
-  O+ + O- + O2 -> 2O + O2;       0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 187
-  O+ + O- + O2 -> 2O2;           0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 188
-  O- + O2+ -> 3O;                0.0; 1.61e-14 * (300/T_O2)^1.1;                     # 207
-  O- + O2+ -> O + O2;            0.0; 1.61e-14 * (300/T_O2)^1.1;                     # 208
-  O- + Ar+ -> O + Ar;            0.0; 4.0e-14 * (300 / T_O2)^0.43;
-  O- + O3+ -> O + O3;            0.0; 3.07e-14 * (300/T_O)^1.1;                      # 212, corrected
-  O- + O4+ -> O + 2O2;           0.0; 1.54e-14 * (300/T_O)^0.9;                      # 213
-  O- + O4+ -> O2 + O3;           0.0; 1.54e-14 * (300/T_O)^0.9;                      # 214
-  O2+ + O- + O2 -> O + 2O2;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 237
-  O2+ + O- + O2 -> O2 + O3;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 238
-  O2+ + O2- -> 2O2;              0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 243
-  O+ + O2- -> O + O2;            0.0; 3.22e-14 * (300/T_O2)^1.1;                     # 190
-  O+ + O2- + O2 -> O + 2O2;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 191
-  O+ + O2- + O2 -> O2 + O3;      0.0; 1.00e-37 * (300/T_O2)^2.5;                     # 192
-  O2 + O2- + O3+ -> 2O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 219
-  O2 + O2- + O4+ -> 4O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 220
-  O3+ + O3- -> 2O3;              0.0; 5.19e-14 * (300/T_O2)^0.9;                     # 252
-  O4+ + O4- -> 4O2;              0.0; 4.97e-14 * (300/T_O2)^0.9;                     # 257
-  O2+ + O2- + O2 -> 3O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 239
-  O2+ + O3- + O2 -> 2O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 240
-  O2+ + O4- + O2 -> 4O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 241
-  O2+ + O2- -> O2 + 2O;          0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 242
-  O2+ + O3- -> 2O + O3;          0.0; 2.90e-14 * (300/T_O2)^0.9;                     # 244
-  O2+ + O3- -> O2 + O3;          0.0; 2.90e-14 * (300/T_O2)^0.9;                     # 245
-  O2+ + O4- -> 3O2;              0.0; 6.07e-14 * (300/T_O2)^0.9;                     # 246
-  O2- + O3+ -> O2 + O3;          0.0; 3.29e-14 * (300/T_O2)^1.1;                     # 248
-  O2- + O4+ -> 2O + 2O2;         0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 249
-  O2- + O4+ -> 3O2;              0.0; 1.60e-14 * (300/T_O2)^1.1;                     # 250
-  O3+ + O4- -> 2O2 + O3;         0.0; 5.37e-14 * (300/T_O2)^0.9;                     # 253
-  O3- + O4+ -> O + 3O2;          0.0; 2.43e-14 * (300/T_O2)^0.9;                     # 255
-  O3- + O4+ -> 2O2 + O3;         0.0; 2.43e-14 * (300/T_O2)^0.9;                     # 256
-  O+ + O3- -> O + O3;            0.0; 7.33e-14 * (300/T_O)^0.9;                      # 194
-  O+ + O3- + O2 -> O + O2 + O3;  0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 195
-  O2 + O3+ + O4- -> 3O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 224
-  O2 + O3- + O4+ -> 3O2 + O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 225
-  O+ + O4- -> O + 2O2;           0.0; 7.87e-14 * (300/T_O)^0.9;                      # 196
-  O+ + O4- + O2 -> O + 3O2;      0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 197
-  O2 + O4+ + O4- -> 5O2;         0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 226
-  O2 + O3+ + O3- -> O2 + 2O3;    0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 223
-  O- + O2 + O3+ -> O + O2 + O3;  0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 201
-  O- + O2 + O4+ -> O + 3O2;      0.0; 2.00e-37 * (300/T_O2)^2.5;                     # 202
-end:reactions
-
-
-begin:reactions
-  reaction_type = emission_rate 
-  # Ar reactions (Gudmundsson 2007, table 1)
-  Ar_r -> Ar;                           0.0 ; 1.e5;   # s^-1 Ar_r -> Ar + hν 
-  Ar_4p -> Ar;                          0.0 ; 3.2e7;  # s^-1 Ar_4p -> Ar + hν
-  Ar_4p -> Ar_m;                        0.0 ; 3.e7;   # s^-1 Ar_4p -> Ar_m + hν
-  Ar_4p -> Ar_r;                        0.0 ; 3.e7;   # s^-1 Ar_4p -> Ar_r + hν
-
-  # Fiebrandt (2020) table 2 and/or Fiebrandt thesis (2018)
-  # reaction;   [g_p, g_k, g_p_tot, g_k_tot, wavelength];      A_pk;
-  O_1s -> O_1d; [1.0, 5.0,     1.0,     5.0,   557.7_nm];      1.26;
-  
-  O_5s -> O;    [5.0, 5.0,     5.0,     8.0,   135.6_nm];     4.2e3;
-  O_5s -> O;    [5.0, 3.0,     5.0,     8.0,   135.9_nm];     1.4e3;
-  
-  O_3s -> O;    [3.0, 5.0,     3.0,     9.0,   130.2_nm];     3.4e8;
-  O_3s -> O;    [3.0, 3.0,     3.0,     9.0,   130.5_nm];     2.0e8;
-  O_3s -> O;    [3.0, 1.0,     3.0,     9.0,   130.6_nm];     6.8e7;
-  
-  O_5p -> O_5s; [7.0, 5.0,     15.0,    5.0,   777.2_nm];     3.7e7;
-  O_5p -> O_5s; [5.0, 5.0,     15.0,    5.0,   777.4_nm];     3.7e7;
-  O_5p -> O_5s; [3.0, 5.0,     15.0,    5.0,   777.5_nm];     3.7e7;
-  
-  O_3p -> O_3s; [1.0, 3.0,      9.0,    3.0,   844.6_nm];     9.2e7;
-  O_3p -> O_3s; [5.0, 3.0,      9.0,    3.0,   844.6_nm];     9.2e7;
-  O_3p -> O_3s; [3.0, 3.0,      9.0,    3.0,   844.7_nm];     9.2e7;
-end:reactions
-
-
-begin:reactions
-  reaction_type = diffusion 
-  # Gudmundsson 2007
-  2O -> O2;                   0.0; 1/(Lambda^2 / D_O  + 2 * V * (2 - gamma_O ) / A / vth_O  / gamma_O);
-  O_1d -> O;                  0.0; 1/(Lambda^2 / D_O_1d  + 2 * V * (2 - gamma_O_1d ) / A / vth_O_1d  / gamma_O_1d);
-  O_1s -> O;                  0.0; 1/(Lambda^2 / D_O_1s  + 2 * V * (2 - gamma_O_1s ) / A / vth_O_1s  / gamma_O_1s);
-  O_3s -> O;                  0.0; 1/(Lambda^2 / D_O_3s  + 2 * V * (2 - gamma_O_3s ) / A / vth_O_3s  / gamma_O_3s);
-  O_5s -> O;                  0.0; 1/(Lambda^2 / D_O_5s  + 2 * V * (2 - gamma_O_5s ) / A / vth_O_5s  / gamma_O_5s);
-  O_3p -> O;                  0.0; 1/(Lambda^2 / D_O_3p  + 2 * V * (2 - gamma_O_3p ) / A / vth_O_3p  / gamma_O_3p);
-  O_5p -> O;                  0.0; 1/(Lambda^2 / D_O_5p  + 2 * V * (2 - gamma_O_5p ) / A / vth_O_5p  / gamma_O_5p);
-  O2_a1Ag -> O2;              0.0; 1/(Lambda^2 / D_O2_a1Ag + 2 * V * (2 - gamma_O2_a1Ag) / A / vth_O2_a1Ag / gamma_O2_a1Ag);
-  O2_b1Su -> O2;              0.0; 1/(Lambda^2 / D_O2_b1Su + 2 * V * (2 - gamma_O2_b1Su) / A / vth_O2_b1Su / gamma_O2_b1Su);
-  O2_a1Ag_v -> O2;            0.0; 1/(Lambda^2 / D_O2_a1Ag_v + 2 * V * (2 - gamma_O2_a1Ag_v) / A / vth_O2_a1Ag_v / gamma_O2_a1Ag_v);
-  O2_b1Su_v -> O2;            0.0; 1/(Lambda^2 / D_O2_b1Su_v + 2 * V * (2 - gamma_O2_b1Su_v) / A / vth_O2_b1Su_v / gamma_O2_b1Su_v);
-  Ar_m -> Ar;                 0.0; 1/(Lambda^2 / D_Ar_m + 2 * V * (2 - gamma_Ar_m) / A / vth_Ar_m / gamma_Ar_m);
-  Ar_r -> Ar;                 0.0; 1/(Lambda^2 / D_Ar_r + 2 * V * (2 - gamma_Ar_r) / A / vth_Ar_r / gamma_Ar_r);
-  Ar_4p -> Ar;                0.0; 1/(Lambda^2 / D_Ar_4p + 2 * V * (2 - gamma_Ar_4p) / A / vth_Ar_4p / gamma_Ar_4p);
-end:reactions
-
 begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 500
-  x_max = 500
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0
-  x_max = 0
-  steps = 1
-  scale = linear
   
-  x = density
-  species = Ar+
-  x_min = 1.0e12
-  x_max = 1.0e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
+  x = pressure_percent
+  species = O2 
   x_min = 0.0
-  x_max = 0.0
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 622
-  x_max = 622
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.02439
-  x_max = 0.02439
-  steps = 1
-  scale = linear
+  x_max = 0.10
+  steps = 11
   
-  x = density
-  species = Ar+
-  x_min = 0.97561e12
-  x_max = 0.97561e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.02439e12
-  x_max = 0.02439e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 683
-  x_max = 683
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.04762
-  x_max = 0.04762
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.95238e12
-  x_max = 0.95238e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.04762e12
-  x_max = 0.04762e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 717
-  x_max = 717
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.06977
-  x_max = 0.06977
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.93023e12
-  x_max = 0.93023e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.06977e12
-  x_max = 0.06977e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 739
-  x_max = 739
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.09091
-  x_max = 0.09091
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.90909e12
-  x_max = 0.90909e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.09091e12
-  x_max = 0.09091e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 787
-  x_max = 787
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 0.16667
-  x_max = 0.16667
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.83333e12
-  x_max = 0.83333e12
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 0.16667e12
-  x_max = 0.16667e12
-  steps = 1
-  scale = linear
-end:output
-
-begin:output
-  x = temperature
-  species = neutral_gas
-  x_min = 800
-  x_max = 800
-  steps = 1
-
-  x = pressure_percent
-  species = O2
-  x_min = 1.0
-  x_max = 1.0
-  steps = 1
-  scale = linear
-  
-  x = density
-  species = Ar+
-  x_min = 0.0
-  x_max = 0.0
-  steps = 1
-  scale = linear
-
-  x = density
-  species = O2+
-  x_min = 1.e12
-  x_max = 1.e12
-  steps = 1
-  scale = linear
 end:output
