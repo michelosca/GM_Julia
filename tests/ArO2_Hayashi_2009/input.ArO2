@@ -120,27 +120,27 @@ begin:species
   gamma = gamma_O2
 end:species
 
-begin:species
-  name = O2_a1Ag_v
-  charge = 0
-  mass = mO2 
-  solve_dens = true 
-  solve_temp = false
-  T = T_gas
-  density = 0
-  gamma = gamma_O2
-end:species
-
-begin:species
-  name = O2_b1Su_v
-  charge = 0
-  mass = mO2 
-  solve_dens = true 
-  solve_temp = false
-  T = T_gas
-  density = 0
-  gamma = gamma_O2
-end:species
+#begin:species
+#  name = O2_a1Ag_v
+#  charge = 0
+#  mass = mO2 
+#  solve_dens = true 
+#  solve_temp = false
+#  T = T_gas
+#  density = 0
+#  gamma = gamma_O2
+#end:species
+#
+#begin:species
+#  name = O2_b1Su_v
+#  charge = 0
+#  mass = mO2 
+#  solve_dens = true 
+#  solve_temp = false
+#  T = T_gas
+#  density = 0
+#  gamma = gamma_O2
+#end:species
 
 begin:species
   name = O 
