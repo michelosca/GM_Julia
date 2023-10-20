@@ -110,7 +110,7 @@ function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     end
 
     # First get the positive ion fluxes
-    errcode = UpdatePositiveFlux!(species_list)
+    errcode = UpdatePositiveFlux!(species_list, sID)
     if errcode == c_io_error
         system.errcode = errcode 
         PrintErrorMessage(system, "UpdatePositiveFlux failed")

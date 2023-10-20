@@ -420,7 +420,7 @@ function LoadOutputBlock!(sol, output::OutputBlock,
             end
 
             #### Update flux and potential values 
-            errcode = UpdatePositiveFlux!(species_list)
+            errcode = UpdatePositiveFlux!(species_list, sID)
             if errcode == c_io_error
                 PrintWarningMessage(system, "OUTPUT UpdatePositiveFlux failed")
                 for s in species_list

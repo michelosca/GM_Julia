@@ -431,11 +431,11 @@ function EndFile_Species!(read_step::Int64, species_list::Vector{Species},
                 end
             end
 
-            # - Flux terms are considered as a reaction X+ -> X,
-            # therefore for each ion (X+) touching the wall a neutral
+            # - Flux terms are considered as a reaction X+/- -> X,
+            # therefore for each ion (X+/-) touching the wall a neutral
             # species (X) is created and thus this must be accounted 
             # in the mass balance
-            if s.charge > 0
+            if s.charge != 0
                 s_neutral = species_list[s.neutral_species_id]
                 s_neutral.has_wall_loss = true
             end
