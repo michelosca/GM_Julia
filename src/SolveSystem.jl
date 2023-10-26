@@ -75,22 +75,11 @@ function ExecuteProblem(species_list::Vector{Species},
         callback = cb,
         save_everystep = save_flag
     )
-    message = EndExecutionMessage(sol.retcode)
+    message = @sprintf("Solution state: %s\n", sol.retcode)
     PrintMessage(system, message)
     return sol
 end
 
-function EndExecutionMessage(retcode::Symbol)
-
-    if retcode == :Default
-        message = "***WARNING***Problem execution finished\n"
-    elseif retcode == :Success
-        message = "Problem execution finished succesfully\n"
-    else
-        message = @sprintf("***ERROR*** Return code: %s\n", retcode)
-    end
-    return message
-end
 
 function ode_fn!(dy::Vector{Float64}, y::Vector{Float64}, p::Tuple, t::Float64)
     # dy are the derivatives of y, i.e. the lhs of the ODE equations
