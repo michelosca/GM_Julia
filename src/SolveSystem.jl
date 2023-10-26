@@ -29,7 +29,7 @@ using DifferentialEquations: DiscreteCallback, VectorContinuousCallback
 using DifferentialEquations: CallbackSet
 using DifferentialEquations: terminate!, set_proposed_dt!
 using PrintModule: PrintErrorMessage, PrintMessage
-#using Printf: @sprintf
+using Printf: @sprintf
 #using PrintModule: PrintSimulationState
 
 function ExecuteProblem(species_list::Vector{Species},
