@@ -10,8 +10,8 @@ begin:constants
   T_gas = 600                           # K
   T_electrons = 1.5                     # eV
   nO2 = 0.0                             # m^-3
-  nAr = 1.e12                           # m^-3
-  ne = 1.e12                            # m^-3
+  nAr = 1.e14                           # m^-3
+  ne = 1.e14                            # m^-3
   pAr = 1.0                             # partial pressure (fraction) 
   pO2 = 0.0                             # partial pressure (fraction)
   mO = 16amu                            # kg
@@ -1033,15 +1033,15 @@ begin:output
   
   x = density
   species = Ar+
-  x_min = 0.99e12
-  x_max = 0.99e12
+  x_min = 0.99e14
+  x_max = 0.99e14
   steps = 1
   scale = linear
 
   x = density
   species = O2+
-  x_min = 0.01e12
-  x_max = 0.01e12
+  x_min = 0.01e14
+  x_max = 0.01e14
   steps = 1
   scale = linear
 end:output
@@ -1056,15 +1056,15 @@ begin:output
   
   x = density
   species = Ar+
-  x_min = 0.8e12
-  x_max = 0.8e12
+  x_min = 0.8e14
+  x_max = 0.8e14
   steps = 1
   scale = linear
 
   x = density
   species = O2+
-  x_min = 0.2e12
-  x_max = 0.2e12
+  x_min = 0.2e14
+  x_max = 0.2e14
   steps = 1
   scale = linear
 end:output
@@ -1079,15 +1079,15 @@ begin:output
   
   x = density
   species = Ar+
-  x_min = 0.6e12
-  x_max = 0.6e12
+  x_min = 0.6e14
+  x_max = 0.6e14
   steps = 1
   scale = linear
 
   x = density
   species = O2+
-  x_min = 0.4e12
-  x_max = 0.4e12
+  x_min = 0.4e14
+  x_max = 0.4e14
   steps = 1
   scale = linear
 end:output
@@ -1102,15 +1102,15 @@ begin:output
   
   x = density
   species = Ar+
-  x_min = 0.4e12
-  x_max = 0.4e12
+  x_min = 0.4e14
+  x_max = 0.4e14
   steps = 1
   scale = linear
 
   x = density
   species = O2+
-  x_min = 0.6e12
-  x_max = 0.6e12
+  x_min = 0.6e14
+  x_max = 0.6e14
   steps = 1
   scale = linear
 end:output
@@ -1125,15 +1125,15 @@ begin:output
   
   x = density
   species = Ar+
-  x_min = 0.2e12
-  x_max = 0.2e12
+  x_min = 0.2e14
+  x_max = 0.2e14
   steps = 1
   scale = linear
 
   x = density
   species = O2+
-  x_min = 0.8e12
-  x_max = 0.8e12
+  x_min = 0.8e14
+  x_max = 0.8e14
   steps = 1
   scale = linear
 end:output
@@ -1148,15 +1148,15 @@ begin:output
   
   x = density
   species = Ar+
-  x_min = 0.01e12
-  x_max = 0.01e12
+  x_min = 0.01e14
+  x_max = 0.01e14
   steps = 1
   scale = linear
 
   x = density
   species = O2+
-  x_min = 0.99e12
-  x_max = 0.99e12
+  x_min = 0.99e14
+  x_max = 0.99e14
   steps = 1
   scale = linear
 end:output
@@ -1178,8 +1178,8 @@ begin:output
 
   x = density
   species = O2+
-  x_min = 1.0e12
-  x_max = 1.0e12
+  x_min = 1.0e14
+  x_max = 1.0e14
   steps = 1
   scale = linear
 end:output

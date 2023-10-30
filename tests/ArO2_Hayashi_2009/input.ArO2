@@ -11,8 +11,8 @@ begin:constants
   T_gas = 740 
   T_electrons = 1.5
   nO2 = 0.0
-  nAr = 1.e12
-  ne = 1.e12
+  nAr = 1.e14
+  ne = 1.e14
   pAr = 1.0 
   pO2 = 0.0
   mO = 16amu
