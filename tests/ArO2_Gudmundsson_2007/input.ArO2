@@ -635,7 +635,7 @@ begin:reactions
   e + O_1d -> e + O_3p;          9.02_eeV; -4.0e-18 + 1.9e-18 * exp(T_e_eV/1.8); lower_threshold # k12
   e + O_1d -> e + O_3p;         10.01_eeV; -4.0e-17 + 1.5e-17 * exp(T_e_eV/1.4); lower_threshold # k13
   e + O_1s -> e + O_3p;           6.8_eeV; -1.5e-17 + 1.2e-17 * exp(T_e_eV/4.7); lower_threshold # k15
-  e + O_1s -> e + O_3p;         10.99_eeV; -1.6445e-17 +4.5274e-17*T_e_eV -4.7377e-17*T_e_eV^2 +2.3414e-17*T_e_eV^3 -5.3018e-18*T_e_eV^4 +4.5651e-19*T_e_eV^5; lower_threshold # k16 
+  e + O_1s -> e + O_3p;           6.8_eeV; -1.6445e-17 +4.5274e-17*T_e_eV -4.7377e-17*T_e_eV^2 +2.3414e-17*T_e_eV^3 -5.3018e-18*T_e_eV^4 +4.5651e-19*T_e_eV^5; lower_threshold # k16 
   e + O_5s -> e + O_3s;          0.37_eeV; 3.1663e-14 +1.9133e-14*T_e_eV -1.6834e-14*T_e_eV^2 +4.3614e-15*T_e_eV^3 -3.853e-16*T_e_eV^4; lower_threshold # k17
   e + O_5s -> e + O_5p;          1.59_eeV; -1.6369e-13 +3.5636e-13*T_e_eV -8.7183e-14*T_e_eV^2 +9.8816e-15*T_e_eV^3 -3.8759e-16*T_e_eV^4; lower_threshold # k18
   e + O_5s -> e + O_3p;          1.84_eeV; -1.8405e-14 + 4.1875e-14*T_e_eV - 1.8784e-14*T_e_eV^2 + 3.7213e-15*T_e_eV^3 - 2.8142e-16*T_e_eV^4; lower_threshold # k19
