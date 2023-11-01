@@ -276,7 +276,7 @@ function UpdateRateCoefficientValues!(reaction_list::Vector{Reaction},
     # Averaged recombination rate coefficient
     if !special_coll
         if system.h_id == h_Thorsteinsson || system.h_id == h_Monahan
-            if n_recomb == 0.0
+            if n_recomb <= 0.0
                 system.K_recombination = 0.0 
             else
                 system.K_recombination = nK_recomb / n_recomb
