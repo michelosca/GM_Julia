@@ -25,7 +25,7 @@ using SharedData: K_to_eV, kb
 using DataFrames, CSV
 using Printf
 
-global ix_ref = 270 # reaction reference is first VUV emitting e + O -> e + O_5s
+global ix_ref = 299 # reaction reference is first VUV emitting e + O -> e + O_5s
 
 function CRM_test(n_data::DataFrame, T_data::DataFrame, K_data::DataFrame, output_fold::String)
 
@@ -190,7 +190,7 @@ function CRM_test(n_data::DataFrame, T_data::DataFrame, K_data::DataFrame, outpu
         , label = GM_label
         , legend = :bottomleft
         , yscale=:log10
-        , ylims = (1.e2, 1.e3)
+        , ylims = (1.e1, 1.e3)
         , ylabel = L"\textrm{\mathrm{I_{777}}\ /\ \mathrm{m^{_3}s^{-1} 10^{18}}}"
     )
     scatter!(p, O2_fract_fieb20, I_777_fieb2020_e18

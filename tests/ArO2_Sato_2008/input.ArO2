@@ -464,6 +464,8 @@ begin:reactions
   O_1d + O3 -> 2O + O2;          0.0; 1.20e-16;                                      # 114
   O_1d + O3 -> 2O2;              0.0; 1.20e-16;                                      # 115
   O_1s + O2 -> O + O2;           0.0; 3.00e-18 * exp(-850/T_O2);                     # 116
+  O_1s + O2_a1Ag -> O + O2;           0.0; 3.00e-18 * exp(-850/T_O2);                     # 116 - Assumed same
+  O_1s + O2_b1Su -> O + O2;           0.0; 3.00e-18 * exp(-850/T_O2);                     # 116 - Assumed same
   O_1s + O2 -> O_1d + O2;        0.0; 1.30e-18 * exp(-850/T_O2);                     # 117
   O_1s + O2_a1Ag -> 3O;          0.0; 3.20e-17;                                      # 118
   O_1s + O2_a1Ag -> O + O2_b1Su; 0.0; 1.30e-16;                                      # 119
@@ -601,11 +603,45 @@ begin:reactions
   O2_b1Su + Ar_r -> O + O_1d + Ar;       0.0; 1.456e-16;
   O2_b1Su + Ar_r -> O + O_1s + Ar;       0.0; 5.6e-18;
   
+  O_1d + O2 -> O + O2;                   0.0; 4.e-17;
+  O_1d + O2_a1Ag -> O + O2;              0.0; 4.e-17; # Fiebrandt 2020 Tab 6 - extended
+  O_1d + O2_b1Su -> O + O2;              0.0; 4.e-17; # Fiebrandt 2020 Tab 6 - extended
   O_1d + Ar -> Ar + O;                   0.0; 3.e-19;
   O_1s + Ar -> Ar + O;                   0.0; 4.8e-24;
   
   O + Ar_m -> Ar + O_3p;                 0.0; 7.6e-17;
   O_3p + Ar -> Ar + O_5p;                0.0; 2.80e-18;
+
+  # Niemi 2005
+  O_3p + O2 -> O + O2;         0.0; 9.4e-16;
+  O_3p + O2_a1Ag -> O + O2;    0.0; 9.4e-16;
+  O_3p + O2_b1Su -> O + O2;    0.0; 9.4e-16;
+  O_3p + O3 -> O + O3;         0.0; 9.4e-16;
+  O_3p + O -> O + O;           0.0; 9.4e-16;
+  O_3p + Ar -> O + Ar;         0.0; 1.4e-17;
+
+  O_3s + O2 -> O + O2;         0.0; 9.4e-16;
+  O_3s + O2_a1Ag -> O + O2;    0.0; 9.4e-16;
+  O_3s + O2_b1Su -> O + O2;    0.0; 9.4e-16;
+  O_3s + O3 -> O + O3;         0.0; 9.4e-16;
+  O_3s + O -> O + O;           0.0; 9.4e-16;
+  O_3s + Ar -> O + Ar;         0.0; 1.4e-17; # Assumed same as for O_3p and Ar, Niemi 2005
+
+  # Dagdigian 1988
+  O_5p + O2 -> O + O2;         0.0; 1.08e-15;
+  O_5p + O2_a1Ag -> O + O2;    0.0; 1.08e-15;
+  O_5p + O2_b1Su -> O + O2;    0.0; 1.08e-15;
+  O_5p + O3 -> O + O3;         0.0; 1.08e-15;
+  O_5p + O -> O + O;           0.0; 1.08e-15;
+  O_5p + Ar -> O + Ar;         0.0;  1.4e-17; # Assumed same as for O_3p and Ar, Niemi 2005
+
+  # Roth 1973
+  O_5s + O2 -> O + O2;         0.0; 1.4e-16;
+  O_5s + O2_a1Ag -> O + O2;    0.0; 1.4e-16;
+  O_5s + O2_b1Su -> O + O2;    0.0; 1.4e-16;
+  O_5s + O3 -> O + O3;         0.0; 1.4e-16;
+  O_5s + O -> O + O;           0.0; 1.4e-16;
+  O_5s + Ar -> O + Ar;         0.0; 1.4e-17; # Assumed same as for O_3p and Ar, Niemi 2005
 
   ##################################################################################################################
   # Ar reactions (Gudmundsson 2007, table 1)
@@ -646,7 +682,7 @@ begin:reactions
   e + O_1d -> e + O_3p;          9.02_eeV; -4.0e-18 + 1.9e-18 * exp(T_e_eV/1.8); lower_threshold # k12
   e + O_1d -> e + O_3p;         10.01_eeV; -4.0e-17 + 1.5e-17 * exp(T_e_eV/1.4); lower_threshold # k13
   e + O_1s -> e + O_3p;           6.8_eeV; -1.5e-17 + 1.2e-17 * exp(T_e_eV/4.7); lower_threshold # k15
-  e + O_1s -> e + O_3p;         10.99_eeV; -1.6445e-17 +4.5274e-17*T_e_eV -4.7377e-17*T_e_eV^2 +2.3414e-17*T_e_eV^3 -5.3018e-18*T_e_eV^4 +4.5651e-19*T_e_eV^5; lower_threshold # k16 
+  e + O_1s -> e + O_3p;           6.8_eeV; -1.6445e-17 +4.5274e-17*T_e_eV -4.7377e-17*T_e_eV^2 +2.3414e-17*T_e_eV^3 -5.3018e-18*T_e_eV^4 +4.5651e-19*T_e_eV^5; lower_threshold # k16 
   e + O_5s -> e + O_3s;          0.37_eeV; 3.1663e-14 +1.9133e-14*T_e_eV -1.6834e-14*T_e_eV^2 +4.3614e-15*T_e_eV^3 -3.853e-16*T_e_eV^4; lower_threshold # k17
   e + O_5s -> e + O_5p;          1.59_eeV; -1.6369e-13 +3.5636e-13*T_e_eV -8.7183e-14*T_e_eV^2 +9.8816e-15*T_e_eV^3 -3.8759e-16*T_e_eV^4; lower_threshold # k18
   e + O_5s -> e + O_3p;          1.84_eeV; -1.8405e-14 + 4.1875e-14*T_e_eV - 1.8784e-14*T_e_eV^2 + 3.7213e-15*T_e_eV^3 - 2.8142e-16*T_e_eV^4; lower_threshold # k19
