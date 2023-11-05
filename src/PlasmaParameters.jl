@@ -678,11 +678,10 @@ function GetEscapeFactor(reaction::Reaction, species_list::Vector{Species},
 
     # Absorption coefficient
     kappa = GetAbsorptionCoefficient(reaction, species)
-    L = 0.5 * ( system.l + 2.0 * system.radius)
-    kappa_L = kappa * L 
+    kappa_R = kappa * system.radius 
 
     # Escape factor
-    gamma = (2.0 - exp(- kappa_L * 1.e-3)) / (1.0 + kappa_L)
+    gamma = (2.0 - exp(- kappa_R * 1.e-3)) / (1.0 + kappa_R)
     gamma *= reaction.g_high /reaction.g_high_total
 
     return gamma
