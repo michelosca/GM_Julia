@@ -164,7 +164,7 @@ function UpdateSpeciesParameters!(temp::Vector{Float64}, dens::Vector{Float64},
             return c_io_error
         end
 
-        errcode = GetNeutralDiffusionCoeff!(s, species_list, sID)
+        errcode = GetDiffusionCoeff!(s, species_list, sID)
         if errcode == c_io_error
             err_message = @sprintf("GetNeutralDiffusionCoeff for %s failed",
                 s.name)
@@ -327,28 +327,26 @@ function GetMFP!(species::Species, dens::Vector{Float64}, species_list::Vector{S
 
     ilambda = 0.0         # inverse mean-free-path
 
-    v_th_s = species.v_thermal
-    id = species.id
+    T_species = species.temp
+    dens_s = species.dens
+    if dens_s <= 0.0
+        species.mfp = 1.e100
+        return 0
+    end
 
     for r in species.reaction_list
 
-        # Get max. thermal speed of reacting species
-        v_th = v_th_s
-        for i in r.reactant_species
-            v_th_n = species_list[i].v_thermal
-            v_th = max(v_th_n, v_th)
-        end
-        
-        # Exclude the species for which the mfp is calculated
-        r_species = copy(r.reactant_species)
-        index = findall( x -> x == id, r_species )
-        deleteat!(r_species, index)
+        # Reduced mass
+        mu = GetReducedMass(r, species_list)
+
+        # Mean speed of relative motion
+        v_mean = sqrt(8 * kb * T_species / pi / mu)
         
         # Set collision cross section
-        cross_section = r.K_value / v_th
+        cross_section = r.K_value / v_mean
 
         # Density of colliding partners
-        n = prod(dens[r_species])
+        n = prod(dens[r.reactant_species]) / dens_s
         if n < 0.0
             n = 0.0
         end
@@ -424,7 +422,7 @@ function GetLambda(system::System)
 end
 
 
-function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Species}, sID::SpeciesID)
+function GetDiffusionCoeff!(species::Species, species_list::Vector{Species}, sID::SpeciesID)
     # Computation of the Neutral Diffusion Coefficient for a given species (A)
 
     if species.id == sID.electron
@@ -458,7 +456,11 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
         iD = 0.0  # will add up "mu_AB * n_B * K_AB_i" for each i-th reaction 
 
         T = species.temp
-        id = species.id
+        dens_s = species.dens
+        if dens_s <= 0.0
+            species.D = 1.e100
+            return 0
+        end
 
         for r in species.reaction_list
 
@@ -467,14 +469,9 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             # thermal speed is constant. However, if this changes the thermal speed and
             # temperature used for calculating D would change! 
             
-            # Exclude the species for which D is calculated
-            r_species = copy(r.reactant_species)
-            index = findall( x -> x == id, r_species )
-            deleteat!(r_species, index)
-            
             # Density of colliding partners (excluding current species)
-            n = 1.0
-            for r_s_id in r_species
+            n = 1.0 / dens_s
+            for r_s_id in r.reactant_species
                 n *= species_list[r_s_id].dens
             end
             if n < 0.0
@@ -482,12 +479,7 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             end
 
             # Reduced mass
-            imu = 0.0
-            for rs_id in r.reactant_species
-                rs_mass = species_list[rs_id].mass
-                imu += 1.0/rs_mass
-            end
-            mu = 1.0 / imu
+            mu = GetReducedMass(r, species_list)
 
             # Add to inverse D related to the current reaction
             iD += mu * n * r.K_value 
@@ -497,6 +489,7 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
             iD = 1.e-100
         end
 
+        # In case that neutral and ions temperature is species dependent T should go into the for loop
         species.D = kb * T / iD
     end
 
@@ -504,16 +497,16 @@ function GetNeutralDiffusionCoeff!(species::Species, species_list::Vector{Specie
 end
 
 
-function DiffusionRateCoefficient(species::Species, system::System)
-    V = system.V
-    A = system.A
-    lambda = system.Lambda
-    D = species.D
-    gamma = species.gamma
-    vth = species.v_thermal
+function GetReducedMass(r::Reaction, species_list::Vector{Species})
 
-    K = 1.0/(lambda^2 / D  + 2.0 * V * (2.0 - gamma) / A / vth  / gamma)
-    return K
+    # Reduced mass
+    imu = 0.0
+    for rs_id in r.reactant_species
+        rs_mass = species_list[rs_id].mass
+        imu += 1.0/rs_mass
+    end
+    mu = 1.0 / imu
+    return mu
 end
 
 
